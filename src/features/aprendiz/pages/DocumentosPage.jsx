@@ -1,36 +1,119 @@
-import { useState, useRef } from "react";
-import { Upload, FileText, Image, Download, Trash2, FolderOpen } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Upload, FileText, Image, Download, Trash2, FolderOpen, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../providers/AuthProvider";
 
-const MOCK_DOCS = [
-  { id: "1", name: "Certificado médico - Jun 2026.pdf", type: "pdf",   size: "245 KB", date: "2026-06-10", category: "Certificado médico" },
-  { id: "2", name: "Incapacidad - May 2026.pdf",        type: "pdf",   size: "189 KB", date: "2026-05-15", category: "Incapacidad" },
-  { id: "3", name: "Foto carnet SENA.jpg",              type: "image", size: "1.2 MB", date: "2026-03-01", category: "Identificación" },
-];
+function formatSize(bytes) {
+  if (!bytes) return "—";
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function detectCategory(name) {
+  const n = name.toLowerCase();
+  if (n.includes("certif")) return "Certificado médico";
+  if (n.includes("incapac")) return "Incapacidad";
+  if (n.includes("carnet") || n.includes("foto")) return "Identificación";
+  return "Documento";
+}
+
+function isPdfFile(mimeType, name) {
+  return mimeType === "application/pdf" || name?.toLowerCase().endsWith(".pdf");
+}
 
 export default function DocumentosPage() {
-  const [docs, setDocs] = useState(MOCK_DOCS);
+  const { user } = useAuth();
+  const [docs, setDocs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileSelect = () => {
-    toast.info("Función disponible en producción");
+  const fetchDocs = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("user_documents")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (!error) setDocs(data || []);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => { fetchDocs(); }, [fetchDocs]);
+
+  const handleFile = async (file) => {
+    if (!file || !user) return;
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) { toast.error("El archivo supera los 5 MB"); return; }
+    const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) { toast.error("Formato no permitido. Usa PDF, JPG o PNG"); return; }
+
+    setUploading(true);
+    try {
+      const fileName = `${crypto.randomUUID()}-${file.name}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("user-documents")
+        .upload(filePath, file);
+
+      if (uploadError) { toast.error("Error al subir el archivo"); return; }
+
+      const { error: dbError } = await supabase.from("user_documents").insert({
+        user_id:   user.id,
+        name:      file.name,
+        file_path: filePath,
+        file_size: file.size,
+        mime_type: file.type,
+        category:  detectCategory(file.name),
+      });
+
+      if (dbError) {
+        await supabase.storage.from("user-documents").remove([filePath]);
+        toast.error("Error al registrar el documento");
+        return;
+      }
+
+      toast.success("Documento subido correctamente");
+      await fetchDocs();
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  };
+
+  const handleDelete = async (doc) => {
+    const { error: storageError } = await supabase.storage
+      .from("user-documents")
+      .remove([doc.file_path]);
+    if (storageError) { toast.error("Error al eliminar el archivo"); return; }
+
+    await supabase.from("user_documents").delete().eq("id", doc.id);
     toast.success("Documento eliminado");
-    setDocs(d => d.filter(doc => doc.id !== id));
+    setDocs(d => d.filter(x => x.id !== doc.id));
   };
 
-  const handleDownload = () => {
-    toast.info("Descarga disponible en producción");
+  const handleDownload = async (doc) => {
+    const { data, error } = await supabase.storage
+      .from("user-documents")
+      .createSignedUrl(doc.file_path, 60);
+    if (error || !data?.signedUrl) { toast.error("No se pudo generar el enlace"); return; }
+    window.open(data.signedUrl, "_blank");
   };
 
   return (
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
-      {/* Header */}
       <div style={{ background: "white", borderBottom: "1px solid #e5e7eb" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "1.75rem 2rem" }}>
           <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#39a900", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>
@@ -50,7 +133,8 @@ export default function DocumentosPage() {
         <div
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={e => { e.preventDefault(); setDragOver(false); handleFileSelect(); }}
+          onDrop={handleDrop}
+          onClick={() => !uploading && fileInputRef.current?.click()}
           style={{
             border: `2px dashed ${dragOver ? "#39a900" : "#d1fae5"}`,
             borderRadius: 14,
@@ -59,25 +143,29 @@ export default function DocumentosPage() {
             background: dragOver ? "#f0fce4" : "white",
             marginBottom: "1.5rem",
             transition: "all 0.15s",
-            cursor: "pointer",
+            cursor: uploading ? "not-allowed" : "pointer",
+            opacity: uploading ? 0.7 : 1,
           }}
-          onClick={() => fileInputRef.current?.click()}
         >
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
             style={{ display: "none" }}
-            onChange={handleFileSelect}
+            onChange={e => handleFile(e.target.files[0])}
           />
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#f0fce4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
-            <Upload size={24} color="#39a900" />
+            {uploading
+              ? <Loader2 size={24} color="#39a900" style={{ animation: "spin 0.8s linear infinite" }} />
+              : <Upload size={24} color="#39a900" />
+            }
           </div>
           <p style={{ fontSize: "0.9375rem", color: "#374151", margin: "0 0 0.5rem", fontWeight: 500 }}>
-            Arrastra archivos aquí o{" "}
-            <span style={{ color: "#39a900", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>
-              selecciona un archivo
-            </span>
+            {uploading ? "Subiendo archivo…" : (
+              <>Arrastra archivos aquí o{" "}
+                <span style={{ color: "#39a900", fontWeight: 700, textDecoration: "underline" }}>selecciona un archivo</span>
+              </>
+            )}
           </p>
           <p style={{ fontSize: "0.8125rem", color: "#9ca3af", margin: 0 }}>
             PDF, JPG, PNG · Máx. 5 MB
@@ -85,7 +173,11 @@ export default function DocumentosPage() {
         </div>
 
         {/* Document grid */}
-        {docs.length === 0 ? (
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "3rem 0" }}>
+            <div style={{ width: 28, height: 28, border: "2.5px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+          </div>
+        ) : docs.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem 1rem" }}>
             <FolderOpen size={48} color="#e5e7eb" style={{ margin: "0 auto 1rem", display: "block" }} />
             <div style={{ fontWeight: 600, fontSize: "1rem", color: "#374151" }}>Aún no has subido documentos</div>
@@ -106,13 +198,21 @@ export default function DocumentosPage() {
           </>
         )}
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
 
 function DocCard({ doc, onDelete, onDownload }) {
   const [hovered, setHovered] = useState(false);
-  const isPdf = doc.type === "pdf";
+  const [deleting, setDeleting] = useState(false);
+  const isPdf = isPdfFile(doc.mime_type, doc.name);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    await onDelete(doc);
+    setDeleting(false);
+  };
 
   return (
     <div
@@ -129,22 +229,15 @@ function DocCard({ doc, onDelete, onDownload }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: "0.875rem", marginBottom: "0.875rem" }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-          background: isPdf ? "#fee2e2" : "#dbeafe",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          {isPdf
-            ? <FileText size={18} color="#ef4444" />
-            : <Image size={18} color="#3b82f6" />
-          }
+        <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: isPdf ? "#fee2e2" : "#dbeafe", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {isPdf ? <FileText size={18} color="#ef4444" /> : <Image size={18} color="#3b82f6" />}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {doc.name}
           </div>
           <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem" }}>
-            {doc.size}
+            {formatSize(doc.file_size)}
           </div>
         </div>
       </div>
@@ -155,19 +248,22 @@ function DocCard({ doc, onDelete, onDownload }) {
             {doc.category}
           </span>
           <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-            Subido: {format(parseISO(doc.date), "d MMM yyyy", { locale: es })}
+            Subido: {doc.created_at ? format(parseISO(doc.created_at), "d MMM yyyy", { locale: es }) : "—"}
           </span>
         </div>
         <div style={{ display: "flex", gap: "0.375rem" }}>
           <button
-            onClick={onDownload}
+            onClick={() => onDownload(doc)}
+            title="Descargar"
             style={{ width: 32, height: 32, borderRadius: 8, background: "#f9fafb", border: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
           >
             <Download size={14} color="#6b7280" />
           </button>
           <button
-            onClick={() => onDelete(doc.id)}
-            style={{ width: 32, height: 32, borderRadius: 8, background: "#fff1f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+            onClick={handleDelete}
+            disabled={deleting}
+            title="Eliminar"
+            style={{ width: 32, height: 32, borderRadius: 8, background: "#fff1f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.5 : 1 }}
           >
             <Trash2 size={14} color="#ef4444" />
           </button>
