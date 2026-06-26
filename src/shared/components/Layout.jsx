@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Calendar, Users, BarChart2,
   LogOut, Plus, Heart, UserCircle, Bell,
@@ -9,6 +10,7 @@ import { useAuth } from "../../providers/AuthProvider";
 import { useAppointmentModal } from "../../providers/AppointmentModalContext";
 import { SenaLogo } from "./SenaLogo";
 import { AppointmentModal } from "../../features/appointments/components/AppointmentModal";
+import { supabase } from "../../lib/supabase";
 
 const ROLE_LABELS = {
   APRENDIZ:       "Aprendiz",
@@ -72,8 +74,9 @@ function NavLink({ to, icon: Icon, label, active, badge }) {
 
 export function Layout({ children }) {
   const location = useLocation();
-  const { isProfessional, isCoordination, isAdmin, isAprendiz, profile, signOut } = useAuth();
+  const { isProfessional, isCoordination, isAdmin, isAprendiz, profile, user, signOut } = useAuth();
   const { openModal } = useAppointmentModal();
+  const [notifBadge, setNotifBadge] = useState(IS_DEV ? 2 : 0);
 
   const role     = profile?.roles?.name;
   const fullName = profile?.full_name || "Usuario";
@@ -81,8 +84,16 @@ export function Layout({ children }) {
   const roleName = ROLE_LABELS[role] || role || "Usuario";
   const isActive = (to) => location.pathname === to || location.pathname.startsWith(to + "/");
 
-  // In DEV preview mode show a hardcoded badge count
-  const notifBadge = IS_DEV ? 2 : 0;
+  useEffect(() => {
+    if (IS_DEV || !user || !isAprendiz?.()) return;
+    supabase
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .in("status", ["pending", "confirmed"])
+      .gte("scheduled_date", new Date().toISOString().slice(0, 10))
+      .then(({ count }) => setNotifBadge(count || 0));
+  }, [user, location.pathname]);
 
   const renderNav = () => {
     if (isAdmin?.()) {
