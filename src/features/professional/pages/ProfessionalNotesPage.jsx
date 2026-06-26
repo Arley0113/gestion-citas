@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Search, FileText, ChevronRight, CalendarDays } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "sonner";
+import { useAuth } from "../../../providers/AuthProvider";
+import { supabase } from "../../../lib/supabase";
 
 const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
 
@@ -10,19 +12,40 @@ const AVATAR_COLORS = ["#39a900","#3b82f6","#8b5cf6","#f59e0b","#ef4444","#06b6d
 const avatarColor = (name) => AVATAR_COLORS[(name?.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 
 const MOCK_NOTES = [
-  { id:"n1", apt_id:"1", aprendiz:"Laura Gómez",   date:"2026-06-20T10:30:00Z", dependency:"Psicología",    content:"Sesión de seguimiento por ansiedad académica. La paciente muestra mejoría significativa en las técnicas de respiración aprendidas en sesiones anteriores. Continúa con ejercicios de mindfulness diarios. Se recomienda mantener el ritmo de sesiones quincenales." },
-  { id:"n2", apt_id:"2", aprendiz:"Carlos Ruiz",   date:"2026-06-15T09:00:00Z", dependency:"Psicología",    content:"Primera consulta. Motivo: dificultades de concentración y estrés por acumulación de proyectos. Se aplican técnicas cognitivo-conductuales básicas. Se programa seguimiento en 15 días para evaluar avances." },
-  { id:"n3", apt_id:"3", aprendiz:"Ana Martínez",  date:"2026-05-30T14:00:00Z", dependency:"Psicología",    content:"Consulta de cierre de ciclo semestral. La aprendiz finalizó satisfactoriamente el proceso de acompañamiento. Se sugiere continuidad en el próximo semestre según necesidad personal." },
-  { id:"n4", apt_id:"4", aprendiz:"Pedro Torres",  date:"2026-05-15T08:00:00Z", dependency:"Psicología",    content:"Consulta por orientación académica y vocacional. Manifiesta dudas sobre su programa de formación. Se orienta sobre opciones de cambio de programa y complementación académica disponibles." },
+  { id:"n1", notes:"Sesión de seguimiento por ansiedad académica. La paciente muestra mejoría significativa en las técnicas de respiración aprendidas en sesiones anteriores. Continúa con ejercicios de mindfulness diarios.", updated_at:"2026-06-20T10:30:00Z", aprendiz:{ full_name:"Laura Gómez", program:"Desarrollo de Software" } },
+  { id:"n2", notes:"Primera consulta. Motivo: dificultades de concentración y estrés por acumulación de proyectos. Se aplican técnicas cognitivo-conductuales básicas. Se programa seguimiento en 15 días.", updated_at:"2026-06-15T09:00:00Z", aprendiz:{ full_name:"Carlos Ruiz", program:"Contabilidad" } },
+  { id:"n3", notes:"Consulta de cierre de ciclo semestral. La aprendiz finalizó satisfactoriamente el proceso de acompañamiento. Se sugiere continuidad en el próximo semestre según necesidad personal.", updated_at:"2026-05-30T14:00:00Z", aprendiz:{ full_name:"Ana Martínez", program:"Diseño Gráfico" } },
+  { id:"n4", notes:"Consulta por orientación académica y vocacional. Manifiesta dudas sobre su programa de formación. Se orienta sobre opciones de cambio de programa y complementación académica disponibles.", updated_at:"2026-05-15T08:00:00Z", aprendiz:{ full_name:"Pedro Torres", program:"Electrónica" } },
 ];
 
 export default function ProfessionalNotesPage() {
-  const navigate   = useNavigate();
-  const [query, setQuery]       = useState("");
+  const { user } = useAuth();
+  const [notes, setNotes]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery]     = useState("");
   const [expanded, setExpanded] = useState(null);
 
-  const notes = IS_DEV ? MOCK_NOTES : [];
-  const filtered = notes.filter(n => n.aprendiz.toLowerCase().includes(query.toLowerCase()));
+  useEffect(() => {
+    if (IS_DEV) { setNotes(MOCK_NOTES); setLoading(false); return; }
+    if (!user) { setLoading(false); return; }
+
+    supabase
+      .from("appointments")
+      .select("id, notes, updated_at, reason, aprendiz:profiles!user_id(full_name, program)")
+      .eq("professional_id", user.id)
+      .not("notes", "is", null)
+      .neq("notes", "")
+      .order("updated_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) { toast.error("Error al cargar las notas"); setLoading(false); return; }
+        setNotes(data || []);
+        setLoading(false);
+      });
+  }, [user]);
+
+  const filtered = notes.filter(n =>
+    (n.aprendiz?.full_name || "").toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
@@ -37,7 +60,7 @@ export default function ProfessionalNotesPage() {
               <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: "0.25rem 0 0" }}>Historial de observaciones registradas</p>
             </div>
             <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#374151", background: "#f3f4f6", border: "1px solid #e5e7eb", padding: "0.25rem 0.75rem", borderRadius: 20 }}>
-              {filtered.length} notas registradas
+              {notes.length} {notes.length === 1 ? "nota registrada" : "notas registradas"}
             </span>
           </div>
         </div>
@@ -58,8 +81,18 @@ export default function ProfessionalNotesPage() {
           />
         </div>
 
-        {/* Notes list */}
-        {filtered.length === 0 ? (
+        {/* Loading */}
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "3rem 0" }}>
+            <div style={{ width: 28, height: 28, border: "2.5px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+          </div>
+        ) : notes.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "4rem 1rem" }}>
+            <FileText size={44} color="#e5e7eb" style={{ margin: "0 auto 1rem", display: "block" }} />
+            <div style={{ fontWeight: 600, fontSize: "1rem", color: "#374151" }}>No has registrado notas clínicas aún</div>
+            <p style={{ fontSize: "0.875rem", color: "#9ca3af", marginTop: "0.375rem" }}>Las notas aparecen al completar una atención</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem 1rem" }}>
             <FileText size={44} color="#e5e7eb" style={{ margin: "0 auto 1rem", display: "block" }} />
             <div style={{ fontWeight: 600, fontSize: "1rem", color: "#374151" }}>No se encontraron notas</div>
@@ -68,8 +101,9 @@ export default function ProfessionalNotesPage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
             {filtered.map(note => {
-              const isExp = expanded === note.id;
-              const color = avatarColor(note.aprendiz);
+              const isExp  = expanded === note.id;
+              const nombre = note.aprendiz?.full_name || "Aprendiz";
+              const color  = avatarColor(nombre);
               return (
                 <div
                   key={note.id}
@@ -80,24 +114,26 @@ export default function ProfessionalNotesPage() {
                 >
                   <div style={{ display: "flex", alignItems: "flex-start", gap: "0.875rem" }}>
                     <div style={{ width: 40, height: 40, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ color: "white", fontWeight: 800, fontSize: "1rem" }}>{note.aprendiz[0]}</span>
+                      <span style={{ color: "white", fontWeight: 800, fontSize: "1rem" }}>{nombre.charAt(0)}</span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
-                        <span style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>{note.aprendiz}</span>
+                        <span style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>{nombre}</span>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#8b5cf6", background: "#f5f3ff", padding: "0.2rem 0.6rem", borderRadius: 20 }}>{note.dependency}</span>
+                          {note.aprendiz?.program && (
+                            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#8b5cf6", background: "#f5f3ff", padding: "0.2rem 0.6rem", borderRadius: 20 }}>{note.aprendiz.program}</span>
+                          )}
                           <ChevronRight size={15} color="#d1d5db" style={{ transform: isExp ? "rotate(90deg)" : "rotate(0)", transition: "transform 0.2s" }} />
                         </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "0.25rem" }}>
                         <CalendarDays size={12} color="#9ca3af" />
                         <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-                          {format(parseISO(note.date), "d 'de' MMMM yyyy · h:mm a", { locale: es })}
+                          {format(parseISO(note.updated_at), "d 'de' MMMM yyyy · h:mm a", { locale: es })}
                         </span>
                       </div>
                       <p style={{ fontSize: "0.875rem", color: "#4b5563", margin: "0.625rem 0 0", lineHeight: 1.6, overflow: isExp ? "visible" : "hidden", display: isExp ? "block" : "-webkit-box", WebkitLineClamp: isExp ? undefined : 2, WebkitBoxOrient: isExp ? undefined : "vertical" }}>
-                        {note.content}
+                        {note.notes}
                       </p>
                       {!isExp && (
                         <button
@@ -115,6 +151,8 @@ export default function ProfessionalNotesPage() {
           </div>
         )}
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
