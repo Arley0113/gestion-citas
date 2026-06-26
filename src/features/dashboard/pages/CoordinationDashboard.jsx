@@ -39,11 +39,21 @@ const STATUS_BADGE = {
 
 const PERIODS = ["Hoy", "Esta semana", "Este mes", "Este año"];
 
-function useDashboardData() {
+function getPeriodDateFrom(period) {
+  const today = new Date();
+  if (period === "Hoy")         return today.toISOString().slice(0, 10);
+  if (period === "Esta semana") return startOfWeek(today, { weekStartsOn: 1 }).toISOString().slice(0, 10);
+  if (period === "Este mes")    return startOfMonth(today).toISOString().slice(0, 10);
+  if (period === "Este año")    return new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10);
+  return null;
+}
+
+function useDashboardData(period) {
   const [data, setData]           = useState(DEV_ROLE ? MOCK_DATA : null);
   const [loading, setLoading]     = useState(!DEV_ROLE);
   const [todayApts, setTodayApts] = useState(DEV_ROLE ? MOCK_RECENT : []);
   const [loadingToday, setLoadingToday] = useState(!DEV_ROLE);
+  const [depData, setDepData]     = useState([]);
 
   const loadToday = useCallback(async () => {
     if (DEV_ROLE) return;
@@ -61,23 +71,39 @@ function useDashboardData() {
 
   useEffect(() => {
     if (DEV_ROLE) return;
+    const dateFrom = getPeriodDateFrom(period);
+    const applyFilter = (q) => dateFrom ? q.gte("scheduled_date", dateFrom) : q;
+
     const load = async () => {
+      setLoading(true);
       try {
-        const [{ count: total }, { count: pending }, { count: completed }, { count: cancelled }] = await Promise.all([
-          supabase.from("appointments").select("*", { count: "exact", head: true }),
-          supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "pending"),
-          supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "completed"),
-          supabase.from("appointments").select("*", { count: "exact", head: true }).in("status", ["cancelled","no_show"]),
+        const [{ count: total }, { count: pending }, { count: completed }, { count: cancelled }, { data: depRows }] = await Promise.all([
+          applyFilter(supabase.from("appointments").select("*", { count: "exact", head: true })),
+          applyFilter(supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "pending")),
+          applyFilter(supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "completed")),
+          applyFilter(supabase.from("appointments").select("*", { count: "exact", head: true }).in("status", ["cancelled","no_show"])),
+          applyFilter(supabase.from("appointments").select("dependency_id, dependencies(name, color)")),
         ]);
         setData({ total: total || 0, pending: pending || 0, completed: completed || 0, cancelled: cancelled || 0 });
+
+        const depMap = {};
+        (depRows || []).forEach(r => {
+          const name  = r.dependencies?.name  || "Sin área";
+          const color = r.dependencies?.color || DEP_COLORS[Object.keys(depMap).length % DEP_COLORS.length];
+          if (!depMap[name]) depMap[name] = { name, count: 0, color };
+          depMap[name].count++;
+        });
+        const depList  = Object.values(depMap).sort((a, b) => b.count - a.count);
+        const depTotal = depList.reduce((s, d) => s + d.count, 0) || 1;
+        setDepData(depList.map(d => ({ ...d, pct: Math.round((d.count / depTotal) * 100) })));
       } catch { setData(MOCK_DATA); }
       finally  { setLoading(false); }
     };
     load();
     loadToday();
-  }, [loadToday]);
+  }, [period, loadToday]);
 
-  return { data, loading, todayApts, loadingToday, loadToday };
+  return { data, loading, todayApts, loadingToday, loadToday, depData };
 }
 
 function fmtTime(t = "08:00:00") {
@@ -88,7 +114,7 @@ function fmtTime(t = "08:00:00") {
 }
 
 export default function CoordinationDashboard() {
-  const { data, loading, todayApts, loadingToday, loadToday } = useDashboardData();
+  const { data, loading, todayApts, loadingToday, loadToday, depData } = useDashboardData(period);
   const { can } = usePermissions();
   const today = new Date();
   const [period, setPeriod] = useState("Este mes");
@@ -208,9 +234,15 @@ export default function CoordinationDashboard() {
                 <p>Total de citas atendidas por área</p>
               </div>
             </div>
+            {depData.length === 0 && !loading ? (
+              <div style={{ padding: "2rem 0", textAlign: "center" }}>
+                <BarChart2 size={28} color="#e5e7eb" style={{ margin: "0 auto 0.5rem" }} />
+                <p style={{ fontSize: "0.8125rem", color: "#9ca3af", margin: 0 }}>Sin datos para el período seleccionado</p>
+              </div>
+            ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", alignItems: "center" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                {DEP_DATA.map(dep => (
+                {depData.map(dep => (
                   <div key={dep.name}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.375rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -226,18 +258,19 @@ export default function CoordinationDashboard() {
                 ))}
               </div>
               <ResponsiveContainer width="100%" height={150}>
-                <BarChart data={DEP_DATA} barSize={36}>
+                <BarChart data={depData} barSize={36}>
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                   <YAxis hide />
                   <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }} formatter={v => [`${v} citas`]} />
                   <Bar dataKey="count" radius={[4,4,0,0]}>
-                    {DEP_DATA.map((entry, idx) => (
+                    {depData.map((entry, idx) => (
                       <Cell key={idx} fill={entry.color} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            )}
           </div>
 
           {/* Citas de hoy */}

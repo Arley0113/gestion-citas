@@ -5,7 +5,7 @@ import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { usePermissions } from "../../../shared/rbac/usePermissions";
 import { P } from "../../../shared/rbac/permissions";
-import { format, subMonths } from "date-fns";
+import { format, subMonths, startOfWeek, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 
@@ -59,7 +59,15 @@ const PERIODS = [
   { key: "todo",   label: "Todo"        },
 ];
 
-function useReportsData() {
+function getPeriodDateFrom(period) {
+  const today = new Date();
+  if (period === "semana") return startOfWeek(today, { weekStartsOn: 1 }).toISOString().slice(0, 10);
+  if (period === "mes")    return startOfMonth(today).toISOString().slice(0, 10);
+  if (period === "año")    return new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10);
+  return null;
+}
+
+function useReportsData(period) {
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,11 +77,16 @@ function useReportsData() {
       setLoading(false);
       return;
     }
+    setLoading(true);
     try {
+      const dateFrom = getPeriodDateFrom(period);
       const sixMonthsAgo = subMonths(new Date(), 6).toISOString().slice(0, 10);
 
+      let aptQuery = supabase.from("appointments").select("status, scheduled_date, dependency_id, dependencies(name, color)");
+      if (dateFrom) aptQuery = aptQuery.gte("scheduled_date", dateFrom);
+
       const [{ data: all }, { data: profileRows }] = await Promise.all([
-        supabase.from("appointments").select("status, scheduled_date, dependency_id, dependencies(name, color)"),
+        aptQuery,
         supabase.from("profiles").select("program").not("program", "is", null).neq("program", ""),
       ]);
 
@@ -91,7 +104,8 @@ function useReportsData() {
         if (!depMap[depName]) depMap[depName] = { name: depName, count: 0, color: depColor };
         depMap[depName].count++;
 
-        if (r.scheduled_date >= sixMonthsAgo) {
+        const monthCutoff = dateFrom || sixMonthsAgo;
+      if (r.scheduled_date >= monthCutoff) {
           const mo = format(new Date(r.scheduled_date), "MMM", { locale: es });
           const key = r.scheduled_date.slice(0, 7);
           monthMap[key] = { month: mo.charAt(0).toUpperCase() + mo.slice(1), total: (monthMap[key]?.total || 0) + 1 };
@@ -119,7 +133,7 @@ function useReportsData() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [period]);
 
   useEffect(() => { fetch(); }, [fetch]);
   return { data, loading };
@@ -127,10 +141,10 @@ function useReportsData() {
 
 export default function ReportsDashboard() {
   const { can }          = usePermissions();
-  const { data, loading } = useReportsData();
   const canExport        = can(P.REPORTS_EXPORT);
   const now              = new Date();
   const [period, setPeriod] = useState("mes");
+  const { data, loading } = useReportsData(period);
 
   const handleExportCSV = () => {
     if (!data) return;
