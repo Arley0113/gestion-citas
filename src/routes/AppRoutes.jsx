@@ -22,6 +22,7 @@ const AprendicesList        = lazy(() => import("../features/appointments/pages/
 const ProfilePage           = lazy(() => import("../features/auth/pages/ProfilePage"));
 const NotificationsPage     = lazy(() => import("../features/auth/pages/NotificationsPage"));
 const RegisterPage          = lazy(() => import("../features/auth/pages/RegisterPage"));
+const ResetPasswordPage     = lazy(() => import("../features/auth/pages/ResetPasswordPage"));
 const CompleteProfilePage   = lazy(() => import("../features/auth/pages/CompleteProfilePage"));
 const StaffInvitePage       = lazy(() => import("../features/admin/pages/StaffInvitePage"));
 const ReportsDashboard      = lazy(() => import("../features/reports/pages/ReportsDashboard"));
@@ -65,9 +66,10 @@ export function AppRoutes() {
     <Suspense fallback={<Fallback />}>
       <Routes>
         {/* PÚBLICAS */}
-        <Route path="/login"        element={<Login />} />
-        <Route path="/register"     element={<RegisterPage />} />
-        <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/login"          element={<Login />} />
+        <Route path="/register"       element={<RegisterPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/unauthorized"   element={<Unauthorized />} />
 
         {/* ONBOARDING */}
         <Route path="/onboarding" element={

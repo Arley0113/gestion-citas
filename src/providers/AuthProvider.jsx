@@ -77,6 +77,10 @@ export function AuthProvider({ children }) {
     checkSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        window.location.href = "/reset-password" + window.location.hash;
+        return;
+      }
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
         setUser(session.user);
         await fetchProfile(session.user.id);

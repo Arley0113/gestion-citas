@@ -1,15 +1,32 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, Shield } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Shield, X } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { SenaLogo } from "../../../shared/components/SenaLogo";
 
 export default function Login() {
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [showPwd,  setShowPwd]  = useState(false);
-  const [loading,  setLoading]  = useState(false);
+  const [email,       setEmail]       = useState("");
+  const [password,    setPassword]    = useState("");
+  const [showPwd,     setShowPwd]     = useState(false);
+  const [loading,     setLoading]     = useState(false);
+  const [forgotOpen,  setForgotOpen]  = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+
+  const handleForgot = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) { toast.error("Ingresa tu correo"); return; }
+    setForgotLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim().toLowerCase(), {
+      redirectTo: "https://gestion-citas-nu.vercel.app/reset-password",
+    });
+    setForgotLoading(false);
+    if (error) { toast.error("No se pudo enviar el correo"); return; }
+    toast.success("Revisa tu correo para restablecer tu contraseña");
+    setForgotOpen(false);
+    setForgotEmail("");
+  };
 
   const handleEmail = async (e) => {
     e.preventDefault();
@@ -304,6 +321,7 @@ export default function Login() {
                 <label className="input-label" style={{ marginBottom: 0 }}>Contraseña</label>
                 <button
                   type="button"
+                  onClick={() => { setForgotOpen(true); setForgotEmail(email); }}
                   style={{ fontSize: "0.8125rem", color: "#39a900", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', system-ui", fontWeight: 500 }}
                 >
                   ¿Olvidaste?
@@ -355,6 +373,54 @@ export default function Login() {
             <a href="#">Términos de uso</a>
             <a href="#">Política de privacidad</a>
           </div>
+
+          {/* Modal olvidé contraseña */}
+          {forgotOpen && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+              <div style={{ background: "white", borderRadius: 20, padding: "2rem", width: "100%", maxWidth: 400, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", position: "relative", animation: "slideUp 0.3s cubic-bezier(0.16,1,0.3,1) both" }}>
+                <button onClick={() => setForgotOpen(false)} style={{ position: "absolute", top: "1rem", right: "1rem", background: "none", border: "none", cursor: "pointer", color: "#8b949e", display: "flex" }}>
+                  <X size={18} />
+                </button>
+                <div style={{ fontFamily: "'Sora', system-ui", fontWeight: 800, fontSize: "1.25rem", color: "#0d1117", marginBottom: "0.375rem" }}>Restablecer contraseña</div>
+                <p style={{ fontSize: "0.875rem", color: "#6e7681", marginBottom: "1.25rem", lineHeight: 1.5 }}>
+                  Ingresa tu correo y te enviaremos un enlace para crear una nueva contraseña.
+                </p>
+                <form onSubmit={handleForgot}>
+                  <div className="input-group">
+                    <label className="input-label">Correo electrónico</label>
+                    <div className="input-wrap">
+                      <Mail size={15} className="input-icon" />
+                      <input
+                        className="text-input"
+                        type="email"
+                        value={forgotEmail}
+                        onChange={e => setForgotEmail(e.target.value)}
+                        placeholder="tu@sena.edu.co"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.625rem", marginTop: "0.25rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => setForgotOpen(false)}
+                      style={{ flex: 1, padding: "0.75rem", background: "white", border: "1.5px solid #d0d7de", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', system-ui", color: "#374151" }}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="btn-submit"
+                      style={{ flex: 2, marginTop: 0 }}
+                    >
+                      {forgotLoading ? "Enviando…" : "Enviar enlace"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="login-bottom">
