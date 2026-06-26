@@ -174,7 +174,14 @@ export default function ConfiguracionPage() {
         <SectionCard icon={Lock} iconColor="#6b7280" iconBg="#f9fafb" title="Cuenta">
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", paddingTop: "0.5rem" }}>
             <button
-              onClick={() => toast.info("Contacta al administrador para esta acción")}
+              onClick={async () => {
+                if (!user?.email) return;
+                const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+                  redirectTo: "https://gestion-citas-nu.vercel.app/reset-password",
+                });
+                if (error) toast.error("No se pudo enviar el correo");
+                else toast.success("Revisa tu correo para cambiar la contraseña");
+              }}
               style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.75rem 1rem", background: "white", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "var(--font-sans)", width: "fit-content" }}
             >
               <Lock size={15} /> Cambiar contraseña

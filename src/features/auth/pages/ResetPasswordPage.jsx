@@ -25,7 +25,7 @@ export default function ResetPasswordPage() {
 
   const handleReset = async (e) => {
     e.preventDefault();
-    if (password.length < 6) { toast.error("La contraseña debe tener al menos 6 caracteres"); return; }
+    if (password.length < 8) { toast.error("Mínimo 8 caracteres"); return; }
     if (password !== confirm) { toast.error("Las contraseñas no coinciden"); return; }
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
@@ -138,7 +138,7 @@ export default function ResetPasswordPage() {
                       type={showPwd ? "text" : "password"}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                       style={{ paddingRight: "2.75rem" }}
                       autoFocus
                     />

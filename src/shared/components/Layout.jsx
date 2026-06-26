@@ -102,6 +102,8 @@ export function Layout({ children }) {
         <>
           <NavGroup label="Panel" />
           <NavLink to="/coordination" icon={LayoutDashboard} label="Dashboard"  active={isActive("/coordination")} />
+          <NavGroup label="Gestión" />
+          <NavLink to="/aprendices"   icon={Users}           label="Aprendices" active={isActive("/aprendices")} />
           <NavGroup label="Análisis" />
           <NavLink to="/reportes"     icon={BarChart2}       label="Reportes"   active={isActive("/reportes")} />
         </>

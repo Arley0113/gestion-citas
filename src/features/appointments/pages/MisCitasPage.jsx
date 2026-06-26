@@ -48,11 +48,11 @@ export default function MisCitasPage() {
 
   useEffect(() => {
     if (IS_DEV) { setCitas(MOCK_CITAS); setLoading(false); return; }
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     supabase
       .from("appointments")
       .select("*, dependencies(name)")
-      .eq("aprendiz_id", user.id)
+      .eq("user_id", user.id)
       .order("scheduled_date", { ascending: false })
       .then(({ data }) => { setCitas(data || []); setLoading(false); });
   }, [user]);

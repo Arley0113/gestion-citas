@@ -72,15 +72,17 @@ function useReportsData() {
     try {
       const sixMonthsAgo = subMonths(new Date(), 6).toISOString().slice(0, 10);
 
-      const [{ data: all }] = await Promise.all([
+      const [{ data: all }, { data: profileRows }] = await Promise.all([
         supabase.from("appointments").select("status, scheduled_date, dependency_id, dependencies(name, color)"),
+        supabase.from("profiles").select("program").not("program", "is", null).neq("program", ""),
       ]);
 
       const rows = all || [];
       const total = rows.length;
-      const statusMap = {};
-      const depMap    = {};
-      const monthMap  = {};
+      const statusMap  = {};
+      const depMap     = {};
+      const monthMap   = {};
+      const programMap = {};
 
       rows.forEach(r => {
         statusMap[r.status] = (statusMap[r.status] || 0) + 1;
@@ -96,11 +98,21 @@ function useReportsData() {
         }
       });
 
+      (profileRows || []).forEach(p => {
+        if (p.program) programMap[p.program] = (programMap[p.program] || 0) + 1;
+      });
+      const totalProfiles = (profileRows || []).length || 1;
+      const byProgram = Object.entries(programMap)
+        .sort(([,a],[,b]) => b - a)
+        .slice(0, 5)
+        .map(([name, count]) => ({ name, count, pct: Math.round((count / totalProfiles) * 100) }));
+
       setData({
         total,
         byStatus: Object.entries(statusMap).map(([status, count]) => ({ status, count })),
         byDep:    Object.values(depMap).sort((a, b) => b.count - a.count),
         monthly:  Object.entries(monthMap).sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v),
+        byProgram,
       });
     } catch (e) {
       console.error(e);
@@ -316,21 +328,25 @@ export default function ReportsDashboard() {
                   <div key={h} style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
                 ))}
               </div>
-              {TOP_PROGRAMS.map(({ name, count, pct }, i) => (
-                <div
-                  key={name}
-                  style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 60px", padding: "0.875rem 1.5rem", background: i % 2 === 0 ? "white" : "#fafafa", borderBottom: i < TOP_PROGRAMS.length - 1 ? "1px solid #f9fafb" : "none", alignItems: "center" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "#f0fce4"}
-                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? "white" : "#fafafa"}
-                >
-                  <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827" }}>{name}</div>
-                  <div style={{ fontSize: "0.9375rem", fontWeight: 800, color: "#39a900", fontFamily: "var(--font-display)" }}>{count}</div>
-                  <div style={{ height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${(pct / 23) * 100}%`, background: "linear-gradient(90deg, #39a900, #5bc700)", borderRadius: 3 }} />
+              {(data.byProgram?.length ? data.byProgram : TOP_PROGRAMS).map(({ name, count, pct }, i) => {
+                const list = data.byProgram?.length ? data.byProgram : TOP_PROGRAMS;
+                const maxPct = Math.max(...list.map(p => p.pct), 1);
+                return (
+                  <div
+                    key={name}
+                    style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 60px", padding: "0.875rem 1.5rem", background: i % 2 === 0 ? "white" : "#fafafa", borderBottom: i < list.length - 1 ? "1px solid #f9fafb" : "none", alignItems: "center" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#f0fce4"}
+                    onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? "white" : "#fafafa"}
+                  >
+                    <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827" }}>{name}</div>
+                    <div style={{ fontSize: "0.9375rem", fontWeight: 800, color: "#39a900", fontFamily: "var(--font-display)" }}>{count}</div>
+                    <div style={{ height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${(pct / maxPct) * 100}%`, background: "linear-gradient(90deg, #39a900, #5bc700)", borderRadius: 3 }} />
+                    </div>
+                    <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#6b7280" }}>{pct}%</div>
                   </div>
-                  <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#6b7280" }}>{pct}%</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         ) : (

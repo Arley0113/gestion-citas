@@ -79,6 +79,16 @@ export default function HorariosPage() {
 
   const handleSave = async () => {
     if (!user) return;
+    for (const { key } of DAYS) {
+      const d = schedule[key];
+      if (!d.active) continue;
+      const [sh, sm] = d.start.split(":").map(Number);
+      const [eh, em] = d.end.split(":").map(Number);
+      if (eh * 60 + em <= sh * 60 + sm) {
+        toast.error(`${key.charAt(0).toUpperCase() + key.slice(1)}: la hora de fin debe ser mayor a la de inicio`);
+        return;
+      }
+    }
     setSaving(true);
     const { error } = await supabase
       .from("professional_schedules")

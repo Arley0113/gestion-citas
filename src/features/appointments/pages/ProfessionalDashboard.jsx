@@ -85,13 +85,19 @@ export default function ProfessionalDashboard() {
   useEffect(() => { fetch(); }, [fetch]);
 
   const confirm = async (id) => {
-    if (!DEV_ROLE) await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date() }).eq("id", id);
+    if (!DEV_ROLE) {
+      const { error } = await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date() }).eq("id", id);
+      if (error) { toast.error("Error al confirmar la cita"); return; }
+    }
     toast.success("Cita confirmada");
     fetch();
   };
 
   const noShow = async (id) => {
-    if (!DEV_ROLE) await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", id);
+    if (!DEV_ROLE) {
+      const { error } = await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", id);
+      if (error) { toast.error("Error al actualizar la cita"); return; }
+    }
     toast.info("Marcada como no asistió");
     fetch();
   };

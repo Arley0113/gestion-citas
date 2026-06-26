@@ -237,7 +237,7 @@ export default function AdminDashboard() {
                     <span style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>{title}</span>
                     {!hasAccess && (
                       <span style={{ fontSize: "0.6875rem", background: "#f3f4f6", color: "#9ca3af", padding: "0.125rem 0.5rem", borderRadius: 20, fontWeight: 600 }}>
-                        Sin permiso
+                        Próximamente
                       </span>
                     )}
                   </div>

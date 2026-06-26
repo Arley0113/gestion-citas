@@ -94,12 +94,13 @@ export default function DocumentosPage() {
   };
 
   const handleDelete = async (doc) => {
+    if (!window.confirm(`¿Eliminar "${doc.name}"? Esta acción no se puede deshacer.`)) return;
     const { error: storageError } = await supabase.storage
       .from("user-documents")
       .remove([doc.file_path]);
     if (storageError) { toast.error("Error al eliminar el archivo"); return; }
-
-    await supabase.from("user_documents").delete().eq("id", doc.id);
+    const { error: dbError } = await supabase.from("user_documents").delete().eq("id", doc.id);
+    if (dbError) { toast.error("Error al eliminar el registro"); return; }
     toast.success("Documento eliminado");
     setDocs(d => d.filter(x => x.id !== doc.id));
   };
@@ -107,9 +108,9 @@ export default function DocumentosPage() {
   const handleDownload = async (doc) => {
     const { data, error } = await supabase.storage
       .from("user-documents")
-      .createSignedUrl(doc.file_path, 60);
+      .createSignedUrl(doc.file_path, 300);
     if (error || !data?.signedUrl) { toast.error("No se pudo generar el enlace"); return; }
-    window.open(data.signedUrl, "_blank");
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   };
 
   return (

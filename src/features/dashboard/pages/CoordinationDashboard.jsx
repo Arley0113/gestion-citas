@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { TrendingUp, TrendingDown, Calendar, Users, BarChart2, ChevronRight, Bell, Download, RefreshCw, AlertTriangle } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfWeek, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from "recharts";
 import { supabase } from "../../../lib/supabase";
@@ -20,12 +20,7 @@ const TREND_DATA = [
   { week: "25 Mar", citas: 98,  meta: 100 },
 ];
 
-// Brand-aligned colors
-const DEP_DATA = [
-  { name: "Psicología",     count: 54, pct: 45, color: "#39a900", bg: "#f0fce4" },
-  { name: "Enfermería",     count: 38, pct: 32, color: "#0ea5e9", bg: "#e0f2fe" },
-  { name: "Trabajo Social", count: 28, pct: 23, color: "#f59e0b", bg: "#fef3c7" },
-];
+const DEP_COLORS = ["#39a900", "#0ea5e9", "#f59e0b", "#8b5cf6", "#ef4444"];
 
 const MOCK_RECENT = [
   { profiles: { full_name: "Laura Gómez" },    dependencies: { name: "Psicología" },     scheduled_time: "08:00:00", status: "completed" },
