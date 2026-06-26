@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Clock, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../providers/AuthProvider";
 
 const DAYS = [
   { key: "lunes",     label: "Lunes" },
@@ -41,9 +43,25 @@ function countSlots(start, end, duration) {
 }
 
 export default function HorariosPage() {
+  const { user } = useAuth();
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
   const [duration, setDuration] = useState(30);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("professional_schedules")
+      .select("*")
+      .eq("professional_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setSchedule(data.schedule ?? DEFAULT_SCHEDULE);
+          setDuration(data.duration_minutes ?? 30);
+        }
+      });
+  }, [user]);
 
   const toggleDay = (key) => {
     setSchedule(prev => ({
@@ -60,9 +78,16 @@ export default function HorariosPage() {
   };
 
   const handleSave = async () => {
+    if (!user) return;
     setSaving(true);
-    await new Promise(r => setTimeout(r, 800));
+    const { error } = await supabase
+      .from("professional_schedules")
+      .upsert(
+        { professional_id: user.id, schedule, duration_minutes: duration },
+        { onConflict: "professional_id" }
+      );
     setSaving(false);
+    if (error) { toast.error("Error al guardar los horarios"); return; }
     toast.success("Horarios guardados correctamente");
   };
 

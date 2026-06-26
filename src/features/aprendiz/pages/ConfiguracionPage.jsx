@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Shield, Lock, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../providers/AuthProvider";
 
 function Toggle({ value, onChange }) {
   return (
@@ -51,29 +53,59 @@ function SectionCard({ icon: Icon, iconColor, iconBg, title, children }) {
   );
 }
 
+const DEFAULT_NOTIFS = { reminder24h: true, confirmacion: true, cancelacion: true, novedades: false };
+const DEFAULT_PRIVACY = { historialProfesional: true, correosSeguimiento: true };
+
+async function upsertSettings(userId, notifs, privacy) {
+  return supabase
+    .from("user_settings")
+    .upsert(
+      { user_id: userId, settings: { notifs, privacy } },
+      { onConflict: "user_id" }
+    );
+}
+
 export default function ConfiguracionPage() {
-  const [notifs, setNotifs] = useState({
-    reminder24h: true,
-    confirmacion: true,
-    cancelacion: true,
-    novedades: false,
-  });
-  const [privacy, setPrivacy] = useState({
-    historialProfesional: true,
-    correosSeguimiento: true,
-  });
+  const { user } = useAuth();
+  const [notifs, setNotifs] = useState(DEFAULT_NOTIFS);
+  const [privacy, setPrivacy] = useState(DEFAULT_PRIVACY);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("user_settings")
+      .select("settings")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.settings) {
+          setNotifs(s => ({ ...s, ...data.settings.notifs }));
+          setPrivacy(s => ({ ...s, ...data.settings.privacy }));
+        }
+      });
+  }, [user]);
 
   const setNotif = (key) => (val) => {
-    setNotifs(p => ({ ...p, [key]: val }));
+    const next = { ...notifs, [key]: val };
+    setNotifs(next);
+    if (user) upsertSettings(user.id, next, privacy);
     toast.success("Preferencia guardada");
   };
 
   const setPriv = (key) => (val) => {
-    setPrivacy(p => ({ ...p, [key]: val }));
+    const next = { ...privacy, [key]: val };
+    setPrivacy(next);
+    if (user) upsertSettings(user.id, notifs, next);
     toast.success("Preferencia guardada");
   };
 
-  const handleSave = () => toast.success("Configuración guardada correctamente");
+  const handleSave = async () => {
+    if (user) {
+      const { error } = await upsertSettings(user.id, notifs, privacy);
+      if (error) { toast.error("Error al guardar"); return; }
+    }
+    toast.success("Configuración guardada correctamente");
+  };
 
   return (
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
