@@ -55,13 +55,16 @@ export default function RegisterPage() {
     setLoading(true);
     const full_name = `${form.first_name.trim()} ${form.last_name.trim()}`;
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email:    form.email,
         password: form.password,
         options: {
           data: {
             full_name,
-            document_number: form.document_number,
+            document_type:   form.document_type,
+            document_number: form.document_number.trim(),
+            ficha_number:    form.ficha_number.trim()  || null,
+            program:         form.program.trim()        || null,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -75,9 +78,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Actualizar perfil con datos SENA (el trigger ya creó el perfil)
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      const newUser = data?.user;
+      if (newUser) {
         await supabase.from("profiles").update({
           full_name,
           document_type:   form.document_type,
@@ -85,7 +87,7 @@ export default function RegisterPage() {
           ficha_number:    form.ficha_number.trim()  || null,
           program:         form.program.trim()        || null,
           onboarding_completed: true,
-        }).eq("id", user.id);
+        }).eq("id", newUser.id);
       }
 
       toast.success("¡Cuenta creada! Revisa tu correo para verificarla.");

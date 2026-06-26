@@ -1,37 +1,79 @@
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Check, ChevronRight, Tag, Target, StickyNote, Calendar, User, ArrowLeft, FileText, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { Check, ChevronRight, Tag, Target, StickyNote, Calendar, User, ArrowLeft, FileText, CheckCircle2, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { SenaLogo } from "../../../shared/components/SenaLogo";
+import { supabase } from "../../../lib/supabase";
 
 const OBS_LABELS = { done: "Cita cumplida", follow: "Requiere seguimiento", refer: "Remitir a otro servicio" };
 
-const MOCK_RESULT = {
-  apt: { id: "mock-detail", scheduled_date: "2026-06-28", scheduled_time: "14:00:00", reason: "Estrés y dificultades de concentración antes de los exámenes del trimestre", dependencies: { name: "Psicología" }, profiles: { full_name: "Juan Pérez", document_number: "1034567890" } },
-  notes: "Se trabajaron técnicas de respiración y mindfulness. Se identificaron patrones de pensamiento catastrófico relacionados con el rendimiento académico. Se recomienda seguimiento en 2 semanas.",
-  tags: ["Ansiedad", "Rendimiento académico"],
-  objectives: ["Explorar causas de la ansiedad académica", "Identificar estrategias de afrontamiento"],
-  obs: ["done", "follow"],
-};
-
 export default function AttentionResult() {
-  const { id }   = useParams();
-  const { state } = useLocation();
-  const navigate  = useNavigate();
+  const { id }     = useParams();
+  const { state }  = useLocation();
+  const navigate   = useNavigate();
 
-  const apt        = state?.apt        ?? MOCK_RESULT.apt;
-  const notes      = state?.notes      ?? MOCK_RESULT.notes;
-  const tags       = state?.tags       ?? MOCK_RESULT.tags;
-  const objectives = state?.objectives ?? MOCK_RESULT.objectives;
-  const obs        = state?.obs        ?? MOCK_RESULT.obs;
-  const hasFollow  = obs.includes("follow");
+  const [loading, setLoading] = useState(!state);
+  const [data,    setData]    = useState(state || null);
 
-  const initials = apt?.profiles?.full_name?.split(" ").slice(0, 2).map(w => w[0]).join("") || "?";
+  useEffect(() => {
+    if (state) return;
+    supabase
+      .from("appointments")
+      .select("id, scheduled_date, scheduled_time, reason, notes, tags, observations, user_id, profiles!user_id(full_name, document_number), dependencies(name)")
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data: apt }) => {
+        if (apt) {
+          setData({
+            apt: {
+              id: apt.id,
+              scheduled_date: apt.scheduled_date,
+              scheduled_time: apt.scheduled_time,
+              reason: apt.reason,
+              user_id: apt.user_id,
+              profiles: apt.profiles,
+              dependencies: apt.dependencies,
+            },
+            notes:      apt.notes      || "",
+            tags:       apt.tags       || [],
+            objectives: [],
+            obs:        apt.observations || [],
+          });
+        }
+        setLoading(false);
+      });
+  }, [id, state]);
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f5f7fa" }}>
+        <Loader2 size={32} color="#39a900" style={{ animation: "spin 0.7s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "0.5rem", fontFamily: "var(--font-sans)" }}>
+        <div style={{ fontSize: "2rem", fontWeight: 800, color: "#e5e7eb" }}>404</div>
+        <div style={{ color: "#9ca3af" }}>Registro no encontrado</div>
+        <button onClick={() => navigate("/professional")} style={{ marginTop: "1rem", padding: "0.5rem 1.25rem", background: "#39a900", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>
+          Volver al panel
+        </button>
+      </div>
+    );
+  }
+
+  const { apt, notes, tags, objectives, obs } = data;
+  const hasFollow = obs.includes("follow");
+  const initials  = apt?.profiles?.full_name?.split(" ").slice(0, 2).map(w => w[0]).join("") || "?";
 
   return (
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
 
-      {/* ─── Header ─── */}
+      {/* Header */}
       <div style={{ background: "white", borderBottom: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 2rem", height: "64px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -62,10 +104,10 @@ export default function AttentionResult() {
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "1.75rem 2rem", display: "grid", gridTemplateColumns: "1fr 300px", gap: "1.5rem", alignItems: "start" }}>
 
-        {/* ─── Columna principal ─── */}
+        {/* Columna principal */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
-          {/* Success card — premium */}
+          {/* Success card */}
           <div style={{ background: "linear-gradient(135deg, #1a6b00 0%, #39a900 100%)", borderRadius: "16px", padding: "2rem 2.25rem", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
             <div style={{ position: "absolute", bottom: -30, right: 80, width: 100, height: 100, borderRadius: "50%", background: "rgba(255,255,255,0.04)" }} />
@@ -181,7 +223,7 @@ export default function AttentionResult() {
           )}
         </div>
 
-        {/* ─── Columna lateral ─── */}
+        {/* Columna lateral */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
           {/* Resultado observaciones */}
@@ -221,9 +263,9 @@ export default function AttentionResult() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
               {[
-                { label: "Ver historial del aprendiz", icon: User,     action: () => apt && navigate(`/aprendiz/${apt.user_id}/historial`) },
-                { label: "Agendar nueva cita",         icon: Calendar, action: () => navigate("/professional") },
-                { label: "Volver al panel",             icon: ArrowLeft, action: () => navigate("/professional") },
+                { label: "Ver historial del aprendiz", icon: User,      action: () => apt?.user_id && navigate(`/aprendiz/${apt.user_id}/historial`) },
+                { label: "Agendar nueva cita",          icon: Calendar,  action: () => navigate("/professional") },
+                { label: "Volver al panel",              icon: ArrowLeft, action: () => navigate("/professional") },
               ].map(({ label, icon: Icon, action }) => (
                 <button
                   key={label}
@@ -256,6 +298,7 @@ export default function AttentionResult() {
           </div>
         </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
