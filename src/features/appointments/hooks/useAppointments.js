@@ -3,7 +3,6 @@ import { AppointmentRepository } from "../api/appointments.repository";
 import { toast } from "sonner";
 import { useAuth } from "../../../providers/AuthProvider";
 
-// ESTADOS DE CARGA ESPECÍFICOS (mejor UX que un genérico "loading")
 const STATUS = {
   IDLE: "idle",
   CREATING: "creating",
@@ -12,28 +11,69 @@ const STATUS = {
   ERROR: "error",
 };
 
+const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("preview")
+  : null;
+
+const MOCK_APPOINTMENTS = [
+  {
+    id: "mock-1", status: "pending",
+    scheduled_date: "2026-06-27", scheduled_time: "09:00:00",
+    reason: "Ansiedad y estrés por carga académica del trimestre",
+    dependency_id: 1,
+    dependencies: { name: "Psicología" },
+    profiles: { full_name: "Juan Pérez", document_number: "1034567890" },
+  },
+  {
+    id: "mock-2", status: "confirmed",
+    scheduled_date: "2026-06-28", scheduled_time: "14:00:00",
+    reason: "Control de tensión arterial y revisión general de salud",
+    dependency_id: 2,
+    dependencies: { name: "Enfermería" },
+    profiles: { full_name: "Juan Pérez", document_number: "1034567890" },
+  },
+  {
+    id: "mock-3", status: "completed",
+    scheduled_date: "2026-06-18", scheduled_time: "10:30:00",
+    reason: "Orientación sobre subsidio de alimentación y transporte",
+    dependency_id: 3,
+    dependencies: { name: "Trabajo Social" },
+    profiles: { full_name: "Juan Pérez", document_number: "1034567890" },
+  },
+  {
+    id: "mock-4", status: "cancelled",
+    scheduled_date: "2026-06-12", scheduled_time: "11:00:00",
+    reason: "Dificultades con el proceso de contrato de aprendizaje",
+    dependency_id: 3,
+    dependencies: { name: "Trabajo Social" },
+    profiles: { full_name: "Juan Pérez", document_number: "1034567890" },
+  },
+];
+
 export function useAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [status, setStatus] = useState(STATUS.IDLE);
   const [error, setError] = useState(null);
-  const { user, profile, isAprendiz } = useAuth();
+  const { user, profile } = useAuth();
 
-  // FETCH: Obtener citas según el rol automáticamente
   const fetchAppointments = useCallback(
     async (filters = {}) => {
+      if (DEV_ROLE) {
+        setAppointments(MOCK_APPOINTMENTS);
+        setStatus(STATUS.IDLE);
+        return MOCK_APPOINTMENTS;
+      }
+
       setStatus(STATUS.FETCHING);
       setError(null);
 
       try {
-        // RBAC implícito: los filtros dependen del rol
-        const roleFilters = isAprendiz()
+        const isAprendiz = profile?.roles?.name === "APRENDIZ";
+        const roleFilters = isAprendiz
           ? { userId: user.id }
-          : { dependencyId: profile.dependency_id };
+          : { dependencyId: profile?.dependency_id };
 
-        const data = await AppointmentRepository.fetch({
-          ...roleFilters,
-          ...filters,
-        });
+        const data = await AppointmentRepository.fetch({ ...roleFilters, ...filters });
         setAppointments(data);
         return data;
       } catch (err) {
@@ -44,7 +84,7 @@ export function useAppointments() {
         setStatus(STATUS.IDLE);
       }
     },
-    [user, profile, isAprendiz],
+    [user, profile],
   );
 
   // CREATE: Crear cita con validaciones de negocio
@@ -53,7 +93,7 @@ export function useAppointments() {
 
     try {
       // Regla de negocio: Máximo 2 citas pendientes
-      if (isAprendiz()) {
+      if (profile?.roles?.name === "APRENDIZ") {
         const pendingCount = await AppointmentRepository.countPending(user.id);
         if (pendingCount >= 2) {
           throw new Error(

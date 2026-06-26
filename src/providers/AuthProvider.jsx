@@ -1,36 +1,68 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
-
-// 1 Creamos el contenedor (context)
+import { ROLE_PERMISSIONS } from "../shared/rbac/permissions";
 
 const AuthContext = createContext(null);
 
-// 2. Hook personalizado para usar el contexto facilmente
-//esto evita importar useContext y AuthContext en cada archivo
+// DEV preview — constante de módulo (no cambia durante el ciclo de vida)
+const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("preview")
+  : null;
+
+const DEV_PROFILES = {
+  aprendiz:     { full_name: "Juan Pérez",     document_number: "1234567", dependency_id: 1,    onboarding_completed: true, roles: { name: "APRENDIZ" },       dependencies: { name: "Psicología" } },
+  professional: { full_name: "Carolina R.",    document_number: "9876543", dependency_id: 1,    onboarding_completed: true, roles: { name: "PSICOLOGIA" },      dependencies: { name: "Psicología" } },
+  coordination: { full_name: "Coordinadora",   document_number: "1111111", dependency_id: null, onboarding_completed: true, roles: { name: "COORDINACION" },    dependencies: null },
+  admin:        { full_name: "Admin SENA",     document_number: "2222222", dependency_id: null, onboarding_completed: true, roles: { name: "ADMINISTRADOR" },   dependencies: null },
+  superadmin:   { full_name: "Super Admin",    document_number: "3333333", dependency_id: null, onboarding_completed: true, roles: { name: "SUPERADMIN" },      dependencies: null },
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("UseAuth debe usarse dentro de AuthProvider");
-  }
+  if (!context) throw new Error("useAuth debe usarse dentro de AuthProvider");
   return context;
 };
 
-//3 El provider que envuelve la aplicacion
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null); //usuario de Supabase Auth
-  const [profile, setProfile] = useState(null); //Datos adicionales de nuestra tabla de perfil o profiles
-  const [loading, setLoading] = useState(true); //Estado de cargar inicial
-  const [error, setError] = useState(null); //manejo o gestion de errores
+  const isDev     = !!(DEV_ROLE && DEV_PROFILES[DEV_ROLE]);
+  const devProfile = isDev ? DEV_PROFILES[DEV_ROLE] : null;
+  const devUser    = isDev ? { id: "dev-user", email: "dev@sena.edu.co" } : null;
 
-  //Efecto Escuchar cambios de sesion( login, logout, refresh)
+  // Hooks siempre en el mismo orden — sin retorno condicional antes de hooks
+  const [user,    setUser]    = useState(devUser);
+  const [profile, setProfile] = useState(devProfile);
+  const [loading, setLoading] = useState(!isDev);
+  const [error,   setError]   = useState(null);
+
+  const fetchProfile = useCallback(async (userId) => {
+    if (isDev) return devProfile;
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*, roles(name), dependencies(name)")
+        .eq("id", userId)
+        .single();
+      if (error) throw error;
+      setProfile(data);
+      return data;
+    } catch (err) {
+      console.error("Error cargando perfil:", err);
+      setError("No se pudo cargar tu perfil. Intenta de nuevo.");
+      return null;
+    }
+  }, [isDev, devProfile]);
+
+  const refreshProfile = useCallback(async () => {
+    if (!user || isDev) return;
+    return fetchProfile(user.id);
+  }, [user, isDev, fetchProfile]);
+
   useEffect(() => {
-    //verificar sesion existente al cargar la app
+    if (isDev) return; // modo DEV — no conectar Supabase
+
     const checkSession = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setUser(session.user);
           await fetchProfile(session.user.id);
@@ -41,63 +73,35 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }
     };
+
     checkSession();
 
-    //suscribirse a cambios de autenticacion (login/logout en tiempo real )
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === "SIGNED_IN" && session?.user) {
-          setUser(session.user);
-          await fetchProfile(session.user.id);
-        } else if (event === "SIGNED_OUT") {
-          setUser(null);
-          setProfile(null);
-        }
-      },
-    );
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
+        setUser(session.user);
+        await fetchProfile(session.user.id);
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+        setProfile(null);
+      }
+      setLoading(false);
+    });
 
-    // limpieza de suscripcion al desmontar ( es buena practica)
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
+    return () => listener.subscription.unsubscribe();
+  }, [isDev, fetchProfile]);
 
-  //funcion auxiliar: obterner el perfil + el rol desde nuestra base de datos
-  const fetchProfile = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(
-          `
-            *,
-            roles (name, permissions),
-            dependencies(name)            
-            `,
-        )
-        .eq("id", userId)
-        .single();
-
-      if (error) throw error;
-      setProfile(data);
-    } catch (err) {
-      console.error("Error cargando perfil", err);
-      setError("No se pudo cargar el perfil de usuario");
-    }
-  };
-
-  //Método de autenticacion (clean code: funciones puras y descriptivas)
   const signIn = async (email, password) => {
     try {
       setError(null);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       return { success: true, data };
     } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
+      const msg = err.message === "Invalid login credentials"
+        ? "Correo o contraseña incorrectos"
+        : err.message;
+      setError(msg);
+      return { success: false, error: msg };
     }
   };
 
@@ -109,13 +113,11 @@ export function AuthProvider({ children }) {
         password,
         options: {
           data: {
-            full_name: userData.full_name,
-            document_number: userData.document_number,
-            //El traiger que creamos de SLQ creara automaticamente el perfil
+            full_name: userData.full_name?.trim(),
+            document_number: userData.document_number?.trim(),
           },
         },
       });
-
       if (error) throw error;
       return { success: true, data };
     } catch (err) {
@@ -123,50 +125,56 @@ export function AuthProvider({ children }) {
       return { success: false, error: err.message };
     }
   };
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-      //El estado se limpia automaticamente por onAuthStateChange
+      setUser(null);
+      setProfile(null);
     } catch (err) {
       setError(err.message);
     }
   };
 
-  //SISTEMA RBAC: helper functions para verificar permisos
   const hasRole = (requiredRoles) => {
     if (!profile?.roles?.name) return false;
-    if (Array.isArray(requiredRoles)) {
-      return requiredRoles.includes(profile.roles.name);
-    }
-    return profile.roles.name === requiredRoles;
+    return Array.isArray(requiredRoles)
+      ? requiredRoles.includes(profile.roles.name)
+      : profile.roles.name === requiredRoles;
   };
 
-  const isAdmin = () => hasRole("SUPERADMIN");
-  const isCoordination = () => hasRole(["COORDINACION", "SUPERADMIN"]);
-  const isProfessional = () =>
-    hasRole(["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL"]);
-  const isAprendiz = () => hasRole("APRENDIZ");
+  const can = (permission) =>
+    (ROLE_PERMISSIONS[profile?.roles?.name] || []).includes(permission);
 
-  //valor proporcionado a toda la app
-  const value = {
-    user,
-    profile,
-    loading,
-    error,
-    signIn,
-    signUp,
-    signOut,
-    //helpers RBAC
-    hasRole: hasRole,
-    isAdmin,
-    isCoordination,
-    isProfessional,
-    isAprendiz,
-  };
+  const isAdmin        = () => hasRole(["SUPERADMIN", "ADMINISTRADOR"]);
+  const isCoordination = () => hasRole(["COORDINACION", "SUPERADMIN", "ADMINISTRADOR"]);
+  const isProfessional = () => hasRole(["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL"]);
+  const isAprendiz     = () => hasRole("APRENDIZ");
+
+  const needsOnboarding = () =>
+    !isDev && user && profile && !profile.onboarding_completed && isAprendiz();
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f7f9f7" }}>
+        <div>
+          <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite", margin: "0 auto 0.875rem" }} />
+          <p style={{ fontSize: "0.8125rem", color: "#9ca3af", textAlign: "center", fontFamily: "var(--font-sans)" }}>Iniciando sesión...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      </div>
+    );
+  }
 
   return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
+    <AuthContext.Provider value={{
+      user, profile, loading, error,
+      signIn, signUp, signOut, refreshProfile,
+      hasRole, can,
+      isAdmin, isCoordination, isProfessional, isAprendiz,
+      needsOnboarding,
+    }}>
+      {children}
     </AuthContext.Provider>
   );
 }

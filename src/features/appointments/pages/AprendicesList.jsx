@@ -1,0 +1,308 @@
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { Search, Users, ChevronRight, Calendar, Clock, AlertCircle } from "lucide-react";
+import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../providers/AuthProvider";
+import { format, parseISO, differenceInDays } from "date-fns";
+import { es } from "date-fns/locale";
+
+const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("preview") : null;
+
+const DEV_DATA = [
+  { id: "a1", full_name: "Ana García",       document_number: "1001234", program: "Desarrollo de Software",   last_date: "2026-06-20", total: 3 },
+  { id: "a2", full_name: "Carlos López",     document_number: "1005678", program: "Diseño Gráfico",           last_date: "2026-06-15", total: 1 },
+  { id: "a3", full_name: "María Rodríguez",  document_number: "1009012", program: "Contabilidad",             last_date: "2026-06-18", total: 2 },
+  { id: "a4", full_name: "Pedro Martínez",   document_number: "1003456", program: "Desarrollo de Software",   last_date: null,         total: 0 },
+  { id: "a5", full_name: "Laura Sánchez",    document_number: "1007890", program: "Administración Empresas",  last_date: "2026-06-22", total: 4 },
+  { id: "a6", full_name: "Diego Torres",     document_number: "1002345", program: "Mantenimiento Industrial", last_date: "2026-06-10", total: 1 },
+];
+
+const AVATAR_COLORS = ["#39a900","#3b82f6","#8b5cf6","#f59e0b","#ef4444","#06b6d4","#ec4899","#14b8a6"];
+
+const PROGRAM_COLORS = {
+  "Desarrollo de Software":   { bg: "#eff6ff", color: "#1e40af" },
+  "Diseño Gráfico":           { bg: "#f5f3ff", color: "#6d28d9" },
+  "Contabilidad":             { bg: "#fef3c7", color: "#92400e" },
+  "Administración Empresas":  { bg: "#f0fce4", color: "#166534" },
+  "Mantenimiento Industrial": { bg: "#fef2f2", color: "#991b1b" },
+};
+const DEFAULT_PROGRAM_COLOR = { bg: "#f3f4f6", color: "#374151" };
+
+const normalize = (str) =>
+  str.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+const isAtRisk = (aprendiz) => {
+  if (!aprendiz.total || aprendiz.total === 0) return true;
+  if (!aprendiz.last_date) return true;
+  return differenceInDays(new Date(), parseISO(aprendiz.last_date)) > 30;
+};
+
+const FILTERS = [
+  { key: "todos",     label: "Todos" },
+  { key: "activos",   label: "Con citas" },
+  { key: "sin_citas", label: "Sin citas" },
+  { key: "riesgo",    label: "Sin actividad reciente" },
+];
+
+export default function AprendicesList() {
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const [aprendices, setAprendices]   = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [search, setSearch]           = useState("");
+  const [activeFilter, setActiveFilter] = useState("todos");
+
+  const fetchAprendices = useCallback(async () => {
+    if (DEV_ROLE) {
+      setAprendices(DEV_DATA);
+      setLoading(false);
+      return;
+    }
+    try {
+      const { data: roleRow } = await supabase
+        .from("roles").select("id").eq("name", "APRENDIZ").single();
+      if (!roleRow) return;
+
+      const { data } = await supabase
+        .from("profiles")
+        .select(`id, full_name, document_number, program, appointments!appointments_user_id_fkey(scheduled_date)`)
+        .eq("role_id", roleRow.id)
+        .order("full_name");
+
+      const mapped = (data || []).map(p => {
+        const dates = (p.appointments || []).map(a => a.scheduled_date).sort().reverse();
+        return {
+          id:              p.id,
+          full_name:       p.full_name,
+          document_number: p.document_number,
+          program:         p.program,
+          last_date:       dates[0] || null,
+          total:           dates.length,
+        };
+      });
+      setAprendices(mapped);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [profile]);
+
+  useEffect(() => { fetchAprendices(); }, [fetchAprendices]);
+
+  const byFilter = aprendices.filter(a => {
+    if (activeFilter === "activos")   return a.total > 0;
+    if (activeFilter === "sin_citas") return a.total === 0;
+    if (activeFilter === "riesgo")    return isAtRisk(a);
+    return true;
+  });
+
+  const filtered = byFilter.filter(a => {
+    if (!search) return true;
+    const q = normalize(search);
+    return normalize(a.full_name || "").includes(q)
+      || (a.document_number || "").includes(q)
+      || normalize(a.program || "").includes(q);
+  });
+
+  return (
+    <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
+
+      {/* Header */}
+      <div style={{ background: "white", borderBottom: "1px solid #e5e7eb" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "1.75rem 2rem" }}>
+          <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#39a900", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>
+            Aprendices
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: "1.625rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.025em", lineHeight: 1.2, fontFamily: "var(--font-display)", margin: 0 }}>
+              Mis aprendices
+            </h1>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.875rem", background: "#f0fce4", borderRadius: "8px", border: "1px solid #bbf7d0", flexShrink: 0 }}>
+              <Users size={14} color="#39a900" />
+              <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#166534" }}>
+                {activeFilter !== "todos" || search
+                  ? `${filtered.length} de ${aprendices.length}`
+                  : aprendices.length} registrados
+              </span>
+            </div>
+          </div>
+
+          {/* Búsqueda */}
+          <div style={{ marginTop: "1.25rem", position: "relative" }}>
+            <Search size={15} color="#9ca3af" style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, documento o programa..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ width: "100%", boxSizing: "border-box", paddingLeft: "2.5rem", paddingRight: "1rem", paddingTop: "0.65rem", paddingBottom: "0.65rem", border: "1.5px solid #e5e7eb", borderRadius: "10px", fontSize: "0.9375rem", color: "#111827", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s", fontFamily: "var(--font-sans)" }}
+              onFocus={e => { e.target.style.borderColor = "#39a900"; e.target.style.boxShadow = "0 0 0 3px rgba(57,169,0,0.15)"; }}
+              onBlur={e =>  { e.target.style.borderColor = "#e5e7eb";  e.target.style.boxShadow = "none"; }}
+            />
+          </div>
+
+          {/* Filtros */}
+          <div style={{ marginTop: "0.875rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            {FILTERS.map(f => (
+              <button
+                key={f.key}
+                onClick={() => setActiveFilter(f.key)}
+                style={{
+                  padding: "0.375rem 0.875rem",
+                  borderRadius: 20,
+                  border: activeFilter === f.key ? "1.5px solid #39a900" : "1.5px solid #e5e7eb",
+                  background: activeFilter === f.key ? "#39a900" : "white",
+                  color: activeFilter === f.key ? "white" : "#6b7280",
+                  fontSize: "0.8125rem",
+                  fontWeight: activeFilter === f.key ? 700 : 500,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-sans)",
+                  transition: "all 0.15s",
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "1.5rem 2rem" }}>
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "3rem 0" }}>
+            <div style={{ width: 32, height: 32, border: "2.5px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "4rem 1rem" }}>
+            <Users size={48} color="#e5e7eb" style={{ margin: "0 auto 1rem", display: "block" }} />
+            <div style={{ fontWeight: 600, fontSize: "1rem", color: "#374151" }}>
+              No se encontraron aprendices
+            </div>
+            <p style={{ fontSize: "0.875rem", color: "#9ca3af", marginTop: "0.375rem" }}>
+              Intenta con otro término de búsqueda o filtro
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem" }}>
+            {filtered.map(a => (
+              <AprendizCard
+                key={a.id}
+                aprendiz={a}
+                onClick={() => navigate(`/aprendiz/${a.id}/historial${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+function AprendizCard({ aprendiz, onClick }) {
+  const [hovered, setHovered] = useState(false);
+  const initial   = aprendiz.full_name?.charAt(0).toUpperCase() || "?";
+  const avatarColor = AVATAR_COLORS[aprendiz.full_name?.charCodeAt(0) % AVATAR_COLORS.length] || "#9ca3af";
+  const progColor = PROGRAM_COLORS[aprendiz.program] || DEFAULT_PROGRAM_COLOR;
+  const atRisk    = isAtRisk(aprendiz);
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: "white",
+        borderRadius: 14,
+        border: `1px solid ${hovered ? "#d1d5db" : "#e5e7eb"}`,
+        padding: "1.25rem",
+        cursor: "pointer",
+        transition: "box-shadow 0.15s, border-color 0.15s, transform 0.12s",
+        boxShadow: hovered ? "0 4px 20px rgba(0,0,0,0.08)" : "0 1px 4px rgba(0,0,0,0.04)",
+        transform: hovered ? "translateY(-2px)" : "translateY(0)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.875rem",
+      }}
+    >
+      {/* Top row: avatar + info + risk */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "0.875rem" }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+          background: `${avatarColor}18`,
+          border: `1.5px solid ${avatarColor}30`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: "1.25rem", fontWeight: 800, color: avatarColor,
+          fontFamily: "var(--font-display)",
+        }}>
+          {initial}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {aprendiz.full_name}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem" }}>
+            CC · {aprendiz.document_number || "—"}
+          </div>
+        </div>
+        {atRisk && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 20, padding: "0.2rem 0.5rem", flexShrink: 0 }}>
+            <AlertCircle size={11} color="#d97706" />
+            <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "#92400e" }}>Sin actividad</span>
+          </div>
+        )}
+      </div>
+
+      {/* Programa badge */}
+      {aprendiz.program && (
+        <div style={{ display: "inline-flex" }}>
+          <span style={{
+            fontSize: "0.75rem", fontWeight: 600,
+            background: progColor.bg, color: progColor.color,
+            padding: "0.25rem 0.625rem", borderRadius: 20,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%",
+          }}>
+            {aprendiz.program}
+          </span>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div style={{ display: "flex", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", color: "#6b7280", fontSize: "0.8125rem" }}>
+          <Calendar size={13} color="#9ca3af" />
+          <span><strong style={{ color: "#111827" }}>{aprendiz.total}</strong> {aprendiz.total === 1 ? "cita" : "citas"}</span>
+        </div>
+        {aprendiz.last_date && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", color: "#9ca3af", fontSize: "0.75rem" }}>
+            <Clock size={12} />
+            <span>Última: {format(parseISO(aprendiz.last_date), "d MMM", { locale: es })}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Footer button */}
+      <div
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          paddingTop: "0.75rem",
+          borderTop: "1px solid #f3f4f6",
+        }}
+      >
+        <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#374151" }}>Ver historial</span>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8,
+          background: hovered ? "#f0fce4" : "#f9fafb",
+          border: `1px solid ${hovered ? "#bbf7d0" : "#e5e7eb"}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "all 0.15s",
+        }}>
+          <ChevronRight size={14} color={hovered ? "#39a900" : "#9ca3af"} />
+        </div>
+      </div>
+    </div>
+  );
+}
