@@ -147,14 +147,26 @@ Clases globales vía `<style>` tag en Layout:
 - `.hide-mobile` / `.full-mobile` — show/hide helpers
 - `.bottom-nav` — oculto en desktop (≥769px), visible en mobile
 
-## Estado actual (sesión última)
-- ✅ Sistema registro/invitación staff completo (DB + Edge Function + StaffInvitePage)
-- ✅ APRENDIZ sidebar: 8 items / 4 grupos; PROFESIONAL sidebar: 9 items / 5 grupos
-- ✅ 9 páginas nuevas creadas: MisCitas, MiExpediente, Documentos, Configuracion, Ayuda, Agenda, Notas, Estadisticas, Horarios
-- ✅ Responsive: clases globales en Layout.jsx, mobile bottom nav actualizado
-- ✅ Playwright: 11/11 rutas verificadas, build limpio 3200 módulos ~847ms
+## Estado actual (sesión última — producción)
+- ✅ Deploy en producción: https://gestion-citas-nu.vercel.app (GitHub → Vercel auto-deploy)
+- ✅ Login solo email/contraseña (OAuth removido), olvidé contraseña + ResetPasswordPage
+- ✅ Edge Function `invite-staff` deployada a Supabase (version 2, ACTIVE)
+- ✅ Todas las páginas conectadas a datos reales de Supabase:
+  - HorariosPage → `professional_schedules` (upsert con validación fin > inicio)
+  - ConfiguracionPage → `user_settings` (upsert en toggle y guardado)
+  - DocumentosPage → bucket `user-documents` + tabla `user_documents` (signed URL 300s)
+  - MiExpedientePage → `appointments WHERE notes IS NOT NULL`
+  - ProfessionalNotesPage → `appointments WHERE professional_id = user.id`
+  - ProfessionalStatsPage → queries reales, KPIs calculados, bar chart por semana
+  - ProfessionalAgendaPage → queries por semana, vista lista/semana
+  - CoordinationDashboard → KPIs reales + filtros por dependencia/fecha
+  - ReportsDashboard → datos reales con exportación CSV
+- ✅ AttentionResult: carga desde Supabase al refrescar (usando :id param)
+- ✅ RegisterPage: usa data.user de signUp() directamente + todos los campos en metadata
+- ✅ Notification badge: count real de citas pendientes/confirmadas futuras del aprendiz
+- ✅ 9 bugs corregidos: password 8 chars, documentos validación/noopener/deleteConfirm, etc.
+- ✅ Build limpio: 3201 módulos ~836ms
 
 ## Pendiente
-- Desplegar Edge Function `invite-staff` a producción (local ya funciona)
-- Probar flujo E2E real de invitación con email real de Supabase
 - Notificaciones email cuando se confirma una cita (Resend API)
+- Probar flujo E2E real de invitación con email real de Supabase
