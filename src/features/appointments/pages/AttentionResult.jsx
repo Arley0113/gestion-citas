@@ -102,7 +102,7 @@ export default function AttentionResult() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "1.75rem 2rem", display: "grid", gridTemplateColumns: "1fr 300px", gap: "1.5rem", alignItems: "start" }}>
+      <div className="result-layout">
 
         {/* Columna principal */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -264,7 +264,7 @@ export default function AttentionResult() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
               {[
                 { label: "Ver historial del aprendiz", icon: User,      action: () => apt?.user_id && navigate(`/aprendiz/${apt.user_id}/historial`) },
-                { label: "Agendar nueva cita",          icon: Calendar,  action: () => navigate("/professional") },
+                { label: "Ver agenda semanal",            icon: Calendar,  action: () => navigate("/professional/agenda") },
                 { label: "Volver al panel",              icon: ArrowLeft, action: () => navigate("/professional") },
               ].map(({ label, icon: Icon, action }) => (
                 <button
@@ -298,7 +298,11 @@ export default function AttentionResult() {
           </div>
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .result-layout { max-width: 1000px; margin: 0 auto; padding: 1.75rem 2rem; display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; align-items: start; }
+        @media (max-width: 768px) { .result-layout { grid-template-columns: 1fr; padding: 1rem; } }
+      `}</style>
     </div>
   );
 }

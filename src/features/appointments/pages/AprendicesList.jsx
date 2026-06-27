@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Users, ChevronRight, Calendar, Clock, AlertCircle } from "lucide-react";
+import { Search, Users, ChevronRight, ChevronLeft, Calendar, Clock, AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -28,6 +28,8 @@ const PROGRAM_COLORS = {
 };
 const DEFAULT_PROGRAM_COLOR = { bg: "#f3f4f6", color: "#374151" };
 
+const PAGE_SIZE = 20;
+
 const normalize = (str) =>
   str.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -51,6 +53,7 @@ export default function AprendicesList() {
   const [loading, setLoading]         = useState(true);
   const [search, setSearch]           = useState("");
   const [activeFilter, setActiveFilter] = useState("todos");
+  const [page, setPage]               = useState(0);
 
   const fetchAprendices = useCallback(async () => {
     if (DEV_ROLE) {
@@ -63,14 +66,33 @@ export default function AprendicesList() {
         .from("roles").select("id").eq("name", "APRENDIZ").single();
       if (!roleRow) return;
 
-      const { data } = await supabase
+      const { data: profiles } = await supabase
         .from("profiles")
-        .select(`id, full_name, document_number, program, appointments!appointments_user_id_fkey(scheduled_date)`)
+        .select("id, full_name, document_number, program")
         .eq("role_id", roleRow.id)
-        .order("full_name");
+        .order("full_name")
+        .limit(200);
 
-      const mapped = (data || []).map(p => {
-        const dates = (p.appointments || []).map(a => a.scheduled_date).sort().reverse();
+      if (!profiles?.length) { setAprendices([]); return; }
+
+      const ids = profiles.map(p => p.id);
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const { data: apts } = await supabase
+        .from("appointments")
+        .select("user_id, scheduled_date")
+        .in("user_id", ids)
+        .gte("scheduled_date", sixMonthsAgo.toISOString().slice(0, 10))
+        .order("scheduled_date", { ascending: false });
+
+      const aptsByUser = {};
+      for (const a of (apts || [])) {
+        if (!aptsByUser[a.user_id]) aptsByUser[a.user_id] = [];
+        aptsByUser[a.user_id].push(a.scheduled_date);
+      }
+
+      const mapped = profiles.map(p => {
+        const dates = aptsByUser[p.id] || [];
         return {
           id:              p.id,
           full_name:       p.full_name,
@@ -105,6 +127,9 @@ export default function AprendicesList() {
       || normalize(a.program || "").includes(q);
   });
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   return (
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
 
@@ -135,7 +160,7 @@ export default function AprendicesList() {
               type="text"
               placeholder="Buscar por nombre, documento o programa..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); setPage(0); }}
               style={{ width: "100%", boxSizing: "border-box", paddingLeft: "2.5rem", paddingRight: "1rem", paddingTop: "0.65rem", paddingBottom: "0.65rem", border: "1.5px solid #e5e7eb", borderRadius: "10px", fontSize: "0.9375rem", color: "#111827", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s", fontFamily: "var(--font-sans)" }}
               onFocus={e => { e.target.style.borderColor = "#39a900"; e.target.style.boxShadow = "0 0 0 3px rgba(57,169,0,0.15)"; }}
               onBlur={e =>  { e.target.style.borderColor = "#e5e7eb";  e.target.style.boxShadow = "none"; }}
@@ -147,7 +172,7 @@ export default function AprendicesList() {
             {FILTERS.map(f => (
               <button
                 key={f.key}
-                onClick={() => setActiveFilter(f.key)}
+                onClick={() => { setActiveFilter(f.key); setPage(0); }}
                 style={{
                   padding: "0.375rem 0.875rem",
                   borderRadius: 20,
@@ -185,15 +210,39 @@ export default function AprendicesList() {
             </p>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem" }}>
-            {filtered.map(a => (
-              <AprendizCard
-                key={a.id}
-                aprendiz={a}
-                onClick={() => navigate(`/aprendiz/${a.id}/historial${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
-              />
-            ))}
-          </div>
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem" }}>
+              {paginated.map(a => (
+                <AprendizCard
+                  key={a.id}
+                  aprendiz={a}
+                  onClick={() => navigate(`/aprendiz/${a.id}/historial${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", marginTop: "1.5rem", paddingBottom: "0.5rem" }}>
+                <button
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", background: "white", border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.875rem", fontWeight: 600, color: page === 0 ? "#d1d5db" : "#374151", cursor: page === 0 ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)" }}
+                >
+                  <ChevronLeft size={15} /> Anterior
+                </button>
+                <span style={{ fontSize: "0.875rem", color: "#6b7280", fontWeight: 500 }}>
+                  Página {page + 1} de {totalPages} · {filtered.length} aprendices
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", background: "white", border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.875rem", fontWeight: 600, color: page >= totalPages - 1 ? "#d1d5db" : "#374151", cursor: page >= totalPages - 1 ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)" }}
+                >
+                  Siguiente <ChevronRight size={15} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

@@ -96,6 +96,7 @@ export default function StaffInvitePage() {
   };
 
   const handleCancel = async (id) => {
+    if (!window.confirm("¿Cancelar esta invitación? El enlace enviado dejará de funcionar.")) return;
     const { error } = await supabase
       .from("staff_invitations")
       .update({ status: "cancelled" })

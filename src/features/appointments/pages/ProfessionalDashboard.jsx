@@ -7,6 +7,7 @@ import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { usePermissions } from "../../../shared/rbac/usePermissions";
 import { P } from "../../../shared/rbac/permissions";
+import { notifyAppointmentConfirmed, notifyAppointmentCancelled } from "../../../lib/notifications";
 import { toast } from "sonner";
 
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("preview") : null;
@@ -69,12 +70,12 @@ export default function ProfessionalDashboard() {
 
   const fetch = useCallback(async () => {
     if (DEV_ROLE) { setApts(MOCK); setLoading(false); return; }
-    if (!profile?.dependency_id) return;
+    if (!profile?.dependency_id) { setLoading(false); return; }
     const todayStr = format(new Date(), "yyyy-MM-dd");
     setLoading(true);
     const { data } = await supabase
       .from("appointments")
-      .select("*, profiles!user_id(full_name,document_number)")
+      .select("*, profiles!user_id(full_name,document_number,email)")
       .eq("dependency_id", profile.dependency_id)
       .eq("scheduled_date", todayStr)
       .order("scheduled_time");
@@ -84,19 +85,49 @@ export default function ProfessionalDashboard() {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  const confirm = async (id) => {
+  useEffect(() => {
+    if (DEV_ROLE || !profile?.dependency_id) return;
+    const channel = supabase
+      .channel(`apt-today-${profile.dependency_id}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "appointments",
+        filter: `dependency_id=eq.${profile.dependency_id}`,
+      }, () => fetch())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [profile, fetch]);
+
+  const confirm = async (apt) => {
     if (!DEV_ROLE) {
-      const { error } = await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date() }).eq("id", id);
+      const { error } = await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date() }).eq("id", apt.id);
       if (error) { toast.error("Error al confirmar la cita"); return; }
+      notifyAppointmentConfirmed({
+        to_email: apt.profiles?.email,
+        user_id: apt.user_id,
+        to_name: apt.profiles?.full_name || "Aprendiz",
+        service_name: depName,
+        scheduled_date: apt.scheduled_date,
+        scheduled_time: apt.scheduled_time,
+      });
     }
     toast.success("Cita confirmada");
     fetch();
   };
 
-  const noShow = async (id) => {
+  const noShow = async (apt) => {
     if (!DEV_ROLE) {
-      const { error } = await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", id);
+      const { error } = await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", apt.id);
       if (error) { toast.error("Error al actualizar la cita"); return; }
+      notifyAppointmentCancelled({
+        to_email: apt.profiles?.email,
+        user_id: apt.user_id,
+        to_name: apt.profiles?.full_name || "Aprendiz",
+        service_name: depName,
+        scheduled_date: apt.scheduled_date,
+        reason: "El profesional registró que no asististe a la cita.",
+      });
     }
     toast.info("Marcada como no asistió");
     fetch();
@@ -112,10 +143,10 @@ export default function ProfessionalDashboard() {
   const filtered = apts.filter(a => a.status === tab);
 
   const statsCards = [
-    { label: "Total hoy",   value: counts.total,     icon: CalendarDays,  color: "#6366f1", bg: "#eef2ff", trend: "+1", up: true  },
-    { label: "Pendientes",  value: counts.pending,   icon: AlertCircle,   color: "#d97706", bg: "#fffbeb", trend: "-1", up: false },
-    { label: "Confirmadas", value: counts.confirmed, icon: TrendingUp,    color: "#2563eb", bg: "#eff6ff", trend: "+2", up: true  },
-    { label: "Completadas", value: counts.completed, icon: CheckCircle2,  color: "#16a34a", bg: "#f0fce4", trend: "+1", up: true  },
+    { label: "Total hoy",   value: counts.total,     icon: CalendarDays,  color: "#6366f1", bg: "#eef2ff" },
+    { label: "Pendientes",  value: counts.pending,   icon: AlertCircle,   color: "#d97706", bg: "#fffbeb" },
+    { label: "Confirmadas", value: counts.confirmed, icon: TrendingUp,    color: "#2563eb", bg: "#eff6ff" },
+    { label: "Completadas", value: counts.completed, icon: CheckCircle2,  color: "#16a34a", bg: "#f0fce4" },
   ];
 
   const progressPct = counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0;
@@ -173,10 +204,6 @@ export default function ProfessionalDashboard() {
                       {s.value}
                     </div>
                     <div style={{ fontSize: "0.6875rem", color: "#9ca3af", fontWeight: 500, marginTop: "0.125rem" }}>{s.label}</div>
-                  </div>
-                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: s.up ? "#16a34a" : "#dc2626", display: "flex", alignItems: "center", gap: "0.125rem", flexShrink: 0 }}>
-                    <span>{s.up ? "▲" : "▼"}</span>
-                    <span>{s.trend}</span>
                   </div>
                 </div>
               );
@@ -287,7 +314,7 @@ export default function ProfessionalDashboard() {
                         {(apt.status === "pending" || apt.status === "confirmed") && (can(P.APPOINTMENTS_CONFIRM) || can(P.APPOINTMENTS_START) || can(P.APPOINTMENTS_NO_SHOW)) && (
                           <div style={{ display: "flex", gap: "0.625rem", padding: "0.875rem 1.5rem", background: "#fafafa", borderTop: "1px solid #f3f4f6" }}>
                             {can(P.APPOINTMENTS_CONFIRM) && apt.status === "pending" && (
-                              <button onClick={() => confirm(apt.id)}
+                              <button onClick={() => confirm(apt)}
                                 style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.25rem", background: "#39a900", color: "white", border: "none", borderRadius: 8, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "0 1px 4px rgba(57,169,0,0.3)" }}>
                                 <Check size={14} /> Confirmar
                               </button>
@@ -299,7 +326,7 @@ export default function ProfessionalDashboard() {
                               </button>
                             )}
                             {can(P.APPOINTMENTS_NO_SHOW) && (
-                              <button onClick={() => noShow(apt.id)}
+                              <button onClick={() => noShow(apt)}
                                 style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1rem", background: "white", color: "#9ca3af", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                                 <X size={14} /> No asistió
                               </button>
@@ -365,7 +392,7 @@ export default function ProfessionalDashboard() {
               {[
                 { icon: Users,      label: "Aprendices",  sub: "Historial de atención",   path: "/aprendices", color: "#3b82f6", bg: "#eff6ff" },
                 { icon: FolderOpen, label: "Expedientes", sub: "Historial por aprendiz",   path: "/aprendices", color: "#8b5cf6", bg: "#f5f3ff" },
-                { icon: BarChart2,  label: "Mis citas",   sub: "Agenda completa del día",  path: null,          color: "#39a900", bg: "#f0fce4" },
+                { icon: BarChart2,  label: "Mis citas",   sub: "Agenda completa del día",  path: "/professional/agenda", color: "#39a900", bg: "#f0fce4" },
               ].map(({ icon: Ic, label, sub, path, color, bg }, i, arr) => (
                 <div key={label} onClick={() => path && navigate(path)}
                   style={{ display: "flex", alignItems: "center", gap: "0.875rem", padding: "0.875rem 1.25rem", borderBottom: i < arr.length - 1 ? "1px solid #f9fafb" : "none", cursor: path ? "pointer" : "default", transition: "background 0.1s, border-color 0.1s", borderLeft: "3px solid transparent" }}

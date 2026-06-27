@@ -37,13 +37,22 @@ const MOCK_APT = {
   profiles: { full_name: "Juan Pérez", document_number: "1034567890", program: "Tecnología en Desarrollo de Software" },
 };
 
-function useElapsed(startTime) {
-  const [elapsed, setElapsed] = useState(0);
+function useElapsed(scheduledTime) {
+  const getElapsed = (t) => {
+    if (!t) return 0;
+    const [h, m] = t.split(":").map(Number);
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(h, m, 0, 0);
+    return Math.max(0, Math.floor((now - start) / 60000));
+  };
+  const [elapsed, setElapsed] = useState(() => getElapsed(scheduledTime));
   const ref = useRef(null);
   useEffect(() => {
-    ref.current = setInterval(() => setElapsed(e => e + 1), 60000);
+    setElapsed(getElapsed(scheduledTime));
+    ref.current = setInterval(() => setElapsed(getElapsed(scheduledTime)), 60000);
     return () => clearInterval(ref.current);
-  }, []);
+  }, [scheduledTime]);
   return elapsed;
 }
 
@@ -56,7 +65,7 @@ export default function AttentionInProgress() {
   const [checkedObjs, setObjs]    = useState([]);
   const [selectedObs, setObs]     = useState([]);
   const [saving, setSaving]       = useState(false);
-  const elapsed = useElapsed();
+  const elapsed = useElapsed(apt?.scheduled_time);
 
   useEffect(() => {
     if (DEV_ROLE) return;
@@ -152,7 +161,7 @@ export default function AttentionInProgress() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem", padding: "1.75rem 2rem", maxWidth: 1200, margin: "0 auto" }}>
+      <div className="attention-layout">
 
         {/* ─── Columna principal ─── */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -340,7 +349,11 @@ export default function AttentionInProgress() {
         </div>
       </div>
 
-      <style>{`@keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(57,169,0,0.2)} 50%{box-shadow:0 0 0 6px rgba(57,169,0,0.08)} }`}</style>
+      <style>{`
+        @keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(57,169,0,0.2)} 50%{box-shadow:0 0 0 6px rgba(57,169,0,0.08)} }
+        .attention-layout { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; padding: 1.75rem 2rem; max-width: 1200px; margin: 0 auto; }
+        @media (max-width: 768px) { .attention-layout { grid-template-columns: 1fr; padding: 1rem; } }
+      `}</style>
     </div>
   );
 }

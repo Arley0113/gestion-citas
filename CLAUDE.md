@@ -150,23 +150,23 @@ Clases globales vía `<style>` tag en Layout:
 ## Estado actual (sesión última — producción)
 - ✅ Deploy en producción: https://gestion-citas-nu.vercel.app (GitHub → Vercel auto-deploy)
 - ✅ Login solo email/contraseña (OAuth removido), olvidé contraseña + ResetPasswordPage
-- ✅ Edge Function `invite-staff` deployada a Supabase (version 2, ACTIVE)
-- ✅ Todas las páginas conectadas a datos reales de Supabase:
-  - HorariosPage → `professional_schedules` (upsert con validación fin > inicio)
-  - ConfiguracionPage → `user_settings` (upsert en toggle y guardado)
-  - DocumentosPage → bucket `user-documents` + tabla `user_documents` (signed URL 300s)
-  - MiExpedientePage → `appointments WHERE notes IS NOT NULL`
-  - ProfessionalNotesPage → `appointments WHERE professional_id = user.id`
-  - ProfessionalStatsPage → queries reales, KPIs calculados, bar chart por semana
-  - ProfessionalAgendaPage → queries por semana, vista lista/semana
-  - CoordinationDashboard → KPIs reales + filtros por dependencia/fecha
-  - ReportsDashboard → datos reales con exportación CSV
-- ✅ AttentionResult: carga desde Supabase al refrescar (usando :id param)
-- ✅ RegisterPage: usa data.user de signUp() directamente + todos los campos en metadata
-- ✅ Notification badge: count real de citas pendientes/confirmadas futuras del aprendiz
-- ✅ 9 bugs corregidos: password 8 chars, documentos validación/noopener/deleteConfirm, etc.
-- ✅ Build limpio: 3201 módulos ~836ms
+- ✅ Edge Functions deployadas en Supabase:
+  - `invite-staff` (v2, ACTIVE) — invitación de staff con service role
+  - `notify-appointment` (v5, ACTIVE, verify_jwt: true) — notificaciones email vía Resend API
+- ✅ Migración DB: `user_documents.appointment_id` FK → `appointments(id)` ON DELETE SET NULL
+- ✅ Todas las páginas conectadas a datos reales de Supabase
+- ✅ AuthProvider: timeout de 12s en checkSession() — previene spinner infinito
+- ✅ ProfessionalDashboard: realtime subscription via `postgres_changes` por dependency_id
+- ✅ AprendicesList: paginación (PAGE_SIZE=20), query split para evitar límite de joins
+- ✅ AprendizDashboard + AppointmentDetail: modal de cancelación con `cancelled_reason`
+- ✅ AppointmentDetail: adjuntos de archivos reales (upload/view/delete) en bucket `user-documents`
+- ✅ useAppointments.js: cancelAppointment acepta `cancelledReason` y lo persiste en DB
+- ✅ Build limpio: ~800ms, 0 errores
+
+## Edge Function — notify-appointment
+Soporta Resend API para emails. Requiere secreto `RESEND_API_KEY` en Supabase Dashboard → Edge Functions → Secrets.
+Sin el secreto retorna `{ ok: false, reason: "no_api_key" }` sin romper el flujo.
 
 ## Pendiente
-- Notificaciones email cuando se confirma una cita (Resend API)
+- Configurar `RESEND_API_KEY` en Supabase Secrets para activar emails
 - Probar flujo E2E real de invitación con email real de Supabase

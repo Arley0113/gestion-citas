@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, Clock, CheckCircle2, X, UserX, Check, ChevronRight } from "lucide-react";
-import { format, parseISO, isAfter, startOfDay } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
@@ -57,12 +57,9 @@ export default function MisCitasPage() {
       .then(({ data }) => { setCitas(data || []); setLoading(false); });
   }, [user]);
 
-  const today = startOfDay(new Date());
-
   const filtered = citas.filter(c => {
-    const d = parseISO(c.scheduled_date);
-    if (activeTab === "proximas")   return ["pending","confirmed"].includes(c.status) && !isAfter(today, d);
-    if (activeTab === "pasadas")    return ["completed","no_show"].includes(c.status) || (isAfter(today, d) && c.status !== "cancelled");
+    if (activeTab === "proximas")   return ["pending","confirmed"].includes(c.status);
+    if (activeTab === "pasadas")    return ["completed","no_show"].includes(c.status);
     if (activeTab === "canceladas") return c.status === "cancelled";
     return false;
   });

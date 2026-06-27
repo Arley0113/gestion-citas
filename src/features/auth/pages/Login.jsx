@@ -368,11 +368,6 @@ export default function Login() {
             </Link>
           </div>
 
-          {/* Links */}
-          <div className="login-footer-links">
-            <a href="#">Términos de uso</a>
-            <a href="#">Política de privacidad</a>
-          </div>
 
           {/* Modal olvidé contraseña */}
           {forgotOpen && (

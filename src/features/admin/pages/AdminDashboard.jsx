@@ -41,7 +41,9 @@ function useAdminStats() {
         monthApts: apts.count  ?? "—",
         uptime:    "99.9%",
       });
-    }).catch(() => {});
+    }).catch(() => {
+      setStats({ users: "—", deps: "—", monthApts: "—", uptime: "99.9%" });
+    });
   }, []);
 
   return stats;
@@ -255,8 +257,13 @@ export default function AdminDashboard() {
 
       {/* ─── Actividad reciente ─── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2rem 1.75rem" }}>
-        <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1.25rem" }}>
-          Actividad reciente
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+          <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Actividad reciente
+          </div>
+          <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "#d97706", background: "#fef3c7", padding: "0.1rem 0.5rem", borderRadius: 20, border: "1px solid #fde68a" }}>
+            Datos de ejemplo
+          </span>
         </div>
         <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           {MOCK_ACTIVITY.map(({ icon: Ic, color, bg, text, time, user }, i) => (

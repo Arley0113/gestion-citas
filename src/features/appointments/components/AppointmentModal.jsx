@@ -12,7 +12,9 @@ import {
 import { es } from "date-fns/locale";
 import { useAppointments } from "../hooks/useAppointments";
 import { useAppointmentModal } from "../../../providers/AppointmentModalContext";
+import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
+import { notifyNewAppointment } from "../../../lib/notifications";
 import { toast } from "sonner";
 
 const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
@@ -162,6 +164,7 @@ export function AppointmentModal() {
   const navigate = useNavigate();
   const { isOpen, closeModal, preselectedService } = useAppointmentModal();
   const { createAppointment, isCreating } = useAppointments();
+  const { user, profile } = useAuth();
 
   const [step, setStep]       = useState(1);
   const [services, setServices] = useState(SERVICES);
@@ -201,6 +204,7 @@ export function AppointmentModal() {
   useEffect(() => {
     const svc = services.find(s => s.key === form.serviceKey);
     if (!svc?.id || !form.date || IS_DEV) { setTakenSlots([]); return; }
+    let cancelled = false;
     setCheckingSlots(true);
     const dateStr = format(form.date, "yyyy-MM-dd");
     supabase
@@ -210,9 +214,11 @@ export function AppointmentModal() {
       .eq("scheduled_date", dateStr)
       .in("status", ["pending", "confirmed"])
       .then(({ data }) => {
+        if (cancelled) return;
         setTakenSlots((data || []).map(a => a.scheduled_time.slice(0, 5)));
         setCheckingSlots(false);
       });
+    return () => { cancelled = true; };
   }, [form.serviceKey, form.date, services]);
 
   // Cerrar con Escape
@@ -268,6 +274,13 @@ export function AppointmentModal() {
       reason: form.reason.trim() || "Sin especificar",
     });
     if (result.success) {
+      notifyNewAppointment({
+        to_email: user?.email,
+        to_name: profile?.full_name || "Aprendiz",
+        service_name: selSvc?.label || "Bienestar",
+        scheduled_date: format(form.date, "yyyy-MM-dd"),
+        scheduled_time: `${form.time}:00`,
+      });
       closeModal();
       navigate("/cita-confirmada", { state: { appointment: result.data } });
     }

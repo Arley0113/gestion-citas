@@ -54,7 +54,7 @@ export default function ProfessionalAgendaPage() {
 
   const fetchWeek = useCallback(async () => {
     if (DEV_ROLE) { setApts(MOCK_WEEK_CITAS); setLoading(false); return; }
-    if (!profile?.dependency_id) return;
+    if (!profile?.dependency_id) { setLoading(false); return; }
     setLoading(true);
     const from = format(days[0], "yyyy-MM-dd");
     const to   = format(days[6], "yyyy-MM-dd");

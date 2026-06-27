@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, FileText, CheckCircle2, ArrowRight } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
@@ -7,10 +7,10 @@ import { toast } from "sonner";
 import { SenaLogo } from "../../../shared/components/SenaLogo";
 
 const DOC_TYPES = [
-  { value: "CC", label: "Cédula de Ciudadanía" },
-  { value: "TI", label: "Tarjeta de Identidad" },
-  { value: "CE", label: "Cédula de Extranjería" },
-  { value: "PA", label: "Pasaporte" },
+  { value: "CC", label: "CC — Cédula de Ciudadanía" },
+  { value: "TI", label: "TI — Tarjeta de Identidad" },
+  { value: "CE", label: "CE — Cédula de Extranjería" },
+  { value: "PA", label: "PA — Pasaporte" },
 ];
 
 const ROLE_HOME = {
@@ -37,6 +37,26 @@ export default function CompleteProfilePage() {
   });
   const [saving, setSaving] = useState(false);
   const [done,   setDone]   = useState(false);
+
+  // Redirect if already completed onboarding
+  useEffect(() => {
+    if (profile?.onboarding_completed && roleName) {
+      navigate(ROLE_HOME[roleName] || "/dashboard", { replace: true });
+    }
+  }, [profile, roleName, navigate]);
+
+  // Show spinner while profile/role hasn't loaded yet
+  if (!profile || !roleName) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f7e6", fontFamily: "var(--font-sans)" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite", margin: "0 auto 0.875rem" }} />
+          <p style={{ fontSize: "0.8125rem", color: "#9ca3af" }}>Cargando tu información...</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        </div>
+      </div>
+    );
+  }
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -183,7 +203,7 @@ export default function CompleteProfilePage() {
                   Tipo de doc.
                 </label>
                 <select className="cp-select" value={form.document_type} onChange={e => set("document_type", e.target.value)}>
-                  {DOC_TYPES.map(d => <option key={d.value} value={d.value}>{d.value}</option>)}
+                  {DOC_TYPES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                 </select>
               </div>
               <div>

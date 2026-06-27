@@ -69,6 +69,7 @@ export default function AprendizDashboard() {
   const [tab, setTab]             = useState("Próximas");
   const [showAllServices, setShowAllServices] = useState(false);
   const [mood, setMood]           = useState(null);
+  const [cancelModal, setCancelModal] = useState({ open: false, aptId: null, reason: "" });
 
   useEffect(() => {
     if (!IS_DEV) fetchAppointments();
@@ -87,10 +88,19 @@ export default function AprendizDashboard() {
   const nextApt   = upcoming[0];
   const listApts  = tab === "Próximas" ? upcoming : tab === "Historial" ? history : apts;
 
-  const handleCancel = async (e, id) => {
+  const handleCancel = (e, id) => {
     e.stopPropagation();
-    if (IS_DEV) { toast.success("Cita cancelada (demo)"); return; }
-    await cancelAppointment(id);
+    setCancelModal({ open: true, aptId: id, reason: "" });
+  };
+
+  const executeCancel = async () => {
+    if (IS_DEV) {
+      toast.success("Cita cancelada (demo)");
+      setCancelModal({ open: false, aptId: null, reason: "" });
+      return;
+    }
+    await cancelAppointment(cancelModal.aptId, cancelModal.reason.trim() || null);
+    setCancelModal({ open: false, aptId: null, reason: "" });
   };
 
   const stats = [
@@ -223,14 +233,14 @@ export default function AprendizDashboard() {
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>¿Cómo te sientes hoy?</div>
-              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>Tu respuesta es confidencial</div>
+              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>Registro de bienestar diario</div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
             {MOODS.map((m, i) => (
               <button
                 key={i}
-                onClick={() => setMood(i)}
+                onClick={() => { if (mood !== i) toast.success(`Estado: ${m.label}`); setMood(i); }}
                 title={m.label}
                 style={{
                   width: 40, height: 40, borderRadius: 10, border: "2px solid",
@@ -568,6 +578,47 @@ export default function AprendizDashboard() {
         </div>
       </div>
 
+      {/* ─── Modal cancelación ─── */}
+      {cancelModal.open && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div style={{ background: "white", borderRadius: 20, padding: "1.75rem", width: "100%", maxWidth: 440, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", animation: "slideUp 0.25s cubic-bezier(0.16,1,0.3,1) both" }}>
+            <div style={{ fontWeight: 800, fontSize: "1.125rem", color: "#111827", marginBottom: "0.25rem", fontFamily: "var(--font-display)" }}>Cancelar cita</div>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1.25rem", lineHeight: 1.55 }}>
+              Esta acción no se puede deshacer. Si lo deseas, puedes indicar el motivo.
+            </p>
+            <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.375rem" }}>
+              Motivo <span style={{ fontWeight: 400, color: "#9ca3af" }}>(opcional)</span>
+            </label>
+            <textarea
+              value={cancelModal.reason}
+              onChange={e => setCancelModal(m => ({ ...m, reason: e.target.value }))}
+              placeholder="Ej: No puedo asistir por motivos académicos..."
+              maxLength={300}
+              rows={3}
+              style={{ width: "100%", boxSizing: "border-box", padding: "0.625rem 0.875rem", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: "0.875rem", color: "#111827", resize: "none", outline: "none", fontFamily: "var(--font-sans)", marginBottom: "0.25rem" }}
+              onFocus={e => e.target.style.borderColor = "#ef4444"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            />
+            <div style={{ fontSize: "0.75rem", color: "#9ca3af", textAlign: "right", marginBottom: "1rem" }}>{cancelModal.reason.length}/300</div>
+            <div style={{ display: "flex", gap: "0.625rem" }}>
+              <button
+                onClick={() => setCancelModal({ open: false, aptId: null, reason: "" })}
+                style={{ flex: 1, padding: "0.75rem", background: "white", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)", color: "#374151" }}
+              >
+                Volver
+              </button>
+              <button
+                onClick={executeCancel}
+                style={{ flex: 2, padding: "0.75rem", background: "#ef4444", color: "white", border: "none", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)" }}
+              >
+                Sí, cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`@keyframes slideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }`}</style>
     </div>
   );
 }

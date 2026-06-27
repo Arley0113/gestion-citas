@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ChevronLeft, Check, Clock, Calendar, MapPin, FileText,
-  Paperclip, Play, UserX, MoreHorizontal, User, X,
+  Paperclip, Play, UserX, User, X,
   AlertCircle, Brain, Heart, Users, Shield, Eye,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -58,47 +58,117 @@ export default function AppointmentDetail() {
   const { can }  = usePermissions();
   const [apt, setApt]       = useState(DEV_ROLE ? MOCK_APT : null);
   const [loading, setLoading] = useState(!DEV_ROLE);
-  const [notes, setNotes]   = useState(DEV_ROLE ? "" : undefined);
+  const [notes, setNotes]   = useState("");
   const [saving, setSaving] = useState(false);
+  const [cancelModal, setCancelModal] = useState({ open: false, reason: "" });
+  const [docs, setDocs]     = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     if (DEV_ROLE) return;
     supabase
       .from("appointments")
-      .select("*, dependencies(name,color), profiles!user_id(full_name,document_number), professional:profiles!professional_id(full_name)")
+      .select("*, dependencies(name,color), profiles!user_id(full_name,document_number,email), professional:profiles!professional_id(full_name)")
       .eq("id", id)
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { toast.error("No se pudo cargar la cita"); setLoading(false); return; }
         setApt(data);
         setNotes(data?.notes || "");
         setLoading(false);
       });
   }, [id]);
 
+  useEffect(() => {
+    if (DEV_ROLE || !id) return;
+    supabase
+      .from("user_documents")
+      .select("id, name, file_path, file_size, mime_type, created_at")
+      .eq("appointment_id", id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setDocs(data || []));
+  }, [id]);
+
   const confirm = async () => {
-    await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date() }).eq("id", id);
+    const { error } = await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date() }).eq("id", id);
+    if (error) { toast.error("No se pudo confirmar la cita"); return; }
     toast.success("Cita confirmada");
     setApt(a => ({ ...a, status: "confirmed" }));
   };
 
   const markNoShow = async () => {
-    await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", id);
+    const { error } = await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", id);
+    if (error) { toast.error("No se pudo actualizar la cita"); return; }
     toast.info("Marcada como no asistió");
     setApt(a => ({ ...a, status: "no_show" }));
   };
 
-  const cancelOwnAppointment = async () => {
-    if (DEV_ROLE) { toast.success("Cita cancelada (demo)"); setApt(a => ({ ...a, status: "cancelled" })); return; }
-    await supabase.from("appointments").update({ status: "cancelled", updated_at: new Date() }).eq("id", id);
+  const executeCancel = async () => {
+    if (DEV_ROLE) {
+      toast.success("Cita cancelada (demo)");
+      setApt(a => ({ ...a, status: "cancelled" }));
+      setCancelModal({ open: false, reason: "" });
+      return;
+    }
+    const { error } = await supabase.from("appointments").update({
+      status: "cancelled",
+      cancelled_reason: cancelModal.reason.trim() || null,
+      updated_at: new Date(),
+    }).eq("id", id);
+    if (error) { toast.error("No se pudo cancelar la cita"); return; }
     toast.success("Cita cancelada correctamente");
     setApt(a => ({ ...a, status: "cancelled" }));
+    setCancelModal({ open: false, reason: "" });
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    const MAX = 5 * 1024 * 1024;
+    if (file.size > MAX) { toast.error("El archivo no puede superar 5 MB"); return; }
+    const ALLOWED = ["application/pdf","image/jpeg","image/png","image/webp","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    if (!ALLOWED.includes(file.type)) { toast.error("Formato no permitido. Usa PDF, imagen o Word."); return; }
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `appointments/${id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("user-documents").upload(path, file);
+    if (upErr) { toast.error("Error al subir el archivo"); setUploading(false); return; }
+    const { error: dbErr, data: dbData } = await supabase.from("user_documents").insert({
+      user_id: user.id,
+      appointment_id: parseInt(id),
+      name: file.name,
+      file_path: path,
+      file_size: file.size,
+      mime_type: file.type,
+      category: "appointment",
+    }).select().single();
+    setUploading(false);
+    if (dbErr) { toast.error("Error al registrar el documento"); return; }
+    setDocs(d => [dbData, ...d]);
+    toast.success("Documento adjuntado");
+    e.target.value = "";
+  };
+
+  const handleDeleteDoc = async (doc) => {
+    if (!window.confirm(`¿Eliminar "${doc.name}"?`)) return;
+    await supabase.storage.from("user-documents").remove([doc.file_path]);
+    await supabase.from("user_documents").delete().eq("id", doc.id);
+    setDocs(d => d.filter(x => x.id !== doc.id));
+    toast.success("Documento eliminado");
+  };
+
+  const openDoc = async (doc) => {
+    const { data } = await supabase.storage.from("user-documents").createSignedUrl(doc.file_path, 300);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
   };
 
   const saveNotes = async () => {
     if (DEV_ROLE) { toast.success("Notas guardadas (demo)"); return; }
     setSaving(true);
-    await supabase.from("appointments").update({ notes, updated_at: new Date() }).eq("id", id);
+    const { error } = await supabase.from("appointments").update({ notes, updated_at: new Date() }).eq("id", id);
     setSaving(false);
+    if (error) { toast.error("No se pudieron guardar las notas"); return; }
     toast.success("Notas guardadas");
   };
 
@@ -153,7 +223,6 @@ export default function AppointmentDetail() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <span className={`badge ${stCfg.cls}`}>{stCfg.label}</span>
-          <button className="btn-icon"><MoreHorizontal size={18} /></button>
         </div>
       </div>
 
@@ -310,12 +379,13 @@ export default function AppointmentDetail() {
                 <textarea
                   className="notes-textarea"
                   placeholder="Escribe las notas de la sesión: observaciones, diagnóstico preliminar, seguimiento recomendado..."
-                  value={notes ?? apt.notes ?? ""}
-                  onChange={e => setNotes(e.target.value)}
+                  value={notes}
+                  onChange={e => e.target.value.length <= 2000 && setNotes(e.target.value)}
                   rows={8}
+                  maxLength={2000}
                   style={{ resize: "vertical" }}
                 />
-                <div className="notes-char-count">{(notes?.length || 0)}/2000</div>
+                <div className="notes-char-count">{notes.length}/2000</div>
               </>
             ) : canReadNotes ? (
               <div style={{ background: "var(--gray-50)", borderRadius: "var(--radius-md)", padding: "1rem", borderLeft: "3px solid #bfdbfe", fontSize: "var(--text-sm)", color: "var(--gray-700)", lineHeight: 1.7, minHeight: "4rem" }}>
@@ -336,18 +406,64 @@ export default function AppointmentDetail() {
                 <div style={{ width: 32, height: 32, borderRadius: "var(--radius-sm)", background: "var(--green-100)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Paperclip size={15} color="var(--sena-green)" />
                 </div>
-                <h3 style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--gray-900)" }}>Documentos y anexos</h3>
+                <h3 style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--gray-900)" }}>
+                  Documentos y anexos {docs.length > 0 && <span style={{ fontWeight: 500, color: "var(--gray-500)", fontSize: "var(--text-sm)" }}>({docs.length})</span>}
+                </h3>
               </div>
-              {showActions && (
-                <button style={{ fontSize: "var(--text-xs)", color: "var(--sena-green)", background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "var(--font-sans)" }}>
-                  + Adjuntar
-                </button>
+              {(showActions || isOwnApt) && (
+                <>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                    style={{ display: "none" }}
+                    onChange={handleFileUpload}
+                  />
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    style={{ fontSize: "var(--text-xs)", color: uploading ? "var(--gray-400)" : "var(--sena-green)", background: "none", border: "none", cursor: uploading ? "not-allowed" : "pointer", fontWeight: 600, fontFamily: "var(--font-sans)" }}
+                  >
+                    {uploading ? "Subiendo…" : "+ Adjuntar"}
+                  </button>
+                </>
               )}
             </div>
-            <div style={{ background: "var(--gray-50)", borderRadius: "var(--radius-md)", padding: "1.5rem", textAlign: "center", border: "2px dashed var(--gray-200)" }}>
-              <Paperclip size={28} color="var(--gray-300)" style={{ marginBottom: "0.5rem" }} />
-              <p style={{ fontSize: "var(--text-sm)", color: "var(--gray-500)" }}>No hay documentos adjuntos</p>
-            </div>
+            {docs.length === 0 ? (
+              <div style={{ background: "var(--gray-50)", borderRadius: "var(--radius-md)", padding: "1.5rem", textAlign: "center", border: "2px dashed var(--gray-200)" }}>
+                <Paperclip size={28} color="var(--gray-300)" style={{ marginBottom: "0.5rem" }} />
+                <p style={{ fontSize: "var(--text-sm)", color: "var(--gray-500)" }}>No hay documentos adjuntos</p>
+                {(showActions || isOwnApt) && (
+                  <p style={{ fontSize: "var(--text-xs)", color: "var(--gray-400)", marginTop: "0.25rem" }}>PDF, imagen o Word · máx. 5 MB</p>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {docs.map(doc => (
+                  <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.625rem 0.75rem", background: "var(--gray-50)", borderRadius: "var(--radius-sm)", border: "1px solid var(--gray-100)" }}>
+                    <FileText size={15} color="var(--sena-green)" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--gray-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</div>
+                      {doc.file_size && <div style={{ fontSize: "0.6875rem", color: "var(--gray-400)" }}>{(doc.file_size / 1024).toFixed(0)} KB</div>}
+                    </div>
+                    <button
+                      onClick={() => openDoc(doc)}
+                      style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--sena-green)", background: "none", border: "none", cursor: "pointer", padding: "0.25rem 0.5rem", borderRadius: 4, fontFamily: "var(--font-sans)" }}
+                    >
+                      Ver
+                    </button>
+                    {(showActions || isOwnApt) && (
+                      <button
+                        onClick={() => handleDeleteDoc(doc)}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem", display: "flex", color: "var(--gray-400)" }}
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Acciones — visible solo si tiene al menos un permiso de acción */}
@@ -389,7 +505,7 @@ export default function AppointmentDetail() {
               </p>
               <button
                 className="btn-danger-outline"
-                onClick={cancelOwnAppointment}
+                onClick={() => setCancelModal({ open: true, reason: "" })}
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
               >
                 <X size={15} /> Cancelar esta cita
@@ -404,6 +520,46 @@ export default function AppointmentDetail() {
           </div>
         </div>
       </div>
+
+      {/* ─── Modal cancelación ─── */}
+      {cancelModal.open && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div style={{ background: "white", borderRadius: 20, padding: "1.75rem", width: "100%", maxWidth: 440, boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}>
+            <h3 style={{ fontWeight: 800, fontSize: "1.125rem", color: "var(--gray-900)", marginBottom: "0.25rem" }}>Cancelar cita</h3>
+            <p style={{ fontSize: "0.875rem", color: "var(--gray-500)", marginBottom: "1.25rem", lineHeight: 1.55 }}>
+              Esta acción no se puede deshacer. Puedes indicar el motivo para el registro del sistema.
+            </p>
+            <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "var(--gray-700)", marginBottom: "0.375rem" }}>
+              Motivo <span style={{ fontWeight: 400, color: "var(--gray-400)" }}>(opcional)</span>
+            </label>
+            <textarea
+              value={cancelModal.reason}
+              onChange={e => setCancelModal(m => ({ ...m, reason: e.target.value }))}
+              placeholder="Ej: El aprendiz no pudo asistir por motivos académicos..."
+              maxLength={300}
+              rows={3}
+              style={{ width: "100%", boxSizing: "border-box", padding: "0.625rem 0.875rem", border: "1.5px solid var(--gray-200)", borderRadius: 10, fontSize: "0.875rem", color: "var(--gray-900)", resize: "none", outline: "none", fontFamily: "var(--font-sans)", marginBottom: "0.25rem" }}
+              onFocus={e => e.target.style.borderColor = "#ef4444"}
+              onBlur={e => e.target.style.borderColor = "var(--gray-200)"}
+            />
+            <div style={{ fontSize: "0.75rem", color: "var(--gray-400)", textAlign: "right", marginBottom: "1rem" }}>{cancelModal.reason.length}/300</div>
+            <div style={{ display: "flex", gap: "0.625rem" }}>
+              <button
+                onClick={() => setCancelModal({ open: false, reason: "" })}
+                style={{ flex: 1, padding: "0.75rem", background: "white", border: "1.5px solid var(--gray-200)", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)", color: "var(--gray-700)" }}
+              >
+                Volver
+              </button>
+              <button
+                onClick={executeCancel}
+                style={{ flex: 2, padding: "0.75rem", background: "#ef4444", color: "white", border: "none", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)" }}
+              >
+                Sí, cancelar cita
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .detail-layout {

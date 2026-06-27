@@ -80,14 +80,15 @@ export default function RegisterPage() {
 
       const newUser = data?.user;
       if (newUser) {
-        await supabase.from("profiles").update({
+        await supabase.from("profiles").upsert({
+          id: newUser.id,
           full_name,
           document_type:   form.document_type,
           document_number: form.document_number.trim(),
           ficha_number:    form.ficha_number.trim()  || null,
           program:         form.program.trim()        || null,
           onboarding_completed: true,
-        }).eq("id", newUser.id);
+        }, { onConflict: "id" });
       }
 
       toast.success("¡Cuenta creada! Revisa tu correo para verificarla.");

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { ROLE_PERMISSIONS } from "../shared/rbac/permissions";
+import { toast } from "sonner";
 
 const AuthContext = createContext(null);
 
@@ -48,6 +49,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error("Error cargando perfil:", err);
       setError("No se pudo cargar tu perfil. Intenta de nuevo.");
+      toast.error("No se pudo cargar tu perfil. Intenta de nuevo.");
       return null;
     }
   }, [isDev, devProfile]);
@@ -61,6 +63,12 @@ export function AuthProvider({ children }) {
     if (isDev) return; // modo DEV — no conectar Supabase
 
     const checkSession = async () => {
+      const TIMEOUT = 12_000;
+      const timer = setTimeout(() => {
+        // Si cuelga más de 12s, limpiar sesión y mostrar login
+        supabase.auth.signOut().catch(() => {});
+        setLoading(false);
+      }, TIMEOUT);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -70,6 +78,7 @@ export function AuthProvider({ children }) {
       } catch (err) {
         setError(err.message);
       } finally {
+        clearTimeout(timer);
         setLoading(false);
       }
     };

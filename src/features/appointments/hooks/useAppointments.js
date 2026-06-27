@@ -134,12 +134,13 @@ export function useAppointments() {
   };
 
   // UPDATE STATUS: Cambiar estado (confirmar, completar, cancelar)
-  const updateStatus = async (appointmentId, newStatus, notes = null) => {
+  const updateStatus = async (appointmentId, newStatus, notes = null, cancelledReason = null) => {
     setStatus(STATUS.UPDATING);
 
     try {
       const updates = { status: newStatus };
       if (notes) updates.notes = notes;
+      if (cancelledReason) updates.cancelled_reason = cancelledReason;
 
       const updated = await AppointmentRepository.update(
         appointmentId,
@@ -164,7 +165,7 @@ export function useAppointments() {
   };
 
   // CANCEL: Cancelar cita (solo si está pending)
-  const cancelAppointment = async (appointmentId) => {
+  const cancelAppointment = async (appointmentId, cancelledReason = null) => {
     const appointment = appointments.find((a) => a.id === appointmentId);
 
     if (appointment.status !== "pending") {
@@ -172,7 +173,7 @@ export function useAppointments() {
       return { success: false };
     }
 
-    return updateStatus(appointmentId, "cancelled");
+    return updateStatus(appointmentId, "cancelled", null, cancelledReason);
   };
 
   return {

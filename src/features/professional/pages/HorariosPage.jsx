@@ -85,7 +85,8 @@ export default function HorariosPage() {
       const [sh, sm] = d.start.split(":").map(Number);
       const [eh, em] = d.end.split(":").map(Number);
       if (eh * 60 + em <= sh * 60 + sm) {
-        toast.error(`${key.charAt(0).toUpperCase() + key.slice(1)}: la hora de fin debe ser mayor a la de inicio`);
+        const dayLabel = DAYS.find(d => d.key === key)?.label ?? key;
+        toast.error(`${dayLabel}: la hora de fin debe ser mayor a la de inicio`);
         return;
       }
     }
