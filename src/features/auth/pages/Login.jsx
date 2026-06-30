@@ -34,10 +34,10 @@ export default function Login() {
   const { signIn, user: authUser, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && authUser) {
+    if (!authLoading && authUser && location.pathname === "/login") {
       navigate(`/${location.search || ""}`, { replace: true });
     }
-  }, [authLoading, authUser, location.search, navigate]);
+  }, [authLoading, authUser, location.pathname, location.search, navigate]);
 
   const handleEmail = async (e) => {
     e.preventDefault();
@@ -49,7 +49,6 @@ export default function Login() {
       toast.error(error);
       return;
     }
-    navigate(`/${location.search || ""}`, { replace: true });
   };
 
   return (
