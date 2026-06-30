@@ -10,6 +10,7 @@ const IS_VALID_DEV = DEV_ROLE && VALID_PREVIEWS.includes(DEV_ROLE);
 export function ProtectedRoute({ children, requiredRoles = null, requiredPermissions = null, fallback = "/login" }) {
   const { user, profile, loading, hasRole, can } = useAuth();
   const location = useLocation();
+  const redirectTo = `${fallback}${location.search || ""}`;
 
   // Modo DEV solo permite valores de preview válidos
   if (IS_VALID_DEV) return children;
@@ -26,8 +27,8 @@ export function ProtectedRoute({ children, requiredRoles = null, requiredPermiss
     );
   }
 
-  if (!user) return <Navigate to={fallback} state={{ from: location }} replace />;
-  if (user && !profile) return <Navigate to={fallback} state={{ from: location }} replace />;
+  if (!user) return <Navigate to={redirectTo} state={{ from: location }} replace />;
+  if (user && !profile) return <Navigate to={redirectTo} state={{ from: location }} replace />;
 
   if (requiredRoles) {
     const roles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];

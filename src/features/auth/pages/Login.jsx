@@ -31,13 +31,13 @@ export default function Login() {
     setForgotEmail("");
   };
 
-  const { signIn, user: authUser, loading: authLoading } = useAuth();
+  const { signIn, user: authUser, profile, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && authUser && location.pathname === "/login") {
+    if (!authLoading && authUser && profile && location.pathname === "/login") {
       navigate(`/${location.search || ""}`, { replace: true });
     }
-  }, [authLoading, authUser, location.pathname, location.search, navigate]);
+  }, [authLoading, authUser, profile, location.pathname, location.search, navigate]);
 
   const handleEmail = async (e) => {
     e.preventDefault();
