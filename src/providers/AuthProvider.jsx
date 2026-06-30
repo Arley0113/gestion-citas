@@ -27,6 +27,7 @@ const retryAuthRequest = async (fn) => {
 };
 
 const AuthContext = createContext(null);
+let pendingSessionCheck = null;
 
 // DEV preview — constante de módulo (no cambia durante el ciclo de vida)
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
