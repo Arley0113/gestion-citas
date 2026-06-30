@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, Shield, X } from "lucide-react";
 import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
@@ -8,6 +8,7 @@ import { SenaLogo } from "../../../shared/components/SenaLogo";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email,       setEmail]       = useState("");
   const [password,    setPassword]    = useState("");
   const [showPwd,     setShowPwd]     = useState(false);
@@ -34,9 +35,9 @@ export default function Login() {
 
   useEffect(() => {
     if (!authLoading && authUser) {
-      navigate("/", { replace: true });
+      navigate(`/${location.search || ""}`, { replace: true });
     }
-  }, [authLoading, authUser, navigate]);
+  }, [authLoading, authUser, location.search, navigate]);
 
   const handleEmail = async (e) => {
     e.preventDefault();
@@ -48,7 +49,7 @@ export default function Login() {
       toast.error(error);
       return;
     }
-    navigate("/");
+    navigate(`/${location.search || ""}`, { replace: true });
   };
 
   return (
