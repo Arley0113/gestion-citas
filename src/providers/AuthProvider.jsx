@@ -107,7 +107,11 @@ export function AuthProvider({ children }) {
     if (isDev) return; // modo DEV — no conectar Supabase
 
     let mounted = true;
-    const TIMEOUT = 7_000;
+    const TIMEOUT = 3_000;
+    const FAST_FALLBACK = 1_200;
+    const fallbackTimer = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, FAST_FALLBACK);
 
     const checkSession = async () => {
       try {
@@ -116,7 +120,7 @@ export function AuthProvider({ children }) {
         try {
           const { data, error } = await withTimeout(
             retryAuthRequest(() => supabase.auth.getUser()),
-            2_000,
+            1_000,
             "cached user"
           );
           if (error) throw error;
@@ -147,6 +151,7 @@ export function AuthProvider({ children }) {
         setProfile(null);
         setError(null);
       } finally {
+        clearTimeout(fallbackTimer);
         if (mounted) setLoading(false);
       }
     };
