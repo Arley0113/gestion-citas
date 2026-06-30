@@ -106,23 +106,23 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (isDev) return; // modo DEV — no conectar Supabase
 
+    let mounted = true;
+    const TIMEOUT = 7_000;
+    const FAST_FALLBACK = 2_000;
+    const fallbackTimer = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, FAST_FALLBACK);
+
     const checkSession = async () => {
-      const TIMEOUT = 10_000;
       try {
-        let authUser = null;
+        const { data, error } = await withTimeout(
+          retryAuthRequest(() => supabase.auth.getUser()),
+          TIMEOUT,
+          "cached user"
+        );
+        if (error) throw error;
 
-        const getUserResult = await supabase.auth.getUser();
-        if (getUserResult?.data?.user) {
-          authUser = getUserResult.data.user;
-        } else {
-          const { data: { session } } = await withTimeout(
-            retryAuthRequest(() => supabase.auth.getSession()),
-            TIMEOUT,
-            "session check"
-          );
-          authUser = session?.user || null;
-        }
-
+        const authUser = data?.user || null;
         if (authUser) {
           setUser(authUser);
           const profileData = await fetchProfile(authUser.id);
@@ -138,7 +138,8 @@ export function AuthProvider({ children }) {
         setProfile(null);
         setError(null);
       } finally {
-        setLoading(false);
+        clearTimeout(fallbackTimer);
+        if (mounted) setLoading(false);
       }
     };
 
