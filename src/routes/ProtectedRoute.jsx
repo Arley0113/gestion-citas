@@ -8,7 +8,7 @@ const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
 const IS_VALID_DEV = DEV_ROLE && VALID_PREVIEWS.includes(DEV_ROLE);
 
 export function ProtectedRoute({ children, requiredRoles = null, requiredPermissions = null, fallback = "/login" }) {
-  const { user, loading, hasRole, can } = useAuth();
+  const { user, profile, loading, hasRole, can } = useAuth();
   const location = useLocation();
 
   // Modo DEV solo permite valores de preview válidos
@@ -27,6 +27,7 @@ export function ProtectedRoute({ children, requiredRoles = null, requiredPermiss
   }
 
   if (!user) return <Navigate to={fallback} state={{ from: location }} replace />;
+  if (user && !profile) return <Navigate to={fallback} state={{ from: location }} replace />;
 
   if (requiredRoles) {
     const roles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];

@@ -69,10 +69,12 @@ export function AuthProvider({ children }) {
           .single()
       );
       if (error) throw error;
+      if (!data) throw new Error("Perfil no encontrado");
       setProfile(data);
       return data;
     } catch (err) {
       console.error("Error cargando perfil:", err);
+      setProfile(null);
       setError("No se pudo cargar tu perfil. Intenta de nuevo.");
       toast.error("No se pudo cargar tu perfil. Intenta de nuevo.");
       return null;
@@ -98,7 +100,12 @@ export function AuthProvider({ children }) {
         const { data: { session } } = await retryAuthRequest(() => supabase.auth.getSession());
         if (session?.user) {
           setUser(session.user);
-          await fetchProfile(session.user.id);
+          const profileData = await fetchProfile(session.user.id);
+          if (!profileData) {
+            await supabase.auth.signOut().catch(() => {});
+            setUser(null);
+            setProfile(null);
+          }
         }
       } catch (err) {
         setError(err.message);
@@ -117,7 +124,12 @@ export function AuthProvider({ children }) {
       }
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
         setUser(session.user);
-        await fetchProfile(session.user.id);
+        const profileData = await fetchProfile(session.user.id);
+        if (!profileData) {
+          await supabase.auth.signOut().catch(() => {});
+          setUser(null);
+          setProfile(null);
+        }
       } else if (event === "SIGNED_OUT") {
         setUser(null);
         setProfile(null);
@@ -138,7 +150,13 @@ export function AuthProvider({ children }) {
       const sessionUser = data?.user || data?.session?.user;
       if (sessionUser) {
         setUser(sessionUser);
-        await fetchProfile(sessionUser.id);
+        const profileData = await fetchProfile(sessionUser.id);
+        if (!profileData) {
+          await supabase.auth.signOut().catch(() => {});
+          setUser(null);
+          setProfile(null);
+          return { success: false, error: "No se pudo cargar tu perfil. Intenta de nuevo." };
+        }
       }
       return { success: true, data };
     } catch (err) {
