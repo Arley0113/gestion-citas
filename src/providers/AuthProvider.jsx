@@ -26,6 +26,18 @@ const retryAuthRequest = async (fn) => {
   }
 };
 
+const withTimeout = async (promise, ms, label = "operation") => {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 const AuthContext = createContext(null);
 let pendingSessionCheck = null;
 
@@ -76,8 +88,12 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error("Error cargando perfil:", err);
       setProfile(null);
-      setError("No se pudo cargar tu perfil. Intenta de nuevo.");
-      toast.error("No se pudo cargar tu perfil. Intenta de nuevo.");
+      const isMissingProfile = err.message.includes("Perfil no encontrado");
+      const message = isMissingProfile
+        ? "No se encontró tu perfil en Bienestar SENA. Contacta al administrador."
+        : "No se pudo cargar tu perfil. Intenta de nuevo.";
+      setError(message);
+      toast.error(message);
       return null;
     }
   }, [isDev, devProfile]);
@@ -91,14 +107,13 @@ export function AuthProvider({ children }) {
     if (isDev) return; // modo DEV — no conectar Supabase
 
     const checkSession = async () => {
-      const TIMEOUT = 12_000;
-      const timer = setTimeout(() => {
-        // Si cuelga más de 12s, limpiar sesión y mostrar login
-        supabase.auth.signOut().catch(() => {});
-        setLoading(false);
-      }, TIMEOUT);
+      const TIMEOUT = 7_000;
       try {
-        const { data: { session } } = await retryAuthRequest(() => supabase.auth.getSession());
+        const { data: { session } } = await withTimeout(
+          retryAuthRequest(() => supabase.auth.getSession()),
+          TIMEOUT,
+          "session check"
+        );
         if (session?.user) {
           setUser(session.user);
           const profileData = await fetchProfile(session.user.id);
@@ -109,9 +124,11 @@ export function AuthProvider({ children }) {
           }
         }
       } catch (err) {
-        setError(err.message);
+        console.warn("Session init failed:", err.message);
+        setUser(null);
+        setProfile(null);
+        setError(null);
       } finally {
-        clearTimeout(timer);
         setLoading(false);
       }
     };
@@ -156,7 +173,7 @@ export function AuthProvider({ children }) {
           await supabase.auth.signOut().catch(() => {});
           setUser(null);
           setProfile(null);
-          return { success: false, error: "No se pudo cargar tu perfil. Intenta de nuevo." };
+          return { success: false, error: "No se encontró tu perfil en Bienestar SENA. Contacta al administrador." };
         }
       }
       return { success: true, data };
