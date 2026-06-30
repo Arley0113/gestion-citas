@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, Shield, X } from "lucide-react";
+import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { SenaLogo } from "../../../shared/components/SenaLogo";
 
 export default function Login() {
+  const navigate = useNavigate();
   const [email,       setEmail]       = useState("");
   const [password,    setPassword]    = useState("");
   const [showPwd,     setShowPwd]     = useState(false);
@@ -28,15 +30,19 @@ export default function Login() {
     setForgotEmail("");
   };
 
+  const { signIn } = useAuth();
+
   const handleEmail = async (e) => {
     e.preventDefault();
     if (!email || !password) { toast.error("Completa todos los campos"); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error(error.message.includes("Invalid") ? "Correo o contraseña incorrectos" : "Error al iniciar sesión");
-      setLoading(false);
+    const { success, error } = await signIn(email.trim().toLowerCase(), password);
+    setLoading(false);
+    if (!success) {
+      toast.error(error);
+      return;
     }
+    navigate("/");
   };
 
   return (

@@ -3,6 +3,29 @@ import { supabase } from "../lib/supabase";
 import { ROLE_PERMISSIONS } from "../shared/rbac/permissions";
 import { toast } from "sonner";
 
+const AUTH_LOCK_MAX_RETRIES = 3;
+const AUTH_LOCK_BASE_DELAY = 250;
+
+const isAuthLockError = (err) => {
+  const msg = err?.message || "";
+  return msg.includes("Lock \"lock:sb-") && msg.includes("auth-token") && msg.includes("stole it");
+};
+
+const retryAuthRequest = async (fn) => {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err) {
+      attempt += 1;
+      if (attempt >= AUTH_LOCK_MAX_RETRIES || !isAuthLockError(err)) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, AUTH_LOCK_BASE_DELAY * attempt));
+    }
+  }
+};
+
 const AuthContext = createContext(null);
 
 // DEV preview — constante de módulo (no cambia durante el ciclo de vida)
@@ -38,11 +61,13 @@ export function AuthProvider({ children }) {
   const fetchProfile = useCallback(async (userId) => {
     if (isDev) return devProfile;
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*, roles(name), dependencies(name)")
-        .eq("id", userId)
-        .single();
+      const { data, error } = await retryAuthRequest(() =>
+        supabase
+          .from("profiles")
+          .select("*, roles(name), dependencies(name)")
+          .eq("id", userId)
+          .single()
+      );
       if (error) throw error;
       setProfile(data);
       return data;
@@ -70,7 +95,7 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }, TIMEOUT);
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await retryAuthRequest(() => supabase.auth.getSession());
         if (session?.user) {
           setUser(session.user);
           await fetchProfile(session.user.id);
@@ -106,7 +131,9 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     try {
       setError(null);
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await retryAuthRequest(() =>
+        supabase.auth.signInWithPassword({ email, password })
+      );
       if (error) throw error;
       return { success: true, data };
     } catch (err) {
