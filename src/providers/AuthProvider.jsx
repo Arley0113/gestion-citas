@@ -135,6 +135,11 @@ export function AuthProvider({ children }) {
         supabase.auth.signInWithPassword({ email, password })
       );
       if (error) throw error;
+      const sessionUser = data?.user || data?.session?.user;
+      if (sessionUser) {
+        setUser(sessionUser);
+        await fetchProfile(sessionUser.id);
+      }
       return { success: true, data };
     } catch (err) {
       const msg = err.message === "Invalid login credentials"

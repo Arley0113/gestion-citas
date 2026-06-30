@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, Shield, X } from "lucide-react";
 import { useAuth } from "../../../providers/AuthProvider";
@@ -30,7 +30,13 @@ export default function Login() {
     setForgotEmail("");
   };
 
-  const { signIn } = useAuth();
+  const { signIn, user: authUser, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && authUser) {
+      navigate("/", { replace: true });
+    }
+  }, [authLoading, authUser, navigate]);
 
   const handleEmail = async (e) => {
     e.preventDefault();
