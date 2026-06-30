@@ -115,11 +115,7 @@ export function AuthProvider({ children }) {
 
     const checkSession = async () => {
       try {
-        const { data: { session }, error } = await withTimeout(
-          retryAuthRequest(() => supabase.auth.getSession()),
-          TIMEOUT,
-          "session check"
-        );
+        const { data: { session }, error } = await retryAuthRequest(() => supabase.auth.getSession());
         if (error) throw error;
 
         if (session?.user) {
@@ -134,6 +130,8 @@ export function AuthProvider({ children }) {
       } catch (err) {
         if (!err.message.includes("timed out")) {
           console.warn("Session init failed:", err.message);
+        } else {
+          console.warn("Session init timed out, showing login fallback");
         }
         setUser(null);
         setProfile(null);
@@ -172,11 +170,7 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     try {
       setError(null);
-      const { data, error } = await withTimeout(
-        retryAuthRequest(() => supabase.auth.signInWithPassword({ email, password })),
-        10_000,
-        "sign-in"
-      );
+      const { data, error } = await retryAuthRequest(() => supabase.auth.signInWithPassword({ email, password }));
       if (error) throw error;
       const sessionUser = data?.user || data?.session?.user;
       if (sessionUser) {
@@ -193,7 +187,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       const msg = err.message === "Invalid login credentials"
         ? "Correo o contraseña incorrectos"
-        : err.message;
+        : err.message || "No se pudo iniciar sesión. Intenta de nuevo.";
       setError(msg);
       console.error("signIn error:", err);
       return { success: false, error: msg };
