@@ -107,38 +107,24 @@ export function AuthProvider({ children }) {
     if (isDev) return; // modo DEV — no conectar Supabase
 
     let mounted = true;
-    const TIMEOUT = 3_000;
-    const FAST_FALLBACK = 1_200;
+    const TIMEOUT = 5_000;
+    const FAST_FALLBACK = 700;
     const fallbackTimer = setTimeout(() => {
       if (mounted) setLoading(false);
     }, FAST_FALLBACK);
 
     const checkSession = async () => {
       try {
-        let authUser = null;
+        const { data: { session }, error } = await withTimeout(
+          retryAuthRequest(() => supabase.auth.getSession()),
+          TIMEOUT,
+          "session check"
+        );
+        if (error) throw error;
 
-        try {
-          const { data, error } = await withTimeout(
-            retryAuthRequest(() => supabase.auth.getUser()),
-            1_000,
-            "cached user"
-          );
-          if (error) throw error;
-          authUser = data?.user || null;
-        } catch (err) {
-          console.warn("Cached user lookup failed:", err.message);
-          const { data: sessionData, error: sessionError } = await withTimeout(
-            retryAuthRequest(() => supabase.auth.getSession()),
-            TIMEOUT,
-            "session check"
-          );
-          if (sessionError) throw sessionError;
-          authUser = sessionData?.session?.user || null;
-        }
-
-        if (authUser) {
-          setUser(authUser);
-          const profileData = await fetchProfile(authUser.id);
+        if (session?.user) {
+          setUser(session.user);
+          const profileData = await fetchProfile(session.user.id);
           if (!profileData) {
             await supabase.auth.signOut().catch(() => {});
             setUser(null);
@@ -146,7 +132,9 @@ export function AuthProvider({ children }) {
           }
         }
       } catch (err) {
-        console.warn("Session init failed:", err.message);
+        if (!err.message.includes("timed out")) {
+          console.warn("Session init failed:", err.message);
+        }
         setUser(null);
         setProfile(null);
         setError(null);
@@ -184,8 +172,10 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     try {
       setError(null);
-      const { data, error } = await retryAuthRequest(() =>
-        supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await withTimeout(
+        retryAuthRequest(() => supabase.auth.signInWithPassword({ email, password })),
+        10_000,
+        "sign-in"
       );
       if (error) throw error;
       const sessionUser = data?.user || data?.session?.user;
@@ -205,6 +195,7 @@ export function AuthProvider({ children }) {
         ? "Correo o contraseña incorrectos"
         : err.message;
       setError(msg);
+      console.error("signIn error:", err);
       return { success: false, error: msg };
     }
   };
