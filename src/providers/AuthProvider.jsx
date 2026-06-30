@@ -108,21 +108,30 @@ export function AuthProvider({ children }) {
 
     let mounted = true;
     const TIMEOUT = 7_000;
-    const FAST_FALLBACK = 2_000;
-    const fallbackTimer = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, FAST_FALLBACK);
 
     const checkSession = async () => {
       try {
-        const { data, error } = await withTimeout(
-          retryAuthRequest(() => supabase.auth.getUser()),
-          TIMEOUT,
-          "cached user"
-        );
-        if (error) throw error;
+        let authUser = null;
 
-        const authUser = data?.user || null;
+        try {
+          const { data, error } = await withTimeout(
+            retryAuthRequest(() => supabase.auth.getUser()),
+            2_000,
+            "cached user"
+          );
+          if (error) throw error;
+          authUser = data?.user || null;
+        } catch (err) {
+          console.warn("Cached user lookup failed:", err.message);
+          const { data: sessionData, error: sessionError } = await withTimeout(
+            retryAuthRequest(() => supabase.auth.getSession()),
+            TIMEOUT,
+            "session check"
+          );
+          if (sessionError) throw sessionError;
+          authUser = sessionData?.session?.user || null;
+        }
+
         if (authUser) {
           setUser(authUser);
           const profileData = await fetchProfile(authUser.id);
@@ -138,7 +147,6 @@ export function AuthProvider({ children }) {
         setProfile(null);
         setError(null);
       } finally {
-        clearTimeout(fallbackTimer);
         if (mounted) setLoading(false);
       }
     };
