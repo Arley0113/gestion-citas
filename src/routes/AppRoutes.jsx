@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { useAuth } from "../providers/AuthProvider";
@@ -54,6 +54,7 @@ const Fallback = () => (
 
 export function AppRoutes() {
   const { isAdmin, isCoordination, isProfessional, isAprendiz, needsOnboarding } = useAuth();
+  const location = useLocation();
 
   const getHomeRoute = () => {
     if (isAdmin())        return "/admin";
@@ -120,7 +121,7 @@ export function AppRoutes() {
         {/* /nueva-cita redirige al dashboard donde se abre el modal */}
         <Route path="/nueva-cita" element={
           <ProtectedRoute requiredRoles="APRENDIZ">
-            <Navigate to="/dashboard" replace />
+            <Navigate to={`/dashboard${location.search || ""}`} replace />
           </ProtectedRoute>
         } />
         <Route path="/cita-confirmada" element={
@@ -220,8 +221,8 @@ export function AppRoutes() {
         <Route path="/" element={
           <ProtectedRoute>
             {needsOnboarding()
-              ? <Navigate to="/onboarding" replace />
-              : <Navigate to={getHomeRoute()} replace />
+              ? <Navigate to={`/onboarding${location.search || ""}`} replace />
+              : <Navigate to={`${getHomeRoute()}${location.search || ""}`} replace />
             }
           </ProtectedRoute>
         } />
