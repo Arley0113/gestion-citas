@@ -107,16 +107,25 @@ export function AuthProvider({ children }) {
     if (isDev) return; // modo DEV — no conectar Supabase
 
     const checkSession = async () => {
-      const TIMEOUT = 7_000;
+      const TIMEOUT = 10_000;
       try {
-        const { data: { session } } = await withTimeout(
-          retryAuthRequest(() => supabase.auth.getSession()),
-          TIMEOUT,
-          "session check"
-        );
-        if (session?.user) {
-          setUser(session.user);
-          const profileData = await fetchProfile(session.user.id);
+        let authUser = null;
+
+        const getUserResult = await supabase.auth.getUser();
+        if (getUserResult?.data?.user) {
+          authUser = getUserResult.data.user;
+        } else {
+          const { data: { session } } = await withTimeout(
+            retryAuthRequest(() => supabase.auth.getSession()),
+            TIMEOUT,
+            "session check"
+          );
+          authUser = session?.user || null;
+        }
+
+        if (authUser) {
+          setUser(authUser);
+          const profileData = await fetchProfile(authUser.id);
           if (!profileData) {
             await supabase.auth.signOut().catch(() => {});
             setUser(null);
