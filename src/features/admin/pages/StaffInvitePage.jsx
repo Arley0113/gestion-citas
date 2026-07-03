@@ -10,9 +10,9 @@ const generatePassword = () => Array.from({ length: 12 }, () => CHARS[Math.floor
 
 const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
 const MOCK_DEPS = [
-  { id: 1, name: "Psicología" },
-  { id: 2, name: "Enfermería" },
-  { id: 3, name: "Trabajo Social" },
+  { id: 10, name: "Psicología" },
+  { id: 11, name: "Enfermería" },
+  { id: 12, name: "Trabajo Social" },
 ];
 
 const STAFF_ROLES = [

@@ -131,13 +131,16 @@ Mobile: bottom nav con 4 items por rol + botón "+" circular verde para APRENDIZ
 - Normalización para búsqueda: `str.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()`
 - Sin comentarios de código salvo WHY no obvios
 
-## Sistema de invitación de staff
+## Sistema de creación de staff
 - Tabla `staff_invitations` con `email`, `role_id`, `dependency_id`, `status` (pending/accepted/expired/cancelled), `expires_at`
 - Vista `staff_invitations_full` — join con roles y dependencias para el listado del admin
-- Edge Function `invite-staff` — llama `auth.admin.inviteUserByEmail()` con service role key
+- Edge Function `invite-staff` v3 — usa `auth.admin.createUser()` con `email_confirm: true` + contraseña generada por admin
+  - Si el usuario ya existe: actualiza su contraseña con `updateUserById()`
+  - El admin genera una contraseña aleatoria en el form y la comparte directamente con el staff
+  - NO envía magic link — flujo sin dependencia de email
 - Trigger `handle_new_user()` — al crear usuario, busca en `staff_invitations` para asignar rol; si no hay invitación → rol APRENDIZ
-- APRENDIZ se autoregistra en `/register`; staff recibe email magic link → completa datos en `/completar-perfil`
-- Admin invita desde `/admin/invitar` (ruta `StaffInvitePage.jsx`)
+- APRENDIZ se autoregistra en `/register`; staff es creado por admin → completa datos en `/completar-perfil`
+- Admin crea staff desde `/admin/invitar` (`StaffInvitePage.jsx`) — generador de contraseña aleatoria con show/hide + copy + regenerar
 
 ## Responsive (Layout.jsx)
 Clases globales vía `<style>` tag en Layout:
@@ -151,12 +154,15 @@ Clases globales vía `<style>` tag en Layout:
 - ✅ Deploy en producción: https://gestion-citas-nu.vercel.app (GitHub → Vercel auto-deploy)
 - ✅ Login solo email/contraseña (OAuth removido), olvidé contraseña + ResetPasswordPage
 - ✅ Edge Functions deployadas en Supabase:
-  - `invite-staff` (v2, ACTIVE) — invitación de staff con service role
+  - `invite-staff` (v3, ACTIVE) — crea usuario con `createUser()` + contraseña + `email_confirm: true`; si ya existe actualiza contraseña
   - `notify-appointment` (v5, ACTIVE, verify_jwt: true) — notificaciones email vía Resend API
 - ✅ Migración DB: `user_documents.appointment_id` FK → `appointments(id)` ON DELETE SET NULL
 - ✅ Migración DB: tabla `system_settings` (key/value) con RLS solo ADMINISTRADOR/SUPERADMIN
 - ✅ Todas las páginas conectadas a datos reales de Supabase
-- ✅ AuthProvider: timeout de 12s en checkSession() — previene spinner infinito
+- ✅ AuthProvider: proactive token refresh antes de renderizar (expiresAt < now+30s → refreshSession → signOut si falla)
+- ✅ AuthProvider: FAST_FALLBACK de 8s cuando URL hash contiene tokens de auth (invite/recovery links)
+- ✅ ProtectedRoute: muestra spinner en vez de redirigir cuando `user && !profile` (evita redirect durante carga del perfil)
+- ✅ Navigate fixes: todos los `navigate()` preservan `?preview=<role>` en modo DEV
 - ✅ ProfessionalDashboard: realtime subscription via `postgres_changes` por dependency_id
 - ✅ ProfessionalDashboard: quick link "Expedientes" → /professional/notas (era /aprendices duplicado)
 - ✅ AprendicesList: paginación (PAGE_SIZE=20), query split para evitar límite de joins
@@ -181,4 +187,3 @@ Sin el secreto retorna `{ ok: false, reason: "no_api_key" }` sin romper el flujo
 - Auth → Emails → SMTP Settings: configurar Resend (host: smtp.resend.com, port: 465, user: resend)
 - Edge Functions → Secrets: añadir `RESEND_API_KEY` para activar emails reales
 - Auth → Attack Protection: activar "Leaked Password Protection"
-- AttentionResult: agregar MOCK_APT para preview DEV (actualmente siempre muestra 404 en dev)
