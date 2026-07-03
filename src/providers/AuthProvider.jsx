@@ -108,7 +108,13 @@ export function AuthProvider({ children }) {
 
     let mounted = true;
     const TIMEOUT = 5_000;
-    const FAST_FALLBACK = 700;
+    // Si hay un token de invitación/recovery en el hash, esperar más antes del fallback
+    const hasAuthHash = typeof window !== "undefined" && (
+      window.location.hash.includes("access_token") ||
+      window.location.hash.includes("type=invite") ||
+      window.location.hash.includes("type=recovery")
+    );
+    const FAST_FALLBACK = hasAuthHash ? 8_000 : 700;
     const fallbackTimer = setTimeout(() => {
       if (mounted) setLoading(false);
     }, FAST_FALLBACK);
