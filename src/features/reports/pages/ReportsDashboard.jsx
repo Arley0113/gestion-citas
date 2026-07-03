@@ -82,13 +82,10 @@ function useReportsData(period) {
       const dateFrom = getPeriodDateFrom(period);
       const sixMonthsAgo = subMonths(new Date(), 6).toISOString().slice(0, 10);
 
-      let aptQuery = supabase.from("appointments").select("status, scheduled_date, dependency_id, dependencies(name, color)");
+      let aptQuery = supabase.from("appointments").select("status, scheduled_date, dependency_id, dependencies(name, color), profiles!user_id(program)");
       if (dateFrom) aptQuery = aptQuery.gte("scheduled_date", dateFrom);
 
-      const [{ data: all }, { data: profileRows }] = await Promise.all([
-        aptQuery,
-        supabase.from("profiles").select("program").not("program", "is", null).neq("program", ""),
-      ]);
+      const { data: all } = await aptQuery;
 
       const rows = all || [];
       const total = rows.length;
@@ -105,21 +102,19 @@ function useReportsData(period) {
         depMap[depName].count++;
 
         const monthCutoff = dateFrom || sixMonthsAgo;
-      if (r.scheduled_date >= monthCutoff) {
+        if (r.scheduled_date >= monthCutoff) {
           const mo = format(new Date(r.scheduled_date), "MMM", { locale: es });
           const key = r.scheduled_date.slice(0, 7);
           monthMap[key] = { month: mo.charAt(0).toUpperCase() + mo.slice(1), total: (monthMap[key]?.total || 0) + 1 };
         }
+
+        if (r.profiles?.program) programMap[r.profiles.program] = (programMap[r.profiles.program] || 0) + 1;
       });
 
-      (profileRows || []).forEach(p => {
-        if (p.program) programMap[p.program] = (programMap[p.program] || 0) + 1;
-      });
-      const totalProfiles = (profileRows || []).length || 1;
       const byProgram = Object.entries(programMap)
         .sort(([,a],[,b]) => b - a)
         .slice(0, 5)
-        .map(([name, count]) => ({ name, count, pct: Math.round((count / totalProfiles) * 100) }));
+        .map(([name, count]) => ({ name, count, pct: Math.round((count / total || 1) * 100) }));
 
       setData({
         total,
