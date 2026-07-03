@@ -11,12 +11,12 @@ const IS_DEV = import.meta.env.DEV && typeof window !== "undefined"
   : null;
 
 const MODULES = [
-  { icon: Users,     title: "Gestión de usuarios",  desc: "Invitar staff y asignar roles",   accent: "#3b82f6", bg: "#eff6ff", permission: P.USERS_MANAGE_ROLES, path: "/admin/invitar" },
-  { icon: Building2, title: "Dependencias",          desc: "Administrar áreas de bienestar",  accent: "#8b5cf6", bg: "#f5f3ff", permission: P.DEPS_MANAGE,         path: "/admin/dependencias" },
-  { icon: Shield,    title: "Roles y permisos",      desc: "Ver matriz de acceso del sistema", accent: "#39a900", bg: "#f0fce4", permission: P.SYSTEM_CONFIG,        path: "/admin/roles" },
-  { icon: Activity,  title: "Registro de actividad", desc: "Logs y auditoría del sistema",    accent: "#f59e0b", bg: "#fffbeb", permission: P.SYSTEM_AUDIT,         path: "/admin/actividad" },
-  { icon: Database,  title: "Base de datos",          desc: "Exportar y gestionar datos",     accent: "#ef4444", bg: "#fef2f2", permission: P.SYSTEM_DB,            path: "/reportes" },
-  { icon: Settings,  title: "Configuración general", desc: "Parámetros del sistema",          accent: "#6b7280", bg: "#f9fafb", permission: P.SYSTEM_CONFIG,        path: "/admin/configuracion" },
+  { icon: Users,     title: "Gestión de usuarios",  desc: "Invitar staff y asignar roles",   accent: "#3b82f6", bg: "#eff6ff", permission: P.USERS_MANAGE_ROLES,    path: "/admin/invitar" },
+  { icon: Building2, title: "Dependencias",          desc: "Administrar áreas de bienestar",  accent: "#8b5cf6", bg: "#f5f3ff", permission: P.DEPS_MANAGE,           path: "/admin/dependencias" },
+  { icon: Shield,    title: "Roles y permisos",      desc: "Ver matriz de acceso del sistema", accent: "#39a900", bg: "#f0fce4", permission: P.USERS_READ,            path: "/admin/roles" },
+  { icon: Activity,  title: "Registro de actividad", desc: "Logs y auditoría del sistema",    accent: "#f59e0b", bg: "#fffbeb", permission: P.APPOINTMENTS_READ_ALL, path: "/admin/actividad" },
+  { icon: Database,  title: "Exportar datos",        desc: "Reportes y exportación de datos", accent: "#ef4444", bg: "#fef2f2", permission: P.REPORTS_EXPORT,        path: "/reportes" },
+  { icon: Settings,  title: "Configuración general", desc: "Parámetros del sistema",          accent: "#6b7280", bg: "#f9fafb", permission: P.SYSTEM_CONFIG,         path: "/admin/configuracion" },
 ];
 
 const STATUS_META = {

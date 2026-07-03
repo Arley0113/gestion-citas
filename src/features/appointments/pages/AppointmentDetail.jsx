@@ -61,6 +61,7 @@ export default function AppointmentDetail() {
   const [notes, setNotes]   = useState("");
   const [saving, setSaving] = useState(false);
   const [cancelModal, setCancelModal] = useState({ open: false, reason: "" });
+  const [deleteModal, setDeleteModal] = useState({ open: false, doc: null });
   const [docs, setDocs]     = useState([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
@@ -150,8 +151,11 @@ export default function AppointmentDetail() {
     e.target.value = "";
   };
 
-  const handleDeleteDoc = async (doc) => {
-    if (!window.confirm(`¿Eliminar "${doc.name}"?`)) return;
+  const handleDeleteDoc = (doc) => setDeleteModal({ open: true, doc });
+
+  const executeDeleteDoc = async () => {
+    const doc = deleteModal.doc;
+    setDeleteModal({ open: false, doc: null });
     await supabase.storage.from("user-documents").remove([doc.file_path]);
     await supabase.from("user_documents").delete().eq("id", doc.id);
     setDocs(d => d.filter(x => x.id !== doc.id));
@@ -555,6 +559,32 @@ export default function AppointmentDetail() {
                 style={{ flex: 2, padding: "0.75rem", background: "#ef4444", color: "white", border: "none", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)" }}
               >
                 Sí, cancelar cita
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Modal eliminar documento ─── */}
+      {deleteModal.open && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div style={{ background: "white", borderRadius: 20, padding: "1.75rem", width: "100%", maxWidth: 400, boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}>
+            <h3 style={{ fontWeight: 800, fontSize: "1.125rem", color: "var(--gray-900)", marginBottom: "0.25rem" }}>Eliminar documento</h3>
+            <p style={{ fontSize: "0.875rem", color: "var(--gray-500)", marginBottom: "1.5rem", lineHeight: 1.55 }}>
+              ¿Eliminar <strong style={{ color: "var(--gray-800)" }}>"{deleteModal.doc?.name}"</strong>? Esta acción no se puede deshacer.
+            </p>
+            <div style={{ display: "flex", gap: "0.625rem" }}>
+              <button
+                onClick={() => setDeleteModal({ open: false, doc: null })}
+                style={{ flex: 1, padding: "0.75rem", background: "white", border: "1.5px solid var(--gray-200)", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)", color: "var(--gray-700)" }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeDeleteDoc}
+                style={{ flex: 2, padding: "0.75rem", background: "#ef4444", color: "white", border: "none", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)" }}
+              >
+                Sí, eliminar
               </button>
             </div>
           </div>

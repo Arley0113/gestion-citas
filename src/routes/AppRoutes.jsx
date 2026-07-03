@@ -141,7 +141,7 @@ export function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="/aprendices" element={
-          <ProtectedRoute requiredRoles={["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL","ADMINISTRADOR","SUPERADMIN"]}>
+          <ProtectedRoute requiredRoles={["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL","COORDINACION","ADMINISTRADOR","SUPERADMIN"]}>
             <Layout><AprendicesList /></Layout>
           </ProtectedRoute>
         } />

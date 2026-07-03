@@ -114,10 +114,10 @@ function fmtTime(t = "08:00:00") {
 }
 
 export default function CoordinationDashboard() {
+  const [period, setPeriod] = useState("Este mes");
   const { data, loading, todayApts, loadingToday, loadToday, depData } = useDashboardData(period);
   const { can } = usePermissions();
   const today = new Date();
-  const [period, setPeriod] = useState("Este mes");
   const [hoveredRow, setHoveredRow] = useState(null);
 
   const completedPct = data?.total ? Math.round((data.completed / data.total) * 100) : 74;
