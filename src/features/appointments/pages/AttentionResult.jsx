@@ -8,16 +8,36 @@ import { supabase } from "../../../lib/supabase";
 
 const OBS_LABELS = { done: "Cita cumplida", follow: "Requiere seguimiento", refer: "Remitir a otro servicio" };
 
+const IS_DEV = import.meta.env.DEV && typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("preview")
+  : null;
+
+const MOCK_DATA = {
+  apt: {
+    id: "mock-result-id",
+    scheduled_date: new Date().toISOString().slice(0, 10),
+    scheduled_time: "10:00",
+    reason: "Seguimiento académico y apoyo emocional por bajo rendimiento",
+    user_id: "mock-user",
+    profiles: { full_name: "Juan Andrés Pérez García", document_number: "1004567890" },
+    dependencies: { name: "Psicología" },
+  },
+  notes: "El aprendiz muestra avances significativos en el manejo del estrés académico. Se reforzaron técnicas de organización del tiempo.",
+  tags: ["Estrés académico", "Seguimiento", "Bajo rendimiento"],
+  objectives: ["Identificar fuentes de estrés", "Establecer rutinas de estudio"],
+  obs: ["done", "follow"],
+};
+
 export default function AttentionResult() {
   const { id }     = useParams();
   const { state }  = useLocation();
   const navigate   = useNavigate();
 
-  const [loading, setLoading] = useState(!state);
-  const [data,    setData]    = useState(state || null);
+  const [loading, setLoading] = useState(!state && !IS_DEV);
+  const [data,    setData]    = useState(state || (IS_DEV ? MOCK_DATA : null));
 
   useEffect(() => {
-    if (state) return;
+    if (state || IS_DEV) return;
     supabase
       .from("appointments")
       .select("id, scheduled_date, scheduled_time, reason, notes, tags, observations, user_id, profiles!user_id(full_name, document_number), dependencies(name)")

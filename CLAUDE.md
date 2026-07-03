@@ -154,26 +154,31 @@ Clases globales vía `<style>` tag en Layout:
   - `invite-staff` (v2, ACTIVE) — invitación de staff con service role
   - `notify-appointment` (v5, ACTIVE, verify_jwt: true) — notificaciones email vía Resend API
 - ✅ Migración DB: `user_documents.appointment_id` FK → `appointments(id)` ON DELETE SET NULL
+- ✅ Migración DB: tabla `system_settings` (key/value) con RLS solo ADMINISTRADOR/SUPERADMIN
 - ✅ Todas las páginas conectadas a datos reales de Supabase
 - ✅ AuthProvider: timeout de 12s en checkSession() — previene spinner infinito
 - ✅ ProfessionalDashboard: realtime subscription via `postgres_changes` por dependency_id
+- ✅ ProfessionalDashboard: quick link "Expedientes" → /professional/notas (era /aprendices duplicado)
 - ✅ AprendicesList: paginación (PAGE_SIZE=20), query split para evitar límite de joins
 - ✅ AprendizDashboard + AppointmentDetail: modal de cancelación con `cancelled_reason`
 - ✅ AppointmentDetail: adjuntos de archivos reales (upload/view/delete) en bucket `user-documents`
 - ✅ AppointmentDetail: eliminar doc usa modal propio (no window.confirm)
 - ✅ useAppointments.js: cancelAppointment acepta `cancelledReason` y lo persiste en DB
 - ✅ Admin: 6 páginas funcionales — /admin, /admin/invitar, /admin/dependencias, /admin/actividad, /admin/roles, /admin/configuracion
+- ✅ ConfiguracionAdminPage: persiste en DB (tabla system_settings) con upsert por key
 - ✅ AdminDashboard: permisos de tarjetas corregidos (USERS_READ, APPOINTMENTS_READ_ALL, REPORTS_EXPORT)
 - ✅ CoordinationDashboard: fix hoisting useState period antes de useDashboardData
 - ✅ AppRoutes: COORDINACION añadido a /aprendices
+- ✅ window.confirm eliminado de todos los archivos (modal propio o inline confirm)
+- ✅ Seguridad: vistas security_invoker, search_path fijo en funciones, REVOKE anon en trigger functions
 - ✅ Build limpio: ~800ms, 0 errores
 
 ## Edge Function — notify-appointment
 Soporta Resend API para emails. Requiere secreto `RESEND_API_KEY` en Supabase Dashboard → Edge Functions → Secrets.
 Sin el secreto retorna `{ ok: false, reason: "no_api_key" }` sin romper el flujo.
 
-## Pendiente
-- Configurar `RESEND_API_KEY` en Supabase Secrets para activar emails
-- Probar flujo E2E real de invitación con email real de Supabase
-- ConfiguracionAdminPage: implementar persistencia real en DB (actualmente solo UI)
+## Pendiente (acciones manuales en Supabase Dashboard)
+- Auth → Emails → SMTP Settings: configurar Resend (host: smtp.resend.com, port: 465, user: resend)
+- Edge Functions → Secrets: añadir `RESEND_API_KEY` para activar emails reales
+- Auth → Attack Protection: activar "Leaked Password Protection"
 - AttentionResult: agregar MOCK_APT para preview DEV (actualmente siempre muestra 404 en dev)
