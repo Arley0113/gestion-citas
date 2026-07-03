@@ -8,6 +8,13 @@ import { es } from "date-fns/locale";
 const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$";
 const generatePassword = () => Array.from({ length: 12 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join("");
 
+const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
+const MOCK_DEPS = [
+  { id: 1, name: "Psicología" },
+  { id: 2, name: "Enfermería" },
+  { id: 3, name: "Trabajo Social" },
+];
+
 const STAFF_ROLES = [
   { value: "PSICOLOGIA",     label: "Psicólogo/a",       dep: true  },
   { value: "ENFERMERIA",     label: "Enfermero/a",        dep: true  },
@@ -40,12 +47,13 @@ export default function StaffInvitePage() {
 
   // Cargar roles y dependencias
   useEffect(() => {
+    if (IS_DEV) { setDeps(MOCK_DEPS); }
     Promise.all([
       supabase.from("roles").select("id, name, label").in("name", STAFF_ROLES.map(r => r.value)),
-      supabase.from("dependencies").select("id, name"),
+      IS_DEV ? Promise.resolve({ data: [] }) : supabase.from("dependencies").select("id, name"),
     ]).then(([rolesRes, depsRes]) => {
       setRoles(rolesRes.data || []);
-      setDeps(depsRes.data || []);
+      if (!IS_DEV) setDeps(depsRes.data || []);
     });
   }, []);
 
@@ -131,7 +139,7 @@ export default function StaffInvitePage() {
             Invitar staff
           </h1>
           <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: "0.25rem 0 0" }}>
-            Envía invitaciones por correo al personal de Bienestar SENA con su rol asignado.
+            Crea usuarios para el personal de Bienestar SENA con rol y contraseña temporal asignados.
           </p>
         </div>
       </div>
