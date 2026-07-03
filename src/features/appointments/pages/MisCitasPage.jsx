@@ -145,7 +145,7 @@ export default function MisCitasPage() {
                     transition:"box-shadow 0.12s",
                     cursor:"pointer",
                   }}
-                  onClick={() => navigate(`/cita/${cita.id}`)}
+                  onClick={() => navigate(`/cita/${cita.id}${IS_DEV ? `?preview=${IS_DEV}` : ""}`)}
                   onMouseEnter={e => e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.08)"}
                   onMouseLeave={e => e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,0.04)"}
                 >

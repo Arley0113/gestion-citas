@@ -272,7 +272,7 @@ export default function AprendizDashboard() {
             {/* Próxima cita destacada */}
             {nextApt && (
               <div
-                onClick={() => navigate(`/cita/${nextApt.id}`)}
+                onClick={() => navigate(`/cita/${nextApt.id}${IS_DEV ? `?preview=${IS_DEV}` : ""}`)}
                 style={{
                   background: "white",
                   border: "1px solid #e5e7eb",
@@ -394,7 +394,7 @@ export default function AprendizDashboard() {
                     return (
                       <div
                         key={apt.id}
-                        onClick={() => navigate(`/cita/${apt.id}`)}
+                        onClick={() => navigate(`/cita/${apt.id}${IS_DEV ? `?preview=${IS_DEV}` : ""}`)}
                         style={{
                           display: "flex", alignItems: "center", gap: "1rem",
                           padding: "1rem 1.5rem",
