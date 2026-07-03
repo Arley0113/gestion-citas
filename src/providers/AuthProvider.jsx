@@ -136,9 +136,13 @@ export function AuthProvider({ children }) {
           const isExpiredOrExpiring = expiresAt < Date.now() + 30_000;
 
           if (isExpiredOrExpiring) {
-            const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+            const refreshResult = await Promise.race([
+              supabase.auth.refreshSession(),
+              new Promise(resolve => setTimeout(() => resolve({ data: null, error: new Error("refresh timeout") }), 5_000)),
+            ]);
+            const { data: refreshed, error: refreshErr } = refreshResult;
             if (refreshErr || !refreshed?.session) {
-              // Refresh token inválido — limpiar todo y mostrar login
+              // Refresh token inválido o timeout — limpiar todo y mostrar login
               await supabase.auth.signOut().catch(() => {});
               setUser(null);
               setProfile(null);
