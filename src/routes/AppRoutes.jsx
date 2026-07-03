@@ -24,7 +24,11 @@ const NotificationsPage     = lazy(() => import("../features/auth/pages/Notifica
 const RegisterPage          = lazy(() => import("../features/auth/pages/RegisterPage"));
 const ResetPasswordPage     = lazy(() => import("../features/auth/pages/ResetPasswordPage"));
 const CompleteProfilePage   = lazy(() => import("../features/auth/pages/CompleteProfilePage"));
-const StaffInvitePage       = lazy(() => import("../features/admin/pages/StaffInvitePage"));
+const StaffInvitePage          = lazy(() => import("../features/admin/pages/StaffInvitePage"));
+const DependenciasPage         = lazy(() => import("../features/admin/pages/DependenciasPage"));
+const ActividadPage            = lazy(() => import("../features/admin/pages/ActividadPage"));
+const RolesPage                = lazy(() => import("../features/admin/pages/RolesPage"));
+const ConfiguracionAdminPage   = lazy(() => import("../features/admin/pages/ConfiguracionAdminPage"));
 const ReportsDashboard      = lazy(() => import("../features/reports/pages/ReportsDashboard"));
 
 // Aprendiz — páginas nuevas
@@ -214,6 +218,26 @@ export function AppRoutes() {
         <Route path="/admin/invitar" element={
           <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
             <Layout><StaffInvitePage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/dependencias" element={
+          <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
+            <Layout><DependenciasPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/actividad" element={
+          <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
+            <Layout><ActividadPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/roles" element={
+          <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
+            <Layout><RolesPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/configuracion" element={
+          <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
+            <Layout><ConfiguracionAdminPage /></Layout>
           </ProtectedRoute>
         } />
 

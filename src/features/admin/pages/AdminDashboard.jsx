@@ -1,52 +1,72 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Settings, Building2, ChevronRight, Shield, Activity, Database, Check, Minus, Lock, ChevronDown, UserPlus, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Users, Settings, Building2, ChevronRight, Shield, Activity, Database, Check, Minus, Lock, ChevronDown, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../../../providers/AuthProvider";
 import { usePermissions } from "../../../shared/rbac/usePermissions";
 import { supabase } from "../../../lib/supabase";
 import { ROLE_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_LABELS, ROLE_LABELS, ALL_ROLES, P } from "../../../shared/rbac/permissions";
 
+const IS_DEV = import.meta.env.DEV && typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("preview")
+  : null;
+
 const MODULES = [
   { icon: Users,     title: "Gestión de usuarios",  desc: "Invitar staff y asignar roles",   accent: "#3b82f6", bg: "#eff6ff", permission: P.USERS_MANAGE_ROLES, path: "/admin/invitar" },
-  { icon: Building2, title: "Dependencias",          desc: "Administrar áreas de bienestar",  accent: "#8b5cf6", bg: "#f5f3ff", permission: P.DEPS_MANAGE,         path: null },
-  { icon: Shield,    title: "Roles y permisos",      desc: "Configurar accesos del sistema",  accent: "#39a900", bg: "#f0fce4", permission: P.SYSTEM_CONFIG,        path: null },
-  { icon: Activity,  title: "Registro de actividad", desc: "Logs y auditoría del sistema",    accent: "#f59e0b", bg: "#fffbeb", permission: P.SYSTEM_AUDIT,         path: null },
-  { icon: Database,  title: "Base de datos",          desc: "Exportar y gestionar datos",     accent: "#ef4444", bg: "#fef2f2", permission: P.SYSTEM_DB,            path: null },
-  { icon: Settings,  title: "Configuración general", desc: "Parámetros del sistema",          accent: "#6b7280", bg: "#f9fafb", permission: P.SYSTEM_CONFIG,        path: null },
+  { icon: Building2, title: "Dependencias",          desc: "Administrar áreas de bienestar",  accent: "#8b5cf6", bg: "#f5f3ff", permission: P.DEPS_MANAGE,         path: "/admin/dependencias" },
+  { icon: Shield,    title: "Roles y permisos",      desc: "Ver matriz de acceso del sistema", accent: "#39a900", bg: "#f0fce4", permission: P.SYSTEM_CONFIG,        path: "/admin/roles" },
+  { icon: Activity,  title: "Registro de actividad", desc: "Logs y auditoría del sistema",    accent: "#f59e0b", bg: "#fffbeb", permission: P.SYSTEM_AUDIT,         path: "/admin/actividad" },
+  { icon: Database,  title: "Base de datos",          desc: "Exportar y gestionar datos",     accent: "#ef4444", bg: "#fef2f2", permission: P.SYSTEM_DB,            path: "/reportes" },
+  { icon: Settings,  title: "Configuración general", desc: "Parámetros del sistema",          accent: "#6b7280", bg: "#f9fafb", permission: P.SYSTEM_CONFIG,        path: "/admin/configuracion" },
 ];
 
-const MOCK_ACTIVITY = [
-  { icon: UserPlus,     color: "#3b82f6", bg: "#eff6ff", text: "Invitación enviada a carolina@sena.edu.co", time: "Hace 2 horas",  user: "Admin SENA" },
-  { icon: Calendar,     color: "#39a900", bg: "#f0fce4", text: "Nueva cita agendada — Psicología",          time: "Hace 3 horas",  user: "Juan Pérez" },
-  { icon: CheckCircle2, color: "#16a34a", bg: "#dcfce7", text: "Cita completada — Enfermería",              time: "Hace 4 horas",  user: "Carlos Ruiz" },
-  { icon: Shield,       color: "#8b5cf6", bg: "#f5f3ff", text: "Rol actualizado — Coordinación asignada",   time: "Ayer",          user: "Admin SENA" },
-  { icon: AlertCircle,  color: "#f59e0b", bg: "#fef3c7", text: "No asistió — Trabajo Social",               time: "Ayer",          user: "María Torres" },
-];
+const STATUS_META = {
+  pending:     { icon: Calendar,     color: "#f59e0b", bg: "#fef3c7", label: "Pendiente" },
+  confirmed:   { icon: CheckCircle2, color: "#39a900", bg: "#f0fce4", label: "Confirmada" },
+  cancelled:   { icon: AlertCircle,  color: "#ef4444", bg: "#fef2f2", label: "Cancelada" },
+  in_progress: { icon: Activity,     color: "#3b82f6", bg: "#eff6ff", label: "En atención" },
+  completed:   { icon: CheckCircle2, color: "#8b5cf6", bg: "#f5f3ff", label: "Completada" },
+  no_show:     { icon: AlertCircle,  color: "#6b7280", bg: "#f9fafb", label: "No asistió" },
+};
 
 function useAdminStats() {
   const [stats, setStats] = useState({ users: null, deps: null, monthApts: null, uptime: "99.9%" });
 
   useEffect(() => {
+    if (IS_DEV) {
+      setStats({ users: 128, deps: 3, monthApts: 47, uptime: "99.9%" });
+      return;
+    }
     const now = new Date();
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-
     Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }),
       supabase.from("dependencies").select("*", { count: "exact", head: true }),
       supabase.from("appointments").select("*", { count: "exact", head: true }).gte("scheduled_date", firstOfMonth),
     ]).then(([users, deps, apts]) => {
-      setStats({
-        users:     users.count ?? "—",
-        deps:      deps.count  ?? "—",
-        monthApts: apts.count  ?? "—",
-        uptime:    "99.9%",
-      });
+      setStats({ users: users.count ?? "—", deps: deps.count ?? "—", monthApts: apts.count ?? "—", uptime: "99.9%" });
     }).catch(() => {
       setStats({ users: "—", deps: "—", monthApts: "—", uptime: "99.9%" });
     });
   }, []);
 
   return stats;
+}
+
+function useRecentActivity() {
+  const [activity, setActivity] = useState([]);
+
+  useEffect(() => {
+    if (IS_DEV) return;
+    supabase
+      .from("appointments")
+      .select("id, status, created_at, profiles!user_id(full_name), dependencies(name)")
+      .order("created_at", { ascending: false })
+      .limit(5)
+      .then(({ data }) => { if (data) setActivity(data); })
+      .catch(() => {});
+  }, []);
+
+  return activity;
 }
 
 export default function AdminDashboard() {
@@ -58,6 +78,7 @@ export default function AdminDashboard() {
   const now   = new Date();
   const roleName = ROLE_LABELS[profile?.roles?.name] || profile?.roles?.name || "Admin";
 
+  const recentActivity = useRecentActivity();
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const toggleGroup = (label) => setCollapsedGroups(p => ({ ...p, [label]: !p[label] }));
 
@@ -257,31 +278,46 @@ export default function AdminDashboard() {
 
       {/* ─── Actividad reciente ─── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2rem 1.75rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
           <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Actividad reciente
           </div>
-          <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "#d97706", background: "#fef3c7", padding: "0.1rem 0.5rem", borderRadius: 20, border: "1px solid #fde68a" }}>
-            Datos de ejemplo
-          </span>
+          <button onClick={() => navigate("/admin/actividad")} style={{ fontSize: "0.75rem", color: "#39a900", fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+            Ver todo →
+          </button>
         </div>
         <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          {MOCK_ACTIVITY.map(({ icon: Ic, color, bg, text, time, user }, i) => (
-            <div
-              key={i}
-              style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1.5rem", borderBottom: i < MOCK_ACTIVITY.length - 1 ? "1px solid #f9fafb" : "none" }}
-              onMouseEnter={e => e.currentTarget.style.background = "#fafafa"}
-              onMouseLeave={e => e.currentTarget.style.background = "white"}
-            >
-              <div style={{ width: 36, height: 36, borderRadius: "9px", background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Ic size={16} color={color} />
+          {(IS_DEV ? [
+            { id: 1, status: "confirmed",   profiles: { full_name: "Juan Pérez" },   dependencies: { name: "Psicología" },     created_at: new Date(Date.now()-7200000).toISOString() },
+            { id: 2, status: "completed",   profiles: { full_name: "María Torres" },  dependencies: { name: "Enfermería" },     created_at: new Date(Date.now()-14400000).toISOString() },
+            { id: 3, status: "cancelled",   profiles: { full_name: "Carlos Ruiz" },   dependencies: { name: "Trabajo Social" }, created_at: new Date(Date.now()-86400000).toISOString() },
+            { id: 4, status: "pending",     profiles: { full_name: "Ana Gómez" },     dependencies: { name: "Psicología" },     created_at: new Date(Date.now()-172800000).toISOString() },
+            { id: 5, status: "no_show",     profiles: { full_name: "Luis Martínez" }, dependencies: { name: "Enfermería" },     created_at: new Date(Date.now()-259200000).toISOString() },
+          ] : recentActivity).map((row, i, arr) => {
+            const meta = STATUS_META[row.status] || STATUS_META.pending;
+            const Ic = meta.icon;
+            const elapsed = Math.round((Date.now() - new Date(row.created_at).getTime()) / 60000);
+            const timeStr = elapsed < 60 ? `Hace ${elapsed} min` : elapsed < 1440 ? `Hace ${Math.round(elapsed/60)} h` : `Hace ${Math.round(elapsed/1440)} día(s)`;
+            return (
+              <div
+                key={row.id}
+                onClick={() => !IS_DEV && navigate(`/cita/${row.id}`)}
+                style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1.5rem", borderBottom: i < arr.length - 1 ? "1px solid #f9fafb" : "none", cursor: IS_DEV ? "default" : "pointer" }}
+                onMouseEnter={e => e.currentTarget.style.background = "#fafafa"}
+                onMouseLeave={e => e.currentTarget.style.background = "white"}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: "9px", background: meta.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Ic size={16} color={meta.color} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    Cita {meta.label.toLowerCase()} — {row.dependencies?.name}
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem" }}>{row.profiles?.full_name} · {timeStr}</div>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</div>
-                <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem" }}>{user} · {time}</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
