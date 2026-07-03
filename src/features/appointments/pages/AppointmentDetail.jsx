@@ -176,7 +176,7 @@ export default function AppointmentDetail() {
     toast.success("Notas guardadas");
   };
 
-  const startAttention = () => navigate(`/cita/${id}/atencion`);
+  const startAttention = () => navigate(`/cita/${id}/atencion${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`);
 
   if (loading) return <div className="loading-screen">Cargando cita...</div>;
   if (!apt)    return <div className="loading-screen">Cita no encontrada</div>;

@@ -167,7 +167,7 @@ export default function ProfessionalAgendaPage() {
                         const cfg = STATUS_CFG[apt.status] || STATUS_CFG.pending;
                         return (
                           <div key={apt.id}
-                            onClick={() => navigate(`/cita/${apt.id}`)}
+                            onClick={() => navigate(`/cita/${apt.id}${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
                             style={{ display: "flex", alignItems: "center", gap: "1rem", background: "white", borderRadius: 10, border: "1px solid #e5e7eb", borderLeft: `4px solid ${cfg.border}`, padding: "0.875rem 1.25rem", cursor: "pointer", marginBottom: "0.5rem", transition: "box-shadow 0.15s" }}
                             onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"}
                             onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
@@ -216,7 +216,7 @@ export default function ProfessionalAgendaPage() {
                         const cfg = STATUS_CFG[apt.status] || STATUS_CFG.pending;
                         return (
                           <div key={apt.id}
-                            onClick={() => navigate(`/cita/${apt.id}`)}
+                            onClick={() => navigate(`/cita/${apt.id}${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
                             style={{ background: cfg.bg, borderLeft: `3px solid ${cfg.border}`, borderRadius: "0 6px 6px 0", padding: "0.25rem 0.375rem", cursor: "pointer", marginBottom: "0.25rem" }}
                           >
                             <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: cfg.border }}>{fmtAptTime(apt)}</div>
