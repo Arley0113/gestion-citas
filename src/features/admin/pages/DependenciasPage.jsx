@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, ArrowLeft, ToggleLeft, ToggleRight, Edit2, Check, X, Users, Calendar } from "lucide-react";
+import { Building2, ArrowLeft, ToggleLeft, ToggleRight, Edit2, Check, X, Users } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 
@@ -18,7 +18,7 @@ export default function DependenciasPage() {
     setLoading(true);
     const { data } = await supabase
       .from("dependencies")
-      .select("*, profiles!dependency_id(id)")
+      .select("*")
       .order("id");
     if (data) {
       // count staff per dep
