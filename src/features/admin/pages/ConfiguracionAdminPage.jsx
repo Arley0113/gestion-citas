@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Settings, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "../../../lib/supabase";
 
 const SETTINGS = [
   { key: "max_appointments_per_day", label: "Máx. citas por día (por profesional)", type: "number", default: 8 },
@@ -11,13 +12,46 @@ const SETTINGS = [
   { key: "notification_emails",      label: "Notificaciones por email", type: "boolean", default: true },
 ];
 
+const DEFAULTS = Object.fromEntries(SETTINGS.map(s => [s.key, s.default]));
+
+function parseRow({ key, value }) {
+  const meta = SETTINGS.find(s => s.key === key);
+  if (!meta) return [key, value];
+  if (meta.type === "boolean") return [key, value === "true"];
+  if (meta.type === "number")  return [key, Number(value)];
+  return [key, value];
+}
+
 export default function ConfiguracionAdminPage() {
   const navigate = useNavigate();
-  const [values, setValues] = useState(() =>
-    Object.fromEntries(SETTINGS.map(s => [s.key, s.default]))
-  );
+  const [values, setValues] = useState(DEFAULTS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const save = () => {
+  useEffect(() => {
+    supabase
+      .from("system_settings")
+      .select("key, value")
+      .then(({ data, error }) => {
+        if (!error && data?.length) {
+          setValues(prev => ({ ...prev, ...Object.fromEntries(data.map(parseRow)) }));
+        }
+        setLoading(false);
+      });
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    const rows = SETTINGS.map(s => ({
+      key: s.key,
+      value: String(values[s.key]),
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase
+      .from("system_settings")
+      .upsert(rows, { onConflict: "key" });
+    setSaving(false);
+    if (error) { toast.error("Error al guardar la configuración"); return; }
     toast.success("Configuración guardada");
   };
 
@@ -44,7 +78,13 @@ export default function ConfiguracionAdminPage() {
       </div>
 
       <div style={{ maxWidth: 700, margin: "0 auto", padding: "1.75rem 2rem 2rem" }}>
-        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+        {loading && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "3rem 0" }}>
+            <div style={{ width: 28, height: 28, border: "2.5px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
+        {!loading && <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           {SETTINGS.map((s, i) => (
             <div key={s.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.125rem 1.5rem", borderBottom: i < SETTINGS.length - 1 ? "1px solid #f9fafb" : "none", gap: "1.5rem" }}>
               <div>
@@ -69,16 +109,17 @@ export default function ConfiguracionAdminPage() {
               )}
             </div>
           ))}
-        </div>
+        </div>}
 
-        <div style={{ marginTop: "1.25rem", display: "flex", justifyContent: "flex-end" }}>
+        {!loading && <div style={{ marginTop: "1.25rem", display: "flex", justifyContent: "flex-end" }}>
           <button
             onClick={save}
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.25rem", background: "#39a900", color: "white", border: "none", borderRadius: 9, fontFamily: "var(--font-sans)", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 8px rgba(57,169,0,0.25)" }}
+            disabled={saving}
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.25rem", background: saving ? "#9ca3af" : "#39a900", color: "white", border: "none", borderRadius: 9, fontFamily: "var(--font-sans)", fontSize: "0.875rem", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", boxShadow: "0 2px 8px rgba(57,169,0,0.25)" }}
           >
-            <Save size={15} /> Guardar cambios
+            <Save size={15} /> {saving ? "Guardando…" : "Guardar cambios"}
           </button>
-        </div>
+        </div>}
       </div>
     </div>
   );

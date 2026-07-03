@@ -391,7 +391,7 @@ export default function ProfessionalDashboard() {
               </div>
               {[
                 { icon: Users,      label: "Aprendices",  sub: "Historial de atención",   path: "/aprendices", color: "#3b82f6", bg: "#eff6ff" },
-                { icon: FolderOpen, label: "Expedientes", sub: "Historial por aprendiz",   path: "/aprendices", color: "#8b5cf6", bg: "#f5f3ff" },
+                { icon: FolderOpen, label: "Expedientes", sub: "Notas clínicas",            path: "/professional/notas", color: "#8b5cf6", bg: "#f5f3ff" },
                 { icon: BarChart2,  label: "Mis citas",   sub: "Agenda completa del día",  path: "/professional/agenda", color: "#39a900", bg: "#f0fce4" },
               ].map(({ icon: Ic, label, sub, path, color, bg }, i, arr) => (
                 <div key={label} onClick={() => path && navigate(path)}
