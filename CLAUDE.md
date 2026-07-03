@@ -160,7 +160,12 @@ Clases globales vía `<style>` tag en Layout:
 - ✅ AprendicesList: paginación (PAGE_SIZE=20), query split para evitar límite de joins
 - ✅ AprendizDashboard + AppointmentDetail: modal de cancelación con `cancelled_reason`
 - ✅ AppointmentDetail: adjuntos de archivos reales (upload/view/delete) en bucket `user-documents`
+- ✅ AppointmentDetail: eliminar doc usa modal propio (no window.confirm)
 - ✅ useAppointments.js: cancelAppointment acepta `cancelledReason` y lo persiste en DB
+- ✅ Admin: 6 páginas funcionales — /admin, /admin/invitar, /admin/dependencias, /admin/actividad, /admin/roles, /admin/configuracion
+- ✅ AdminDashboard: permisos de tarjetas corregidos (USERS_READ, APPOINTMENTS_READ_ALL, REPORTS_EXPORT)
+- ✅ CoordinationDashboard: fix hoisting useState period antes de useDashboardData
+- ✅ AppRoutes: COORDINACION añadido a /aprendices
 - ✅ Build limpio: ~800ms, 0 errores
 
 ## Edge Function — notify-appointment
@@ -170,3 +175,5 @@ Sin el secreto retorna `{ ok: false, reason: "no_api_key" }` sin romper el flujo
 ## Pendiente
 - Configurar `RESEND_API_KEY` en Supabase Secrets para activar emails
 - Probar flujo E2E real de invitación con email real de Supabase
+- ConfiguracionAdminPage: implementar persistencia real en DB (actualmente solo UI)
+- AttentionResult: agregar MOCK_APT para preview DEV (actualmente siempre muestra 404 en dev)
