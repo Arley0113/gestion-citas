@@ -51,7 +51,7 @@ export default function MisCitasPage() {
     if (!user) { setLoading(false); return; }
     supabase
       .from("appointments")
-      .select("*, dependencies(name)")
+      .select("*, dependencies(name, color), professional:profiles!professional_id(full_name)")
       .eq("user_id", user.id)
       .order("scheduled_date", { ascending: false })
       .then(({ data }) => { setCitas(data || []); setLoading(false); });
@@ -164,7 +164,7 @@ export default function MisCitasPage() {
                         <CalendarDays size={11} />
                         {format(dateObj, "d MMM yyyy", { locale:es })} · {timeLabel(cita.scheduled_time)}
                       </span>
-                      {cita.professional_name && <span>{cita.professional_name}</span>}
+                      {(cita.professional?.full_name || cita.professional_name) && <span>{cita.professional?.full_name || cita.professional_name}</span>}
                     </div>
                     {cita.reason && (
                       <div style={{ fontSize:"0.75rem", color:"#9ca3af", marginTop:"0.25rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>

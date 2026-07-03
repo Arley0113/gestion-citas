@@ -197,7 +197,6 @@ export function AuthProvider({ children }) {
         setUser(null);
         setProfile(null);
       } else if (event === "SIGNED_OUT") {
-        await supabase.auth.signOut().catch(() => {}); // limpiar localStorage por si acaso
         setUser(null);
         setProfile(null);
       }
@@ -256,13 +255,15 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
+    setUser(null);
+    setProfile(null);
+    setError(null);
     try {
       await supabase.auth.signOut();
-      setUser(null);
-      setProfile(null);
     } catch (err) {
-      setError(err.message);
+      console.warn("signOut:", err.message);
     }
+    window.location.href = "/login";
   };
 
   const hasRole = (requiredRoles) => {

@@ -11,7 +11,8 @@ const IS_DEV = import.meta.env.DEV && typeof window !== "undefined"
   : null;
 
 const MODULES = [
-  { icon: Users,     title: "Gestión de usuarios",  desc: "Invitar staff y asignar roles",   accent: "#3b82f6", bg: "#eff6ff", permission: P.USERS_MANAGE_ROLES,    path: "/admin/invitar" },
+  { icon: Users,     title: "Invitar staff",         desc: "Crear cuentas de profesionales",  accent: "#3b82f6", bg: "#eff6ff", permission: P.USERS_MANAGE_ROLES,    path: "/admin/invitar" },
+  { icon: Users,     title: "Usuarios registrados",  desc: "Ver y eliminar usuarios",         accent: "#dc2626", bg: "#fef2f2", permission: P.USERS_READ,            path: "/admin/usuarios" },
   { icon: Building2, title: "Dependencias",          desc: "Administrar áreas de bienestar",  accent: "#8b5cf6", bg: "#f5f3ff", permission: P.DEPS_MANAGE,           path: "/admin/dependencias" },
   { icon: Shield,    title: "Roles y permisos",      desc: "Ver matriz de acceso del sistema", accent: "#39a900", bg: "#f0fce4", permission: P.USERS_READ,            path: "/admin/roles" },
   { icon: Activity,  title: "Registro de actividad", desc: "Logs y auditoría del sistema",    accent: "#f59e0b", bg: "#fffbeb", permission: P.APPOINTMENTS_READ_ALL, path: "/admin/actividad" },
