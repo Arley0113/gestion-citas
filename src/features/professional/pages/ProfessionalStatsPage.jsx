@@ -5,6 +5,20 @@ import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 
+const IS_DEV = import.meta.env.DEV && typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("preview")
+  : null;
+
+const MOCK_STATS = {
+  stats:       { total: 38, completed: 31, noShow: 4, avgDaily: "2.2" },
+  weekData:    [{ label: "Sem 1", value: 8 }, { label: "Sem 2", value: 11 }, { label: "Sem 3", value: 9 }, { label: "Sem 4", value: 10 }],
+  topAprendices: [
+    { name: "María Torres", count: 5 }, { name: "Juan Pérez", count: 4 },
+    { name: "Ana Gómez", count: 3 },   { name: "Carlos Ruiz", count: 3 },
+    { name: "Luis Martínez", count: 2 },
+  ],
+};
+
 const AVATAR_COLORS = ["#39a900","#3b82f6","#8b5cf6","#f59e0b","#ef4444","#06b6d4"];
 const avatarColor = (name) => AVATAR_COLORS[(name?.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 
@@ -24,6 +38,13 @@ export default function ProfessionalStatsPage() {
   const [topAprendices, setTopAprendices] = useState([]);
 
   useEffect(() => {
+    if (IS_DEV) {
+      setStats(MOCK_STATS.stats);
+      setWeekData(MOCK_STATS.weekData);
+      setTopAprendices(MOCK_STATS.topAprendices);
+      setLoading(false);
+      return;
+    }
     if (!user) { setLoading(false); return; }
 
     const now = new Date();
