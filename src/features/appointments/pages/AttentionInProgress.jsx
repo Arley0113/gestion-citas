@@ -85,7 +85,7 @@ export default function AttentionInProgress() {
     setSaving(true);
     if (DEV_ROLE) {
       toast.success("Atención finalizada (demo)");
-      navigate(`/cita/${id}/resultado`, { state: { apt, notes, tags: selectedTags, objectives: checkedObjs, obs: selectedObs } });
+      navigate(`/cita/${id}/resultado${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`, { state: { apt, notes, tags: selectedTags, objectives: checkedObjs, obs: selectedObs } });
       return;
     }
     const { error } = await supabase
@@ -100,7 +100,7 @@ export default function AttentionInProgress() {
   const markNoShow = async () => {
     if (!DEV_ROLE) await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", id);
     toast.info("Marcada como no asistió");
-    navigate("/professional");
+    navigate(`/professional${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`);
   };
 
   if (!apt) return (

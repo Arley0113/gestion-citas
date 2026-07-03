@@ -269,7 +269,7 @@ export default function ProfessionalDashboard() {
                         onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "1.125rem", padding: "1.125rem 1.5rem", cursor: "pointer" }}
-                          onClick={() => navigate(`/cita/${apt.id}`)}
+                          onClick={() => navigate(`/cita/${apt.id}${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
                         >
                           {/* Hora */}
                           <div style={{ minWidth: 52, flexShrink: 0, textAlign: "center" }}>
@@ -320,7 +320,7 @@ export default function ProfessionalDashboard() {
                               </button>
                             )}
                             {can(P.APPOINTMENTS_START) && apt.status === "confirmed" && (
-                              <button onClick={() => navigate(`/cita/${apt.id}/atencion`)}
+                              <button onClick={() => navigate(`/cita/${apt.id}/atencion${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
                                 style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.25rem", background: "#39a900", color: "white", border: "none", borderRadius: 8, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "0 1px 4px rgba(57,169,0,0.3)" }}>
                                 <Play size={14} /> Iniciar atención
                               </button>
@@ -394,7 +394,7 @@ export default function ProfessionalDashboard() {
                 { icon: FolderOpen, label: "Expedientes", sub: "Notas clínicas",            path: "/professional/notas", color: "#8b5cf6", bg: "#f5f3ff" },
                 { icon: BarChart2,  label: "Mis citas",   sub: "Agenda completa del día",  path: "/professional/agenda", color: "#39a900", bg: "#f0fce4" },
               ].map(({ icon: Ic, label, sub, path, color, bg }, i, arr) => (
-                <div key={label} onClick={() => path && navigate(path)}
+                <div key={label} onClick={() => path && navigate(`${path}${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
                   style={{ display: "flex", alignItems: "center", gap: "0.875rem", padding: "0.875rem 1.25rem", borderBottom: i < arr.length - 1 ? "1px solid #f9fafb" : "none", cursor: path ? "pointer" : "default", transition: "background 0.1s, border-color 0.1s", borderLeft: "3px solid transparent" }}
                   onMouseEnter={e => { if (path) { e.currentTarget.style.background = "#fafafa"; e.currentTarget.style.borderLeftColor = "#39a900"; }}}
                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderLeftColor = "transparent"; }}
