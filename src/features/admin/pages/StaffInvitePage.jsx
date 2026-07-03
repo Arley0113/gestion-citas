@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { UserPlus, Send, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
+import { UserPlus, Send, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Eye, EyeOff, Copy, RefreshCcw } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+
+const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$";
+const generatePassword = () => Array.from({ length: 12 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join("");
 
 const STAFF_ROLES = [
   { value: "PSICOLOGIA",     label: "Psicólogo/a",       dep: true  },
@@ -21,7 +24,8 @@ const STATUS_CFG = {
 };
 
 export default function StaffInvitePage() {
-  const [form, setForm]         = useState({ email: "", role_name: "", dependency_id: "" });
+  const [form, setForm]         = useState({ email: "", role_name: "", dependency_id: "", password: generatePassword() });
+  const [showPwd, setShowPwd]   = useState(false);
   const [roles, setRoles]       = useState([]);
   const [deps, setDeps]         = useState([]);
   const [invitations, setInvitations] = useState([]);
@@ -71,6 +75,11 @@ export default function StaffInvitePage() {
     const roleRow = roles.find(r => r.name === form.role_name);
     if (!roleRow) { toast.error("Rol no encontrado"); return; }
 
+    if (!form.password || form.password.length < 8) {
+      toast.error("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("invite-staff", {
@@ -78,16 +87,17 @@ export default function StaffInvitePage() {
           email:         form.email.trim().toLowerCase(),
           role_id:       roleRow.id,
           dependency_id: form.dependency_id ? parseInt(form.dependency_id) : null,
+          password:      form.password,
         },
       });
 
       if (error || data?.error) {
-        toast.error(data?.error || "Error al enviar la invitación");
+        toast.error(data?.error || "Error al crear el usuario");
         return;
       }
 
-      toast.success(`Invitación enviada a ${form.email}`);
-      setForm({ email: "", role_name: "", dependency_id: "" });
+      toast.success(`Usuario creado: ${form.email}`);
+      setForm({ email: "", role_name: "", dependency_id: "", password: generatePassword() });
       fetchInvitations();
     } catch {
       toast.error("Error de conexión al enviar la invitación");
@@ -135,8 +145,8 @@ export default function StaffInvitePage() {
               <UserPlus size={17} color="#39a900" />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>Nueva invitación</div>
-              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>El staff recibirá un link por correo</div>
+              <div style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>Crear usuario staff</div>
+              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>Asigna rol y contraseña temporal</div>
             </div>
           </div>
 
@@ -196,6 +206,53 @@ export default function StaffInvitePage() {
               </div>
             )}
 
+            {/* Contraseña temporal */}
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.375rem" }}>
+                Contraseña temporal
+              </label>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    value={form.password}
+                    onChange={e => set("password", e.target.value)}
+                    placeholder="Mín. 8 caracteres"
+                    required
+                    style={{ width: "100%", boxSizing: "border-box", padding: "0.65rem 2.5rem 0.65rem 0.875rem", border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.9375rem", color: "#111827", outline: "none", fontFamily: "var(--font-sans)", transition: "border-color 0.15s" }}
+                    onFocus={e => e.target.style.borderColor = "#39a900"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(v => !v)}
+                    style={{ position: "absolute", right: "0.625rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0, display: "flex" }}
+                  >
+                    {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { const p = generatePassword(); set("password", p); setShowPwd(true); }}
+                  title="Generar contraseña aleatoria"
+                  style={{ padding: "0 0.75rem", background: "#f0fce4", border: "1.5px solid #bbf7d0", borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", color: "#39a900", flexShrink: 0 }}
+                >
+                  <RefreshCcw size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard.writeText(form.password); toast.success("Contraseña copiada"); }}
+                  title="Copiar contraseña"
+                  style={{ padding: "0 0.75rem", background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", color: "#6b7280", flexShrink: 0 }}
+                >
+                  <Copy size={15} />
+                </button>
+              </div>
+              <p style={{ fontSize: "0.6875rem", color: "#9ca3af", marginTop: "0.375rem" }}>
+                Comparte esta contraseña con el staff. Podrá cambiarla desde su perfil.
+              </p>
+            </div>
+
             <button
               type="submit"
               disabled={sending}
@@ -204,7 +261,7 @@ export default function StaffInvitePage() {
               onMouseLeave={e => { if (!sending) e.currentTarget.style.background = "#39a900"; }}
             >
               <Send size={15} />
-              {sending ? "Enviando…" : "Enviar invitación"}
+              {sending ? "Creando usuario…" : "Crear usuario"}
             </button>
           </form>
 
@@ -212,7 +269,8 @@ export default function StaffInvitePage() {
           <div style={{ marginTop: "1rem", padding: "0.875rem", background: "#f9fafb", borderRadius: 9, border: "1px solid #f3f4f6" }}>
             <div style={{ fontSize: "0.75rem", color: "#6b7280", lineHeight: 1.6 }}>
               <strong style={{ color: "#374151" }}>¿Cómo funciona?</strong><br />
-              El staff recibe un correo con un link de acceso. Al hacer clic, completa sus datos y entra directamente con el rol asignado. El link expira en 7 días.
+              El usuario se crea directamente con la contraseña temporal. El staff entra en{" "}
+              <strong style={{ color: "#374151" }}>gestion-citas-nu.vercel.app</strong> con su correo y esa contraseña, completa su perfil y queda activo con el rol asignado.
             </div>
           </div>
         </div>
