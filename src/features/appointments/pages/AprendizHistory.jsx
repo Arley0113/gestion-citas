@@ -236,7 +236,7 @@ export default function AprendizHistory() {
                   const d = apt.scheduled_date ? parseISO(apt.scheduled_date) : null;
                   return (
                     <div key={apt.id}
-                      onClick={() => navigate(`/cita/${apt.id}`)}
+                      onClick={() => navigate(`/cita/${apt.id}${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
                       style={{ display: "flex", alignItems: "center", gap: "1.125rem", padding: "1rem 1.5rem", borderBottom: i < Math.min(apts.length, 5) - 1 ? "1px solid #f3f4f6" : "none", cursor: "pointer", transition: "background 0.1s" }}
                       onMouseEnter={e => e.currentTarget.style.background = "#fafafa"}
                       onMouseLeave={e => e.currentTarget.style.background = "transparent"}
@@ -267,7 +267,7 @@ export default function AprendizHistory() {
                 const d = apt.scheduled_date ? parseISO(apt.scheduled_date) : null;
                 return (
                   <div key={apt.id}
-                    onClick={() => navigate(`/cita/${apt.id}`)}
+                    onClick={() => navigate(`/cita/${apt.id}${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
                     style={{ display: "flex", alignItems: "center", gap: "1.25rem", padding: "1.125rem 1.5rem", borderBottom: i < apts.length - 1 ? "1px solid #f3f4f6" : "none", cursor: "pointer", transition: "background 0.1s" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#fafafa"}
                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}
