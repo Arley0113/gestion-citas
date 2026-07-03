@@ -3,6 +3,7 @@ import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { User, FileText, BookOpen, Hash, Mail, Save, Camera, Shield, CheckCircle2 } from "lucide-react";
+import { ROLE_LABELS } from "../../../shared/rbac/permissions";
 
 const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
 
@@ -114,7 +115,7 @@ export default function ProfilePage() {
                 background: "rgba(57,169,0,0.1)", borderRadius: 20,
                 fontSize: "0.6875rem", fontWeight: 700, color: "#39a900",
               }}>
-                <Shield size={10} /> Aprendiz SENA
+                <Shield size={10} /> {ROLE_LABELS[profile?.roles?.name] || "Aprendiz SENA"}
               </div>
             </div>
           </div>
@@ -275,7 +276,7 @@ export default function ProfilePage() {
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {[
               { label: "Correo electrónico", value: email,    note: "Asociado a tu cuenta Google/Microsoft" },
-              { label: "Rol en el sistema",  value: "Aprendiz SENA", note: "Asignado por Bienestar institucional" },
+              { label: "Rol en el sistema",  value: ROLE_LABELS[profile?.roles?.name] || "Aprendiz SENA", note: "Asignado por Bienestar institucional" },
             ].map(({ label, value, note }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0", borderBottom: "1px solid #f9fafb" }}>
                 <div>

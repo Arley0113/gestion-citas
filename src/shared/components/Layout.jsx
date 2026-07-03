@@ -86,13 +86,15 @@ export function Layout({ children }) {
 
   useEffect(() => {
     if (IS_DEV || !user || !isAprendiz?.()) return;
+    let cancelled = false;
     supabase
       .from("appointments")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .in("status", ["pending", "confirmed"])
       .gte("scheduled_date", new Date().toISOString().slice(0, 10))
-      .then(({ count }) => setNotifBadge(count || 0));
+      .then(({ count }) => { if (!cancelled) setNotifBadge(count || 0); });
+    return () => { cancelled = true; };
   }, [user, location.pathname]);
 
   const renderNav = () => {
@@ -100,11 +102,12 @@ export function Layout({ children }) {
       return (
         <>
           <NavGroup label="Panel" />
-          <NavLink to="/admin"        icon={LayoutDashboard} label="Panel admin"  active={isActive("/admin") && !isActive("/admin/invitar")} />
+          <NavLink to="/admin"        icon={LayoutDashboard} label="Panel admin"  active={location.pathname === "/admin"} />
           <NavGroup label="Gestión" />
           <NavLink to="/reportes"     icon={BarChart2}       label="Reportes"     active={isActive("/reportes")} />
           <NavLink to="/coordination" icon={Calendar}        label="Citas"        active={isActive("/coordination")} />
           <NavLink to="/aprendices"   icon={Users}           label="Aprendices"   active={isActive("/aprendices")} />
+          <NavLink to="/admin/usuarios" icon={Users}         label="Usuarios"     active={isActive("/admin/usuarios")} />
         </>
       );
     }
@@ -117,6 +120,8 @@ export function Layout({ children }) {
           <NavLink to="/aprendices"   icon={Users}           label="Aprendices" active={isActive("/aprendices")} />
           <NavGroup label="Análisis" />
           <NavLink to="/reportes"     icon={BarChart2}       label="Reportes"   active={isActive("/reportes")} />
+          <NavGroup label="Soporte" />
+          <NavLink to="/ayuda"        icon={HelpCircle}      label="Ayuda"      active={isActive("/ayuda")} />
         </>
       );
     }

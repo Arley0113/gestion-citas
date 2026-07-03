@@ -22,7 +22,7 @@ export default function AppointmentConfirmed() {
     ? format(parseISO(apt.scheduled_date), "EEEE d 'de' MMMM, yyyy", { locale: es })
     : "Jueves 10 de julio, 2026";
   const timeStr  = timeLabel(apt?.scheduled_time || "09:00");
-  const radicado = apt?.id ? `APT-${apt.id.slice(0, 8).toUpperCase()}` : "APT-2026-0847";
+  const radicado = apt?.id ? `APT-${String(apt.id).padStart(6, "0")}` : "APT-2026-0847";
 
   return (
     <div style={{ minHeight: "100vh", background: "#f0f4f8", fontFamily: "var(--font-sans)", display: "flex", flexDirection: "column" }}>

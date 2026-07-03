@@ -6,7 +6,7 @@ import { es } from "date-fns/locale";
 import { useAppointments } from "../../appointments/hooks/useAppointments";
 import { useAuth } from "../../../providers/AuthProvider";
 
-const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
+const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview") === "aprendiz";
 
 const MOCK = [
   { id: "1", status: "pending",   scheduled_date: "2026-06-30", scheduled_time: "09:00:00", dependencies: { name: "Psicología" } },

@@ -4,6 +4,10 @@ import { es } from "date-fns/locale";
 
 const G = "#39a900";
 
+const esc = (s) => String(s ?? "")
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
 function fmtDate(d) {
   try { return format(typeof d === "string" ? parseISO(d) : d, "EEEE d 'de' MMMM, yyyy", { locale: es }); }
   catch { return d || ""; }
@@ -48,17 +52,17 @@ function infoBox(items, bg = "#f0fdf4", border = "#bbf7d0") {
 async function send(payload) {
   try {
     await supabase.functions.invoke("notify-appointment", { body: payload });
-  } catch {
-    // silent — email is best-effort
+  } catch (e) {
+    console.error("[notify]", e);
   }
 }
 
 export async function notifyNewAppointment({ to_email, to_name, user_id, service_name, scheduled_date, scheduled_time }) {
   const html = wrap(`
-    <div style="font-size:14px;color:#6b7280;margin-bottom:8px;">Hola ${to_name},</div>
+    <div style="font-size:14px;color:#6b7280;margin-bottom:8px;">Hola ${esc(to_name)},</div>
     <div style="font-size:22px;font-weight:800;color:#111827;letter-spacing:-0.025em;margin-bottom:16px;">Cita agendada exitosamente</div>
     ${infoBox([
-      { label: "Servicio", value: service_name },
+      { label: "Servicio", value: esc(service_name) },
       { label: "Fecha",    value: fmtDate(scheduled_date) },
       { label: "Hora",     value: fmtTime(scheduled_time) },
     ])}
@@ -71,10 +75,10 @@ export async function notifyNewAppointment({ to_email, to_name, user_id, service
 
 export async function notifyAppointmentConfirmed({ to_email, to_name, user_id, service_name, scheduled_date, scheduled_time }) {
   const html = wrap(`
-    <div style="font-size:14px;color:#6b7280;margin-bottom:8px;">Hola ${to_name},</div>
+    <div style="font-size:14px;color:#6b7280;margin-bottom:8px;">Hola ${esc(to_name)},</div>
     <div style="font-size:22px;font-weight:800;color:#111827;letter-spacing:-0.025em;margin-bottom:16px;">Tu cita fue confirmada</div>
     ${infoBox([
-      { label: "Servicio", value: service_name },
+      { label: "Servicio", value: esc(service_name) },
       { label: "Fecha",    value: fmtDate(scheduled_date) },
       { label: "Hora",     value: fmtTime(scheduled_time) },
     ])}
@@ -87,12 +91,12 @@ export async function notifyAppointmentConfirmed({ to_email, to_name, user_id, s
 
 export async function notifyAppointmentCancelled({ to_email, to_name, user_id, service_name, scheduled_date, reason }) {
   const html = wrap(`
-    <div style="font-size:14px;color:#6b7280;margin-bottom:8px;">Hola ${to_name},</div>
+    <div style="font-size:14px;color:#6b7280;margin-bottom:8px;">Hola ${esc(to_name)},</div>
     <div style="font-size:22px;font-weight:800;color:#111827;letter-spacing:-0.025em;margin-bottom:16px;">Tu cita fue cancelada</div>
     ${infoBox([
-      { label: "Servicio", value: service_name },
+      { label: "Servicio", value: esc(service_name) },
       { label: "Fecha",    value: fmtDate(scheduled_date) },
-      ...(reason ? [{ label: "Motivo", value: reason }] : []),
+      ...(reason ? [{ label: "Motivo", value: esc(reason) }] : []),
     ], "#fef2f2", "#fecaca")}
     <div style="font-size:13px;color:#6b7280;line-height:1.6;">
       Puedes agendar una nueva cita cuando quieras desde tu portal de Bienestar SENA.

@@ -69,7 +69,7 @@ function ConfirmModal({ user, onConfirm, onCancel, loading }) {
 export default function UsuariosPage() {
   const navigate = useNavigate();
   const { user: currentUser, profile: currentProfile } = useAuth();
-  const isSuperAdmin = currentProfile?.roles?.name === "SUPERADMIN" || DEV_ROLE === "superadmin";
+  const isSuperAdmin = currentProfile?.roles?.name === "SUPERADMIN";
 
   const [users, setUsers]     = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,10 +80,11 @@ export default function UsuariosPage() {
 
   const fetchUsers = useCallback(async () => {
     if (DEV_ROLE) { setUsers(MOCK_USERS); setLoading(false); return; }
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("id, full_name, document_number, onboarding_completed, roles(name), dependencies(name)")
       .order("full_name");
+    if (error) { toast.error("Error cargando usuarios"); setLoading(false); return; }
     setUsers(data || []);
     setLoading(false);
   }, []);

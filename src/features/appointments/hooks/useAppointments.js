@@ -168,6 +168,8 @@ export function useAppointments() {
   const cancelAppointment = async (appointmentId, cancelledReason = null) => {
     const appointment = appointments.find((a) => a.id === appointmentId);
 
+    if (!appointment) return { success: false, error: "Cita no encontrada" };
+
     if (appointment.status !== "pending") {
       toast.error("Solo puedes cancelar citas pendientes");
       return { success: false };

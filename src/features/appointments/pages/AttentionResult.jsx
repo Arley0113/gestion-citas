@@ -40,7 +40,7 @@ export default function AttentionResult() {
     if (state || IS_DEV) return;
     supabase
       .from("appointments")
-      .select("id, scheduled_date, scheduled_time, reason, notes, tags, observations, user_id, profiles!user_id(full_name, document_number), dependencies(name)")
+      .select("id, scheduled_date, scheduled_time, reason, notes, tags, observations, objectives_checked, user_id, profiles!user_id(full_name, document_number), dependencies(name)")
       .eq("id", id)
       .maybeSingle()
       .then(({ data: apt }) => {
@@ -57,7 +57,7 @@ export default function AttentionResult() {
             },
             notes:      apt.notes      || "",
             tags:       apt.tags       || [],
-            objectives: [],
+            objectives: apt.objectives_checked || [],
             obs:        apt.observations || [],
           });
         }

@@ -409,7 +409,7 @@ export function AppointmentModal() {
                     return (
                       <button
                         key={svc.key}
-                        onClick={() => set("serviceKey", svc.key)}
+                        onClick={() => { set("serviceKey", svc.key); set("date", null); set("time", null); }}
                         style={{
                           display: "flex", alignItems: "center", gap: "1rem",
                           padding: "1rem 1.125rem",

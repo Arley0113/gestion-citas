@@ -14,7 +14,7 @@ const STATUS_META = {
   no_show:     { icon: AlertCircle,   color: "#6b7280", bg: "#f9fafb", label: "No asistió" },
 };
 
-const DEP_LABELS = { 1: "Psicología", 2: "Enfermería", 3: "Trabajo Social" };
+const DEP_LABELS = { 10: "Psicología", 11: "Enfermería", 12: "Trabajo Social" };
 
 export default function ActividadPage() {
   const navigate = useNavigate();

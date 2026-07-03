@@ -75,7 +75,7 @@ export default function ProfessionalDashboard() {
     setLoading(true);
     const { data } = await supabase
       .from("appointments")
-      .select("*, profiles!user_id(full_name,document_number,email)")
+      .select("*, profiles!user_id(full_name,document_number)")
       .eq("dependency_id", profile.dependency_id)
       .eq("scheduled_date", todayStr)
       .order("scheduled_time");

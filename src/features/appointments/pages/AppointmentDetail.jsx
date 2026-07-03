@@ -70,7 +70,7 @@ export default function AppointmentDetail() {
     if (DEV_ROLE) return;
     supabase
       .from("appointments")
-      .select("*, dependencies(name,color), profiles!user_id(full_name,document_number,email), professional:profiles!professional_id(full_name)")
+      .select("*, dependencies(name,color), profiles!user_id(full_name,document_number), professional:profiles!professional_id(full_name)")
       .eq("id", id)
       .single()
       .then(({ data, error }) => {

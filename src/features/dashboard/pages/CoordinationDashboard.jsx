@@ -107,10 +107,9 @@ function useDashboardData(period) {
 }
 
 function fmtTime(t = "08:00:00") {
-  const h = parseInt(t);
-  if (h < 12) return `${h}:00 a.m.`;
-  if (h === 12) return "12:00 p.m.";
-  return `${h - 12}:00 p.m.`;
+  const [h, m] = t.split(":").map(Number);
+  const hr = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hr}:${String(m).padStart(2, "0")} ${h < 12 ? "a.m." : "p.m."}`;
 }
 
 export default function CoordinationDashboard() {

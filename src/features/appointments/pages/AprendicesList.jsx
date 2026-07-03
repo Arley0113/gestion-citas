@@ -66,12 +66,29 @@ export default function AprendicesList() {
         .from("roles").select("id").eq("name", "APRENDIZ").single();
       if (!roleRow) return;
 
-      const { data: profiles } = await supabase
+      const isAdminLike = ["COORDINACION", "ADMINISTRADOR", "SUPERADMIN"].includes(profile?.roles?.name);
+      let profileIds = null;
+
+      // Profesionales solo ven aprendices con citas en su dependencia
+      if (!isAdminLike && profile?.dependency_id) {
+        const { data: depApts } = await supabase
+          .from("appointments")
+          .select("user_id")
+          .eq("dependency_id", profile.dependency_id);
+        profileIds = [...new Set((depApts || []).map(a => a.user_id))];
+        if (profileIds.length === 0) { setAprendices([]); setLoading(false); return; }
+      }
+
+      let profileQuery = supabase
         .from("profiles")
         .select("id, full_name, document_number, program")
         .eq("role_id", roleRow.id)
         .order("full_name")
         .limit(200);
+
+      if (profileIds) profileQuery = profileQuery.in("id", profileIds);
+
+      const { data: profiles } = await profileQuery;
 
       if (!profiles?.length) { setAprendices([]); return; }
 

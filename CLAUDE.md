@@ -73,7 +73,9 @@ src/
 database/
   schema.sql            Schema de referencia (ya aplicado a Supabase vía MCP)
 supabase/functions/
-  invite-staff/         index.ts — Edge Function con service role key
+  delete-user/          index.ts — elimina usuario (solo SUPERADMIN)
+  invite-staff/         index.ts — crea/actualiza staff con contraseña
+  notify-appointment/   index.ts — emails via Resend API
 ```
 
 ## Database — estado actual en Supabase
@@ -85,6 +87,7 @@ Schema aplicado vía migración MCP. Tablas activas:
 - **Vista** `appointments_full` — join completo con perfiles y dependencias
 - RLS habilitado en todas las tablas. Función `public.auth_role_name()` usada en políticas.
 - Trigger `on_auth_user_created` → crea perfil automático con rol APRENDIZ
+- Trigger `check_role_escalation` → bloquea cambios de `role_id` para no-admins (SECURITY)
 
 Para promover a SUPERADMIN:
 ```sql
@@ -110,8 +113,8 @@ Sidebar con grupos (`NavGroup`) y badge de notificaciones.
 - MI CUENTA: Mi perfil `/perfil`, Horarios `/professional/horarios`
 - SOPORTE: Ayuda `/ayuda`
 
-**COORDINACION:** Dashboard `/coordination`, Reportes `/reportes`
-**ADMIN/SUPERADMIN:** Panel admin `/admin`, Reportes `/reportes`, Citas `/coordination`, Aprendices `/aprendices`
+**COORDINACION:** Dashboard `/coordination`, Aprendices `/aprendices`, Reportes `/reportes`, Ayuda `/ayuda`
+**ADMIN/SUPERADMIN:** Panel admin `/admin`, Reportes `/reportes`, Citas `/coordination`, Aprendices `/aprendices`, Usuarios `/admin/usuarios`
 
 Mobile: bottom nav con 4 items por rol + botón "+" circular verde para APRENDIZ.
 
@@ -134,13 +137,19 @@ Mobile: bottom nav con 4 items por rol + botón "+" circular verde para APRENDIZ
 ## Sistema de creación de staff
 - Tabla `staff_invitations` con `email`, `role_id`, `dependency_id`, `status` (pending/accepted/expired/cancelled), `expires_at`
 - Vista `staff_invitations_full` — join con roles y dependencias para el listado del admin
-- Edge Function `invite-staff` v3 — usa `auth.admin.createUser()` con `email_confirm: true` + contraseña generada por admin
-  - Si el usuario ya existe: actualiza su contraseña con `updateUserById()`
+- Edge Function `invite-staff` v4 — usa `auth.admin.createUser()` con `email_confirm: true` + contraseña generada por admin
+  - Si el usuario ya existe: actualiza contraseña Y role_id/dependency_id en profile
   - El admin genera una contraseña aleatoria en el form y la comparte directamente con el staff
   - NO envía magic link — flujo sin dependencia de email
+- Edge Function `delete-user` v1 — elimina usuario completo (solo SUPERADMIN)
+  - Valida JWT del llamante + rol SUPERADMIN antes de ejecutar
+  - Previene auto-eliminación y eliminación de otros SUPERADMIN
+  - Cancela invitaciones pendientes y llama `auth.admin.deleteUser()`
 - Trigger `handle_new_user()` — al crear usuario, busca en `staff_invitations` para asignar rol; si no hay invitación → rol APRENDIZ
 - APRENDIZ se autoregistra en `/register`; staff es creado por admin → completa datos en `/completar-perfil`
+- Staff nuevo con `onboarding_completed: false` redirigido a `/completar-perfil` desde ruta raíz
 - Admin crea staff desde `/admin/invitar` (`StaffInvitePage.jsx`) — generador de contraseña aleatoria con show/hide + copy + regenerar
+- SUPERADMIN puede eliminar usuarios desde `/admin/usuarios` (`UsuariosPage.jsx`) — con confirmación modal
 
 ## Responsive (Layout.jsx)
 Clases globales vía `<style>` tag en Layout:
@@ -151,6 +160,19 @@ Clases globales vía `<style>` tag en Layout:
 - `.bottom-nav` — oculto en desktop (≥769px), visible en mobile
 
 ## Estado actual (sesión última — producción)
+- ✅ Seguridad: trigger `prevent_role_escalation` en DB — impide escalación de privilegios via RLS
+- ✅ Seguridad: cabeceras HTTP en vercel.json (X-Frame-Options, CSP, nosniff, Referrer-Policy)
+- ✅ Seguridad: console.log/warn envueltos en `import.meta.env.DEV` guards en AuthProvider
+- ✅ Seguridad: HTML escape en plantillas de email (notifications.js) — previene XSS
+- ✅ Seguridad: ResetPasswordPage limpia hash del historial tras leer recovery token
+- ✅ Seguridad: Edge Functions con código fuente en repo (supabase/functions/) — auditables
+- ✅ UsuariosPage (`/admin/usuarios`): listado de todos los usuarios con filtros + borrar (solo SUPERADMIN)
+- ✅ AprendicesList: profesionales solo ven aprendices con citas en su dependencia
+- ✅ Bugs 400 resueltos: FKs appointments → profiles corregidas, `email` removido de joins
+- ✅ AttentionInProgress: setea `professional_id` y `status=in_progress` al entrar
+- ✅ AttentionResult: incluye `objectives_checked` en query de carga
+- ✅ Layout: coordinación tiene navlink a /ayuda, memory leak de badge resuelto
+- ✅ ProfilePage: etiqueta de rol dinámica (no hardcodeado "Aprendiz SENA")
 - ✅ Deploy en producción: https://gestion-citas-nu.vercel.app (GitHub → Vercel auto-deploy)
 - ✅ Login solo email/contraseña (OAuth removido), olvidé contraseña + ResetPasswordPage
 - ✅ Edge Functions deployadas en Supabase:

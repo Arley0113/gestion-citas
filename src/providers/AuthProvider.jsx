@@ -77,7 +77,7 @@ export function AuthProvider({ children }) {
       const { data, error } = await retryAuthRequest(() =>
         supabase
           .from("profiles")
-          .select("*, roles(name), dependencies(name)")
+          .select("*, roles(name, label), dependencies(name)")
           .eq("id", userId)
           .single()
       );
@@ -86,7 +86,7 @@ export function AuthProvider({ children }) {
       setProfile(data);
       return data;
     } catch (err) {
-      console.error("Error cargando perfil:", err);
+      if (import.meta.env.DEV) console.error("Error cargando perfil:", err);
       setProfile(null);
       const isMissingProfile = err.message.includes("Perfil no encontrado");
       const message = isMissingProfile
@@ -165,7 +165,7 @@ export function AuthProvider({ children }) {
         if (isRefreshTokenError(err)) {
           await supabase.auth.signOut().catch(() => {});
         } else if (!err.message.includes("timed out")) {
-          console.warn("Session init failed:", err.message);
+          if (import.meta.env.DEV) console.warn("Session init failed:", err.message);
         }
         setUser(null);
         setProfile(null);
@@ -228,7 +228,7 @@ export function AuthProvider({ children }) {
         ? "Correo o contraseña incorrectos"
         : err.message || "No se pudo iniciar sesión. Intenta de nuevo.";
       setError(msg);
-      console.error("signIn error:", err);
+      if (import.meta.env.DEV) console.error("signIn error:", err);
       return { success: false, error: msg };
     }
   };
@@ -261,7 +261,7 @@ export function AuthProvider({ children }) {
     try {
       await supabase.auth.signOut();
     } catch (err) {
-      console.warn("signOut:", err.message);
+      if (import.meta.env.DEV) console.warn("signOut:", err.message);
     }
     window.location.href = "/login";
   };

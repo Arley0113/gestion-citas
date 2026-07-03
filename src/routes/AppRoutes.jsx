@@ -58,7 +58,7 @@ const Fallback = () => (
 );
 
 export function AppRoutes() {
-  const { isAdmin, isCoordination, isProfessional, isAprendiz, needsOnboarding } = useAuth();
+  const { isAdmin, isCoordination, isProfessional, isAprendiz, needsOnboarding, profile } = useAuth();
   const location = useLocation();
 
   const getHomeRoute = () => {
@@ -187,7 +187,7 @@ export function AppRoutes() {
         {/* HISTORIAL APRENDIZ — solo staff */}
         <Route path="/aprendiz/:id/historial" element={
           <ProtectedRoute requiredRoles={ALL_STAFF}>
-            <AprendizHistory />
+            <Layout><AprendizHistory /></Layout>
           </ProtectedRoute>
         } />
 
@@ -252,7 +252,9 @@ export function AppRoutes() {
           <ProtectedRoute>
             {needsOnboarding()
               ? <Navigate to={`/onboarding${location.search || ""}`} replace />
-              : <Navigate to={`${getHomeRoute()}${location.search || ""}`} replace />
+              : (profile && !profile.onboarding_completed && !isAprendiz())
+                ? <Navigate to={`/completar-perfil${location.search || ""}`} replace />
+                : <Navigate to={`${getHomeRoute()}${location.search || ""}`} replace />
             }
           </ProtectedRoute>
         } />

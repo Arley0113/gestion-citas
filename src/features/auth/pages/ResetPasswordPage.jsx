@@ -21,6 +21,8 @@ export default function ResetPasswordPage() {
     const type = params.get("type");
     const accessToken = params.get("access_token");
     setValidToken(type === "recovery" && !!accessToken);
+    // Limpiar el token del historial del navegador para evitar exposición
+    if (accessToken) window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
   const handleReset = async (e) => {

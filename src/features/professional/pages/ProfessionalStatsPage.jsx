@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2, TrendingUp, UserX, CalendarDays, Award } from "lucide-react";
-import { format, startOfMonth, subDays, parseISO, getWeek } from "date-fns";
+import { format, startOfMonth, endOfMonth, subDays, parseISO, getWeek } from "date-fns";
 import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
@@ -49,17 +49,23 @@ export default function ProfessionalStatsPage() {
 
     const now = new Date();
     let dateFrom;
+    let dateTo = null;
     if (period === "mes")  dateFrom = format(startOfMonth(now), "yyyy-MM-dd");
-    else if (period === "prev") dateFrom = format(startOfMonth(subDays(now, 30)), "yyyy-MM-dd");
+    else if (period === "prev") {
+      dateFrom = format(startOfMonth(subDays(now, 30)), "yyyy-MM-dd");
+      dateTo   = format(endOfMonth(subDays(now, 30)), "yyyy-MM-dd");
+    }
     else dateFrom = format(new Date(now.getFullYear(), 0, 1), "yyyy-MM-dd");
 
     setLoading(true);
-    supabase
+    let q = supabase
       .from("appointments")
       .select("id, status, scheduled_date, aprendiz:profiles!user_id(full_name)")
       .eq("professional_id", user.id)
-      .gte("scheduled_date", dateFrom)
-      .order("scheduled_date")
+      .gte("scheduled_date", dateFrom);
+    if (dateTo) q = q.lte("scheduled_date", dateTo);
+    q = q.order("scheduled_date");
+    q
       .then(({ data, error }) => {
         if (error) { toast.error("Error al cargar estadísticas"); setLoading(false); return; }
         const rows = data || [];

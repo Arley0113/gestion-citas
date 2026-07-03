@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
+import { toast } from "sonner";
 
 const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
 
@@ -54,7 +55,11 @@ export default function MisCitasPage() {
       .select("*, dependencies(name, color), professional:profiles!professional_id(full_name)")
       .eq("user_id", user.id)
       .order("scheduled_date", { ascending: false })
-      .then(({ data }) => { setCitas(data || []); setLoading(false); });
+      .then(({ data, error }) => {
+        if (error) { toast.error("Error cargando citas"); setLoading(false); return; }
+        setCitas(data || []);
+        setLoading(false);
+      });
   }, [user]);
 
   const filtered = citas.filter(c => {
@@ -133,7 +138,7 @@ export default function MisCitasPage() {
             {filtered.map(cita => {
               const cfg = STATUS_CFG[cita.status] || STATUS_CFG.pending;
               const Ic  = cfg.icon;
-              const dateObj = parseISO(cita.scheduled_date);
+              const dateObj = parseISO(cita.scheduled_date + "T12:00:00");
               return (
                 <div
                   key={cita.id}

@@ -60,10 +60,11 @@ export default function StaffInvitePage() {
   const fetchInvitations = useCallback(async () => {
     setLoadingInv(true);
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("staff_invitations_full")
         .select("*")
         .order("created_at", { ascending: false });
+      if (error) { toast.error("No se pudieron cargar las invitaciones"); return; }
       setInvitations(data || []);
     } catch {
       toast.error("No se pudieron cargar las invitaciones");

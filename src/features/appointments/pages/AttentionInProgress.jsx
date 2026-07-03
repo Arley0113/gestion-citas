@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
+import { useAuth } from "../../../providers/AuthProvider";
 
 const TAGS    = ["Ansiedad", "Estrés", "Autoestima", "Motivación", "Rendimiento académico", "Apoyo familiar"];
 const OBJECTIVES = [
@@ -59,6 +60,7 @@ function useElapsed(scheduledTime) {
 export default function AttentionInProgress() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [apt, setApt]             = useState(DEV_ROLE ? MOCK_APT : null);
   const [notes, setNotes]         = useState("");
   const [selectedTags, setTags]   = useState([]);
@@ -74,7 +76,15 @@ export default function AttentionInProgress() {
       .select("*, dependencies(name), profiles!user_id(full_name,document_number,program)")
       .eq("id", id)
       .single()
-      .then(({ data }) => setApt(data));
+      .then(({ data }) => {
+        setApt(data);
+        if (!DEV_ROLE && profile?.id) {
+          supabase.from("appointments")
+            .update({ status: "in_progress", professional_id: profile.id, updated_at: new Date() })
+            .eq("id", parseInt(id))
+            .then(() => {});
+        }
+      });
   }, [id]);
 
   const toggleTag = t => setTags(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
