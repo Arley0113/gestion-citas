@@ -187,11 +187,7 @@ export default function ConfiguracionPage() {
               <Lock size={15} /> Cambiar contraseña
             </button>
             <button
-              onClick={() => {
-                if (window.confirm("¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.")) {
-                  toast.info("Contacta al administrador para esta acción");
-                }
-              }}
+              onClick={() => toast.info("Para eliminar tu cuenta, contacta al administrador del sistema")}
               style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.75rem 1rem", background: "#fff1f2", border: "1.5px solid #fecaca", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 600, color: "#ef4444", cursor: "pointer", fontFamily: "var(--font-sans)", width: "fit-content" }}
             >
               <Trash2 size={15} /> Eliminar cuenta

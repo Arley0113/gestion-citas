@@ -94,7 +94,6 @@ export default function DocumentosPage() {
   };
 
   const handleDelete = async (doc) => {
-    if (!window.confirm(`¿Eliminar "${doc.name}"? Esta acción no se puede deshacer.`)) return;
     const { error: storageError } = await supabase.storage
       .from("user-documents")
       .remove([doc.file_path]);
@@ -207,12 +206,14 @@ export default function DocumentosPage() {
 function DocCard({ doc, onDelete, onDownload }) {
   const [hovered, setHovered] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const isPdf = isPdfFile(doc.mime_type, doc.name);
 
   const handleDelete = async () => {
     setDeleting(true);
     await onDelete(doc);
     setDeleting(false);
+    setConfirmDelete(false);
   };
 
   return (
@@ -252,22 +253,38 @@ function DocCard({ doc, onDelete, onDownload }) {
             Subido: {doc.created_at ? format(parseISO(doc.created_at), "d MMM yyyy", { locale: es }) : "—"}
           </span>
         </div>
-        <div style={{ display: "flex", gap: "0.375rem" }}>
-          <button
-            onClick={() => onDownload(doc)}
-            title="Descargar"
-            style={{ width: 32, height: 32, borderRadius: 8, background: "#f9fafb", border: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-          >
-            <Download size={14} color="#6b7280" />
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            title="Eliminar"
-            style={{ width: 32, height: 32, borderRadius: 8, background: "#fff1f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.5 : 1 }}
-          >
-            <Trash2 size={14} color="#ef4444" />
-          </button>
+        <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
+          {confirmDelete ? (
+            <>
+              <span style={{ fontSize: "0.75rem", color: "#ef4444", fontWeight: 600 }}>¿Eliminar?</span>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{ padding: "0.25rem 0.625rem", borderRadius: 7, background: "#ef4444", border: "none", color: "white", fontSize: "0.75rem", fontWeight: 700, cursor: deleting ? "not-allowed" : "pointer" }}
+              >{deleting ? "…" : "Sí"}</button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                style={{ padding: "0.25rem 0.625rem", borderRadius: 7, background: "#f3f4f6", border: "1px solid #e5e7eb", color: "#6b7280", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
+              >No</button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => onDownload(doc)}
+                title="Descargar"
+                style={{ width: 32, height: 32, borderRadius: 8, background: "#f9fafb", border: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+              >
+                <Download size={14} color="#6b7280" />
+              </button>
+              <button
+                onClick={() => setConfirmDelete(true)}
+                title="Eliminar"
+                style={{ width: 32, height: 32, borderRadius: 8, background: "#fff1f2", border: "1px solid #fecaca", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+              >
+                <Trash2 size={14} color="#ef4444" />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

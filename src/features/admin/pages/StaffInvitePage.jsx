@@ -27,6 +27,7 @@ export default function StaffInvitePage() {
   const [invitations, setInvitations] = useState([]);
   const [sending, setSending]   = useState(false);
   const [loadingInv, setLoadingInv] = useState(true);
+  const [cancelConfirmId, setCancelConfirmId] = useState(null);
 
   const selectedRoleMeta = STAFF_ROLES.find(r => r.value === form.role_name);
   const requiresDep      = selectedRoleMeta?.dep ?? false;
@@ -96,12 +97,12 @@ export default function StaffInvitePage() {
   };
 
   const handleCancel = async (id) => {
-    if (!window.confirm("¿Cancelar esta invitación? El enlace enviado dejará de funcionar.")) return;
     const { error } = await supabase
       .from("staff_invitations")
       .update({ status: "cancelled" })
       .eq("id", id)
       .eq("status", "pending");
+    setCancelConfirmId(null);
     if (error) { toast.error("No se pudo cancelar"); return; }
     toast.success("Invitación cancelada");
     fetchInvitations();
@@ -265,13 +266,20 @@ export default function StaffInvitePage() {
                         {cfg.label}
                       </span>
                       {inv.status === "pending" && (
-                        <button
-                          onClick={() => handleCancel(inv.id)}
-                          title="Cancelar invitación"
-                          style={{ padding: "0.25rem 0.5rem", background: "white", border: "1px solid #fecaca", borderRadius: 6, fontSize: "0.75rem", color: "#ef4444", cursor: "pointer", fontFamily: "var(--font-sans)" }}
-                        >
-                          Cancelar
-                        </button>
+                        cancelConfirmId === inv.id ? (
+                          <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.6875rem", color: "#ef4444", fontWeight: 600 }}>¿Confirmar?</span>
+                            <button onClick={() => handleCancel(inv.id)} style={{ padding: "0.2rem 0.5rem", background: "#ef4444", border: "none", borderRadius: 5, fontSize: "0.6875rem", color: "white", fontWeight: 700, cursor: "pointer" }}>Sí</button>
+                            <button onClick={() => setCancelConfirmId(null)} style={{ padding: "0.2rem 0.5rem", background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 5, fontSize: "0.6875rem", color: "#6b7280", cursor: "pointer" }}>No</button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setCancelConfirmId(inv.id)}
+                            style={{ padding: "0.25rem 0.5rem", background: "white", border: "1px solid #fecaca", borderRadius: 6, fontSize: "0.75rem", color: "#ef4444", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+                          >
+                            Cancelar
+                          </button>
+                        )
                       )}
                     </div>
                   </div>
