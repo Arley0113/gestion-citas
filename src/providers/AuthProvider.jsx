@@ -113,25 +113,53 @@ export function AuthProvider({ children }) {
       if (mounted) setLoading(false);
     }, FAST_FALLBACK);
 
+    const isRefreshTokenError = (err) => {
+      const msg = err?.message || "";
+      return msg.toLowerCase().includes("refresh token") || msg.toLowerCase().includes("refresh_token");
+    };
+
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await retryAuthRequest(() => supabase.auth.getSession());
         if (error) throw error;
 
         if (session?.user) {
-          setUser(session.user);
-          const profileData = await fetchProfile(session.user.id);
-          if (!profileData) {
-            await supabase.auth.signOut().catch(() => {});
-            setUser(null);
-            setProfile(null);
+          // Si el access token está expirado o por vencer en los próximos 30s,
+          // intentar refrescar proactivamente antes de renderizar la app
+          const expiresAt = (session.expires_at || 0) * 1000;
+          const isExpiredOrExpiring = expiresAt < Date.now() + 30_000;
+
+          if (isExpiredOrExpiring) {
+            const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+            if (refreshErr || !refreshed?.session) {
+              // Refresh token inválido — limpiar todo y mostrar login
+              await supabase.auth.signOut().catch(() => {});
+              setUser(null);
+              setProfile(null);
+              return;
+            }
+            setUser(refreshed.session.user);
+            const profileData = await fetchProfile(refreshed.session.user.id);
+            if (!profileData) {
+              await supabase.auth.signOut().catch(() => {});
+              setUser(null);
+              setProfile(null);
+            }
+          } else {
+            setUser(session.user);
+            const profileData = await fetchProfile(session.user.id);
+            if (!profileData) {
+              await supabase.auth.signOut().catch(() => {});
+              setUser(null);
+              setProfile(null);
+            }
           }
         }
       } catch (err) {
-        if (!err.message.includes("timed out")) {
+        if (isRefreshTokenError(err)) {
+          await supabase.auth.signOut().catch(() => {});
+        } else if (!err.message.includes("timed out")) {
           console.warn("Session init failed:", err.message);
-        } else {
-          console.warn("Session init timed out, showing login fallback");
         }
         setUser(null);
         setProfile(null);
@@ -157,7 +185,13 @@ export function AuthProvider({ children }) {
           setUser(null);
           setProfile(null);
         }
+      } else if (event === "TOKEN_REFRESHED" && !session) {
+        // Refresh token inválido — forzar logout
+        await supabase.auth.signOut().catch(() => {});
+        setUser(null);
+        setProfile(null);
       } else if (event === "SIGNED_OUT") {
+        await supabase.auth.signOut().catch(() => {}); // limpiar localStorage por si acaso
         setUser(null);
         setProfile(null);
       }
