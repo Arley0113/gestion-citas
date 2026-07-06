@@ -37,12 +37,16 @@ export function AuthProvider({ children }) {
   const fetchProfile = useCallback(async (userId) => {
     if (isDev) return devProfile;
     try {
-      // Llamada directa — las queries de DB no compiten con el auth lock
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*, roles(name, label), dependencies(name)")
-        .eq("id", userId)
-        .single();
+      const { data, error } = await Promise.race([
+        supabase
+          .from("profiles")
+          .select("*, roles(name, label), dependencies(name)")
+          .eq("id", userId)
+          .single(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), 6000)
+        ),
+      ]);
       if (error) throw error;
       if (!data) throw new Error("Perfil no encontrado");
       setProfile(data);
@@ -50,12 +54,15 @@ export function AuthProvider({ children }) {
     } catch (err) {
       if (import.meta.env.DEV) console.error("Error cargando perfil:", err);
       setProfile(null);
-      const isMissingProfile = err.message?.includes("Perfil no encontrado");
-      const message = isMissingProfile
-        ? "No se encontró tu perfil en Bienestar SENA. Contacta al administrador."
-        : "No se pudo cargar tu perfil. Intenta de nuevo.";
+      const isTimeout  = err.message === "timeout";
+      const isMissing  = err.message?.includes("Perfil no encontrado");
+      const message = isTimeout
+        ? "Tiempo de respuesta agotado. Por favor intenta iniciar sesión de nuevo."
+        : isMissing
+          ? "No se encontró tu perfil en Bienestar SENA. Contacta al administrador."
+          : "No se pudo cargar tu perfil. Intenta de nuevo.";
       setError(message);
-      toast.error(message);
+      toast.error(message, { duration: 5000 });
       return null;
     }
   }, [isDev, devProfile]);
@@ -98,7 +105,10 @@ export function AuthProvider({ children }) {
           const profileData = await fetchProfile(session.user.id);
           if (!mounted) return;
           if (!profileData) {
-            await supabase.auth.signOut().catch(() => {});
+            await Promise.race([
+              supabase.auth.signOut().catch(() => {}),
+              new Promise(resolve => setTimeout(resolve, 2000)),
+            ]);
             setUser(null);
             setProfile(null);
           }

@@ -51,33 +51,32 @@ export default function Login() {
       return;
     }
 
-    // Validar whitelist solo para aprendices (staff/coordinación pasan siempre)
+    // Validar whitelist solo para aprendices — best-effort con timeout de 5s
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const withTimeout = (promise, ms = 5000) =>
+        Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+
+      const { data: { session } } = await withTimeout(supabase.auth.getSession());
       if (session?.user) {
-        const { data: wlSetting } = await supabase
-          .from("system_settings")
-          .select("value")
-          .eq("key", "whitelist_enabled")
-          .single();
+        const { data: wlSetting } = await withTimeout(
+          supabase.from("system_settings").select("value").eq("key", "whitelist_enabled").single()
+        );
 
         if (wlSetting?.value === "true") {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("document_number, ficha_number, roles(name)")
-            .eq("id", session.user.id)
-            .single();
+          const { data: wlProfile } = await withTimeout(
+            supabase.from("profiles").select("document_number, ficha_number, roles(name)").eq("id", session.user.id).single()
+          );
 
-          if (profile?.roles?.name === "APRENDIZ") {
-            const { data: found } = await supabase
-              .from("aprendiz_whitelist")
-              .select("id")
-              .eq("document_number", profile.document_number || "")
-              .eq("ficha_number",    profile.ficha_number    || "")
-              .maybeSingle();
+          if (wlProfile?.roles?.name === "APRENDIZ") {
+            const { data: found } = await withTimeout(
+              supabase.from("aprendiz_whitelist").select("id")
+                .eq("document_number", wlProfile.document_number || "")
+                .eq("ficha_number",    wlProfile.ficha_number    || "")
+                .maybeSingle()
+            );
 
             if (!found) {
-              await supabase.auth.signOut();
+              await Promise.race([supabase.auth.signOut(), new Promise(r => setTimeout(r, 2000))]);
               toast.error(
                 "Tu cédula o número de ficha no aparecen en la base de datos activa del SENA. Contacta al equipo de Bienestar SENA.",
                 { duration: 7000 }
@@ -89,7 +88,7 @@ export default function Login() {
         }
       }
     } catch {
-      // Si la validación falla por error de red, dejamos entrar (best-effort)
+      // Si la validación falla o hace timeout, dejamos entrar (best-effort)
     }
 
     setLoading(false);

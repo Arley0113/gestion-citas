@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../providers/AuthProvider";
 
 const VALID_PREVIEWS = ["aprendiz","professional","coordination","admin","superadmin"];
@@ -8,9 +9,17 @@ const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
 const IS_VALID_DEV = DEV_ROLE && VALID_PREVIEWS.includes(DEV_ROLE);
 
 export function ProtectedRoute({ children, requiredRoles = null, requiredPermissions = null, fallback = "/login" }) {
-  const { user, profile, loading, hasRole, can } = useAuth();
+  const { user, profile, loading, hasRole, can, signOut } = useAuth();
   const location = useLocation();
   const redirectTo = `${fallback}${location.search || ""}`;
+
+  // Si llevamos más de 7s con user pero sin profile, es un cuelgue — forzar logout
+  const [profileStuck, setProfileStuck] = useState(false);
+  useEffect(() => {
+    if (!user || profile) { setProfileStuck(false); return; }
+    const t = setTimeout(() => setProfileStuck(true), 7000);
+    return () => clearTimeout(t);
+  }, [user, profile]);
 
   // Modo DEV solo permite valores de preview válidos
   if (IS_VALID_DEV) return children;
@@ -28,6 +37,13 @@ export function ProtectedRoute({ children, requiredRoles = null, requiredPermiss
   if (loading) return spinner;
 
   if (!user) return <Navigate to={redirectTo} state={{ from: location }} replace />;
+
+  // Si user existe pero el perfil no cargó y ya expiró el timeout → limpiar y redirigir
+  if (user && !profile && profileStuck) {
+    signOut();
+    return null;
+  }
+
   // Si el usuario existe pero el perfil aún no cargó (p.ej. link de invitación),
   // mostrar spinner en vez de redirigir al login
   if (user && !profile) return spinner;
