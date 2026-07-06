@@ -82,9 +82,10 @@ export default function RegisterPage() {
           setLoading(false);
           return;
         }
-        // Auto-completar programa desde el padrón si el aprendiz no lo escribió
+        // Capturar programa del padrón en variable local (setForm es async,
+        // no afecta el form.program que se lee en signUp justo después)
         if (found.program && !form.program.trim()) {
-          setForm(prev => ({ ...prev, program: found.program }));
+          form.program = found.program;
         }
       }
       // ──────────────────────────────────────────────────────────────────
