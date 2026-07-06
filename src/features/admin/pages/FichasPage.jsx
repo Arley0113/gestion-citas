@@ -81,6 +81,7 @@ export default function FichasPage() {
   const { profile } = useAuth();
   const roleName = profile?.roles?.name;
   const canToggle = ["ADMINISTRADOR", "SUPERADMIN"].includes(roleName);
+  const backRoute = canToggle ? "/admin" : "/coordination";
 
   const [whitelist, setWhitelist] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -112,9 +113,11 @@ export default function FichasPage() {
         supabase.from("system_settings").select("value").eq("key", "whitelist_enabled").single(),
       ]);
       if (countRes.error) throw countRes.error;
-      if (listRes.error) throw listRes.error;
+      if (listRes.error)  throw listRes.error;
       setTotalCount(countRes.count ?? 0);
       setWhitelist(listRes.data ?? []);
+      // settingRes puede ser null si la clave aún no fue creada — no es error
+      if (settingRes.error && settingRes.error.code !== "PGRST116") throw settingRes.error;
       setWlEnabled(settingRes.data?.value === "true");
     } catch {
       toast.error("Error al cargar la lista");
@@ -127,13 +130,14 @@ export default function FichasPage() {
     setTogglingWl(true);
     const { error } = await supabase
       .from("system_settings")
-      .update({ value: next ? "true" : "false" })
-      .eq("key", "whitelist_enabled");
+      .upsert({ key: "whitelist_enabled", value: next ? "true" : "false" }, { onConflict: "key" });
     if (error) {
       toast.error("No se pudo cambiar el estado de la validación");
     } else {
       setWlEnabled(next);
-      toast.success(next ? "Validación activada — solo aprendices del padrón pueden registrarse" : "Validación desactivada — registro abierto para todos");
+      toast.success(next
+        ? "Validación activada — solo aprendices del padrón pueden registrarse"
+        : "Validación desactivada — registro abierto para todos");
     }
     setTogglingWl(false);
   };
@@ -269,10 +273,10 @@ export default function FichasPage() {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", marginBottom: "1.75rem" }}>
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate(backRoute)}
             style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 0.875rem", background: "white", border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.875rem", fontWeight: 600, color: "#6e7681", cursor: "pointer" }}
           >
-            <ChevronLeft size={15} /> Admin
+            <ChevronLeft size={15} /> {canToggle ? "Admin" : "Inicio"}
           </button>
           <div>
             <h1 style={{ fontFamily: "'Sora', system-ui", fontWeight: 800, fontSize: "1.375rem", color: "#0d1117", margin: 0, letterSpacing: "-0.02em" }}>

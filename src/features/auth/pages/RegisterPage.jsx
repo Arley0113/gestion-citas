@@ -57,34 +57,50 @@ export default function RegisterPage() {
     setLoading(true);
     setWhitelistError(null);
     const full_name = `${form.first_name.trim()} ${form.last_name.trim()}`;
+    const withTimeout = (p, ms = 5000) =>
+      Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
     try {
       // ── Validación lista blanca SENA ───────────────────────────────────
-      const { data: wlSetting } = await supabase
-        .from("system_settings")
-        .select("value")
-        .eq("key", "whitelist_enabled")
-        .single();
+      let wlEnabled = false;
+      try {
+        const { data: wlSetting } = await withTimeout(
+          supabase.from("system_settings").select("value").eq("key", "whitelist_enabled").single()
+        );
+        wlEnabled = wlSetting?.value === "true";
+      } catch {
+        // timeout o error → abrir registro (best-effort)
+      }
 
-      if (wlSetting?.value === "true") {
+      if (wlEnabled) {
         if (!form.ficha_number.trim()) {
           setWhitelistError("Debes ingresar tu número de ficha para registrarte en esta plataforma.");
           setLoading(false);
           return;
         }
-        const { data: found } = await supabase
-          .from("aprendiz_whitelist")
-          .select("id, full_name, program")
-          .eq("document_number", form.document_number.trim())
-          .eq("ficha_number", form.ficha_number.trim())
-          .maybeSingle();
-        if (!found) {
+
+        let found = undefined;
+        let wlTimeout = false;
+        try {
+          const res = await withTimeout(
+            supabase.from("aprendiz_whitelist").select("id, full_name, program")
+              .eq("document_number", form.document_number.trim())
+              .eq("ficha_number", form.ficha_number.trim())
+              .maybeSingle()
+          );
+          found = res.data; // null = no encontrado, objeto = encontrado
+        } catch {
+          wlTimeout = true; // timeout → permitir registro (best-effort)
+        }
+
+        if (!wlTimeout && found === null) {
           setWhitelistError("Tu cédula o número de ficha no aparecen en la base de datos del SENA. Verifica tu información o contacta al equipo de Bienestar SENA.");
           setLoading(false);
           return;
         }
+
         // Capturar programa del padrón en variable local (setForm es async,
         // no afecta el form.program que se lee en signUp justo después)
-        if (found.program && !form.program.trim()) {
+        if (found?.program && !form.program.trim()) {
           form.program = found.program;
         }
       }
