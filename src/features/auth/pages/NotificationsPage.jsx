@@ -45,9 +45,11 @@ export default function NotificationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const today  = new Date().toISOString().slice(0, 10);
   const apts   = IS_DEV ? MOCK : (appointments || []);
-  const active = apts.filter(a => ["pending", "confirmed"].includes(a.status))
-                      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+  const active = apts
+    .filter(a => ["pending", "confirmed"].includes(a.status) && a.scheduled_date >= today)
+    .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
 
   return (
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
