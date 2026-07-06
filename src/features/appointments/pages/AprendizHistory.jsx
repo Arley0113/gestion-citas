@@ -5,6 +5,7 @@ import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "../../../lib/supabase";
 import { LineChart, Line, XAxis, ResponsiveContainer } from "recharts";
+import { useAuth } from "../../../providers/AuthProvider";
 
 const STATUS_DOT = { completed: "#22c55e", pending: "#f59e0b", confirmed: "#0284c7", cancelled: "#ef4444", no_show: "#6b7280" };
 const STATUS_LBL = { completed: "Completada", pending: "Pendiente", confirmed: "Confirmada", cancelled: "Cancelada", no_show: "No asistió" };
@@ -31,6 +32,7 @@ const MOCK_APTS = [
 export default function AprendizHistory() {
   const { id }   = useParams();
   const navigate = useNavigate();
+  const { isProfessional } = useAuth();
   const [profile, setProfile]   = useState(DEV_ROLE ? MOCK_PROFILE : null);
   const [apts, setApts]         = useState(DEV_ROLE ? MOCK_APTS : []);
   const [tab, setTab]           = useState("Resumen");
@@ -169,7 +171,7 @@ export default function AprendizHistory() {
               Continuar con el plan de acción y reforzar estrategias de afrontamiento.
             </div>
             <button
-              onClick={() => navigate("/professional")}
+              onClick={() => navigate(isProfessional?.() ? "/professional" : "/coordination")}
               style={{ marginTop: "0.875rem", display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem", fontWeight: 600, color: "#39a900", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)", padding: 0 }}
             >
               Agendar seguimiento <ArrowRight size={13} />
