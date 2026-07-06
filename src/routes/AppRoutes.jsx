@@ -248,7 +248,7 @@ export function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="/admin/fichas" element={
-          <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
+          <ProtectedRoute requiredRoles={["COORDINACION","ADMINISTRADOR","SUPERADMIN"]}>
             <Layout><FichasPage /></Layout>
           </ProtectedRoute>
         } />

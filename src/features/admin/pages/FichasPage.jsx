@@ -79,6 +79,8 @@ async function parseExcelBuffer(buffer) {
 export default function FichasPage() {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const roleName = profile?.roles?.name;
+  const canToggle = ["ADMINISTRADOR", "SUPERADMIN"].includes(roleName);
 
   const [whitelist, setWhitelist] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -280,8 +282,8 @@ export default function FichasPage() {
           </div>
         </div>
 
-        {/* Toggle de validación */}
-        <div style={{ background: "white", border: `1.5px solid ${wlEnabled ? "#86efac" : "#e5e7eb"}`, borderRadius: 14, padding: "1.25rem 1.5rem", marginBottom: "1.5rem", transition: "border-color 0.2s" }}>
+        {/* Toggle de validación — solo ADMIN y SUPERADMIN */}
+        {canToggle && <div style={{ background: "white", border: `1.5px solid ${wlEnabled ? "#86efac" : "#e5e7eb"}`, borderRadius: 14, padding: "1.25rem 1.5rem", marginBottom: "1.5rem", transition: "border-color 0.2s" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.25rem" }}>
@@ -327,7 +329,7 @@ export default function FichasPage() {
               </p>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.875rem", marginBottom: "1.75rem" }}>

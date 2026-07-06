@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Calendar, Users, BarChart2,
   LogOut, Plus, Heart, UserCircle, Bell,
   CalendarDays, ClipboardList, FileText, Settings, HelpCircle,
-  CalendarRange, Clock,
+  CalendarRange, Clock, ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../../providers/AuthProvider";
 import { useAppointmentModal } from "../../providers/AppointmentModalContext";
@@ -115,13 +115,15 @@ export function Layout({ children }) {
       return (
         <>
           <NavGroup label="Panel" />
-          <NavLink to="/coordination" icon={LayoutDashboard} label="Dashboard"  active={isActive("/coordination")} />
+          <NavLink to="/coordination"  icon={LayoutDashboard} label="Dashboard"      active={isActive("/coordination")} />
+          <NavLink to="/reportes"      icon={BarChart2}       label="Reportes"       active={isActive("/reportes")} />
           <NavGroup label="Gestión" />
-          <NavLink to="/aprendices"   icon={Users}           label="Aprendices" active={isActive("/aprendices")} />
-          <NavGroup label="Análisis" />
-          <NavLink to="/reportes"     icon={BarChart2}       label="Reportes"   active={isActive("/reportes")} />
+          <NavLink to="/aprendices"    icon={Users}           label="Aprendices"     active={isActive("/aprendices")} />
+          <NavLink to="/admin/fichas"  icon={ShieldCheck}     label="Fichas activas" active={isActive("/admin/fichas")} />
+          <NavGroup label="Mi cuenta" />
+          <NavLink to="/perfil"        icon={UserCircle}      label="Mi perfil"      active={isActive("/perfil")} />
           <NavGroup label="Soporte" />
-          <NavLink to="/ayuda"        icon={HelpCircle}      label="Ayuda"      active={isActive("/ayuda")} />
+          <NavLink to="/ayuda"         icon={HelpCircle}      label="Ayuda"          active={isActive("/ayuda")} />
         </>
       );
     }
@@ -195,7 +197,9 @@ export function Layout({ children }) {
     if (isCoordination?.()) {
       return [
         { to: "/coordination", icon: LayoutDashboard, label: "Dashboard" },
+        { to: "/aprendices",   icon: Users,           label: "Aprendices" },
         { to: "/reportes",     icon: BarChart2,       label: "Reportes" },
+        { to: "/admin/fichas", icon: ShieldCheck,     label: "Fichas" },
       ];
     }
     if (isProfessional?.()) {
