@@ -30,6 +30,7 @@ const ActividadPage            = lazy(() => import("../features/admin/pages/Acti
 const RolesPage                = lazy(() => import("../features/admin/pages/RolesPage"));
 const ConfiguracionAdminPage   = lazy(() => import("../features/admin/pages/ConfiguracionAdminPage"));
 const UsuariosPage             = lazy(() => import("../features/admin/pages/UsuariosPage"));
+const FichasPage               = lazy(() => import("../features/admin/pages/FichasPage"));
 const ReportsDashboard      = lazy(() => import("../features/reports/pages/ReportsDashboard"));
 
 // Aprendiz — páginas nuevas
@@ -244,6 +245,11 @@ export function AppRoutes() {
         <Route path="/admin/usuarios" element={
           <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
             <Layout><UsuariosPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/fichas" element={
+          <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
+            <Layout><FichasPage /></Layout>
           </ProtectedRoute>
         } />
 

@@ -47,14 +47,42 @@ export default function RegisterPage() {
     setStep(2);
   };
 
+  const [whitelistError, setWhitelistError] = useState(null);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const err = validateStep2();
     if (err) { toast.error(err); return; }
 
     setLoading(true);
+    setWhitelistError(null);
     const full_name = `${form.first_name.trim()} ${form.last_name.trim()}`;
     try {
+      // ── Validación lista blanca SENA ───────────────────────────────────
+      const { count: wlCount } = await supabase
+        .from("aprendiz_whitelist")
+        .select("*", { count: "exact", head: true });
+
+      if (wlCount > 0) {
+        if (!form.ficha_number.trim()) {
+          setWhitelistError("Debes ingresar tu número de ficha para registrarte en esta plataforma.");
+          setLoading(false);
+          return;
+        }
+        const { data: found } = await supabase
+          .from("aprendiz_whitelist")
+          .select("id")
+          .eq("document_number", form.document_number.trim())
+          .eq("ficha_number", form.ficha_number.trim())
+          .maybeSingle();
+        if (!found) {
+          setWhitelistError("Tu cédula o número de ficha no aparecen en la base de datos del SENA. Verifica tu información o contacta al equipo de Bienestar SENA.");
+          setLoading(false);
+          return;
+        }
+      }
+      // ──────────────────────────────────────────────────────────────────
+
       const { data, error } = await supabase.auth.signUp({
         email:    form.email,
         password: form.password,
@@ -279,12 +307,29 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
+                {/* Alerta lista blanca SENA */}
+                {whitelistError && (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 12, padding: "1rem 1.125rem", marginBottom: "1rem" }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Shield size={15} color="#dc2626" />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "#dc2626", margin: "0 0 0.25rem" }}>
+                        No encontrado en la base de datos del SENA
+                      </p>
+                      <p style={{ fontSize: "0.8125rem", color: "#b91c1c", margin: 0, lineHeight: 1.5 }}>
+                        {whitelistError}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ display: "flex", gap: "0.75rem" }}>
                   <button type="button" onClick={() => setStep(1)} style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.8125rem 1rem", background: "white", border: "1.5px solid #d0d7de", borderRadius: 10, fontSize: "0.9375rem", fontWeight: 600, color: "#6e7681", cursor: "pointer", fontFamily: "'DM Sans',system-ui", flexShrink: 0 }}>
                     <ChevronLeft size={16} /> Atrás
                   </button>
                   <button type="submit" className="reg-btn" disabled={loading}>
-                    {loading ? "Creando cuenta…" : "Crear cuenta"}
+                    {loading ? "Verificando…" : "Crear cuenta"}
                   </button>
                 </div>
               </>

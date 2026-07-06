@@ -1,0 +1,532 @@
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Upload, FileSpreadsheet, Trash2, Search, ChevronLeft,
+  Users, CheckCircle2, AlertCircle, X, RefreshCw, Download,
+} from "lucide-react";
+import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../providers/AuthProvider";
+import { toast } from "sonner";
+
+// ─── CSV parser (nativo) ──────────────────────────────────────────────────────
+function parseCSVText(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error("El archivo no tiene datos");
+
+  const delim = lines[0].includes(";") ? ";" : ",";
+  const headers = lines[0].split(delim).map(h =>
+    h.trim().toLowerCase().replace(/['"]/g, "")
+  );
+
+  const docIdx   = headers.findIndex(h => /cedula|documento|document|cc/.test(h));
+  const fichaIdx = headers.findIndex(h => /ficha/.test(h));
+  const nameIdx  = headers.findIndex(h => /nombre|name/.test(h));
+  const progIdx  = headers.findIndex(h => /programa|program/.test(h));
+
+  if (docIdx === -1 || fichaIdx === -1) {
+    throw new Error("El archivo debe tener columnas 'cedula' (o 'documento') y 'ficha'");
+  }
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const cols = line.split(delim).map(c => c.trim().replace(/^["']|["']$/g, ""));
+    const doc  = cols[docIdx]?.trim();
+    const ficha = cols[fichaIdx]?.trim();
+    if (!doc || !ficha) continue;
+    rows.push({
+      document_number: doc,
+      ficha_number:    ficha,
+      full_name: nameIdx >= 0 ? cols[nameIdx]?.trim() || null : null,
+      program:   progIdx >= 0 ? cols[progIdx]?.trim() || null : null,
+    });
+  }
+  return rows;
+}
+
+// ─── Excel parser (SheetJS, dynamic import) ───────────────────────────────────
+async function parseExcelBuffer(buffer) {
+  const XLSX = await import("xlsx");
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+  const json     = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+  if (json.length === 0) throw new Error("La hoja de cálculo está vacía");
+
+  // Normalize headers
+  const sample = json[0];
+  const keys   = Object.keys(sample).map(k => k.toLowerCase().trim());
+
+  const docKey   = Object.keys(sample).find((_, i) => /cedula|documento|document|cc/.test(keys[i]));
+  const fichaKey = Object.keys(sample).find((_, i) => /ficha/.test(keys[i]));
+  const nameKey  = Object.keys(sample).find((_, i) => /nombre|name/.test(keys[i]));
+  const progKey  = Object.keys(sample).find((_, i) => /programa|program/.test(keys[i]));
+
+  if (!docKey || !fichaKey) {
+    throw new Error("El archivo debe tener columnas 'cedula' (o 'documento') y 'ficha'");
+  }
+
+  return json.map(row => ({
+    document_number: String(row[docKey] ?? "").trim(),
+    ficha_number:    String(row[fichaKey] ?? "").trim(),
+    full_name: nameKey ? String(row[nameKey] ?? "").trim() || null : null,
+    program:   progKey ? String(row[progKey] ?? "").trim() || null : null,
+  })).filter(r => r.document_number && r.ficha_number);
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+export default function FichasPage() {
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+
+  const [whitelist, setWhitelist] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadingList, setLoadingList] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const [preview, setPreview]     = useState(null); // { rows, filename }
+  const [importing, setImporting] = useState(false);
+  const [dragging, setDragging]   = useState(false);
+
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing]         = useState(false);
+
+  const fileInputRef = useRef(null);
+
+  // ─── Load whitelist ──────────────────────────────────────────────────────
+  const loadWhitelist = useCallback(async () => {
+    setLoadingList(true);
+    try {
+      const [{ count }, { data }] = await Promise.all([
+        supabase.from("aprendiz_whitelist").select("*", { count: "exact", head: true }),
+        supabase.from("aprendiz_whitelist")
+          .select("*")
+          .order("uploaded_at", { ascending: false })
+          .limit(200),
+      ]);
+      setTotalCount(count ?? 0);
+      setWhitelist(data ?? []);
+    } catch {
+      toast.error("Error al cargar la lista");
+    } finally {
+      setLoadingList(false);
+    }
+  }, []);
+
+  useEffect(() => { loadWhitelist(); }, [loadWhitelist]);
+
+  // ─── File parsing ────────────────────────────────────────────────────────
+  const handleFile = useCallback(async (file) => {
+    if (!file) return;
+    const isCSV  = file.name.toLowerCase().endsWith(".csv");
+    const isXLSX = file.name.toLowerCase().match(/\.xlsx?$/);
+    if (!isCSV && !isXLSX) {
+      toast.error("Formato no soportado. Usa archivos .csv o .xlsx");
+      return;
+    }
+
+    try {
+      let rows;
+      if (isCSV) {
+        const text = await file.text();
+        rows = parseCSVText(text);
+      } else {
+        const buffer = await file.arrayBuffer();
+        rows = await parseExcelBuffer(buffer);
+      }
+
+      if (rows.length === 0) {
+        toast.error("No se encontraron filas válidas en el archivo");
+        return;
+      }
+
+      setPreview({ rows, filename: file.name });
+    } catch (err) {
+      toast.error(err.message || "Error al leer el archivo");
+    }
+  }, []);
+
+  const handleInputChange = (e) => handleFile(e.target.files?.[0]);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragging(false);
+    handleFile(e.dataTransfer.files?.[0]);
+  }, [handleFile]);
+
+  // ─── Import ──────────────────────────────────────────────────────────────
+  const handleImport = async () => {
+    if (!preview) return;
+    setImporting(true);
+    try {
+      const rows = preview.rows.map(r => ({
+        ...r,
+        uploaded_by: profile?.id ?? null,
+        uploaded_at: new Date().toISOString(),
+      }));
+
+      // Upsert in batches of 500
+      for (let i = 0; i < rows.length; i += 500) {
+        const batch = rows.slice(i, i + 500);
+        const { error } = await supabase
+          .from("aprendiz_whitelist")
+          .upsert(batch, { onConflict: "document_number,ficha_number" });
+        if (error) throw error;
+      }
+
+      toast.success(`${rows.length} aprendices importados correctamente`);
+      setPreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      await loadWhitelist();
+    } catch (err) {
+      toast.error("Error al importar: " + (err.message || "intenta de nuevo"));
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // ─── Delete one ──────────────────────────────────────────────────────────
+  const handleDeleteOne = async (id) => {
+    const { error } = await supabase.from("aprendiz_whitelist").delete().eq("id", id);
+    if (error) { toast.error("Error al eliminar"); return; }
+    setWhitelist(prev => prev.filter(r => r.id !== id));
+    setTotalCount(prev => prev - 1);
+  };
+
+  // ─── Clear all ───────────────────────────────────────────────────────────
+  const handleClearAll = async () => {
+    setClearing(true);
+    const { error } = await supabase.from("aprendiz_whitelist").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    if (error) { toast.error("Error al borrar la lista"); setClearing(false); return; }
+    toast.success("Lista borrada. Todos los aprendices pueden registrarse libremente.");
+    setWhitelist([]);
+    setTotalCount(0);
+    setConfirmClear(false);
+    setClearing(false);
+  };
+
+  // ─── Download template ───────────────────────────────────────────────────
+  const downloadTemplate = () => {
+    const csv = "cedula,ficha,nombre,programa\n1001234567,2847193,Juan Pérez,Desarrollo de Software\n1009876543,2851024,María García,Contabilidad\n";
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = "plantilla_fichas.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ─── Filtered list ───────────────────────────────────────────────────────
+  const filtered = whitelist.filter(r => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return r.document_number.includes(q)
+      || r.ficha_number.includes(q)
+      || (r.full_name || "").toLowerCase().includes(q)
+      || (r.program   || "").toLowerCase().includes(q);
+  });
+
+  return (
+    <>
+      <style>{`
+        .fichas-page { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem 3rem; font-family: var(--font-sans, 'DM Sans', system-ui, sans-serif); }
+        .drop-zone { border: 2px dashed #d0d7de; border-radius: 14px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+        .drop-zone:hover, .drop-zone.drag { border-color: #39a900; background: #f0fce4; }
+        .wl-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .wl-table th { background: #f6f8fa; padding: 0.625rem 0.875rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #6e7681; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e5e7eb; }
+        .wl-table td { padding: 0.625rem 0.875rem; border-bottom: 1px solid #f3f4f6; color: #24292f; vertical-align: middle; }
+        .wl-table tr:last-child td { border-bottom: none; }
+        .wl-table tr:hover td { background: #f9fafb; }
+        .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+      `}</style>
+
+      <div className="fichas-page">
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", marginBottom: "1.75rem" }}>
+          <button
+            onClick={() => navigate("/admin")}
+            style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 0.875rem", background: "white", border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.875rem", fontWeight: 600, color: "#6e7681", cursor: "pointer" }}
+          >
+            <ChevronLeft size={15} /> Admin
+          </button>
+          <div>
+            <h1 style={{ fontFamily: "'Sora', system-ui", fontWeight: 800, fontSize: "1.375rem", color: "#0d1117", margin: 0, letterSpacing: "-0.02em" }}>
+              Control de Fichas Activas
+            </h1>
+            <p style={{ fontSize: "0.8125rem", color: "#8b949e", margin: 0 }}>
+              Lista de aprendices habilitados para registrarse en la plataforma
+            </p>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.875rem", marginBottom: "1.75rem" }}>
+          <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1rem 1.25rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.375rem" }}>
+              <Users size={15} color="#39a900" />
+              <span style={{ fontSize: "0.75rem", color: "#6e7681", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Aprendices en lista</span>
+            </div>
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0d1117", letterSpacing: "-0.03em" }}>
+              {loadingList ? "—" : totalCount.toLocaleString("es-CO")}
+            </div>
+            <div style={{ fontSize: "0.75rem", color: totalCount > 0 ? "#39a900" : "#f59e0b", marginTop: "0.25rem", fontWeight: 600 }}>
+              {totalCount > 0 ? "Validación activa" : "Sin restricción — todos pueden registrarse"}
+            </div>
+          </div>
+
+          <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1rem 1.25rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.375rem" }}>
+              <FileSpreadsheet size={15} color="#3b82f6" />
+              <span style={{ fontSize: "0.75rem", color: "#6e7681", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Estado</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
+              {totalCount > 0 ? (
+                <span className="badge" style={{ background: "#dafbe1", color: "#1a7f37" }}>
+                  <CheckCircle2 size={12} /> Activo
+                </span>
+              ) : (
+                <span className="badge" style={{ background: "#fff8e1", color: "#b45309" }}>
+                  <AlertCircle size={12} /> Sin lista cargada
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "#8b949e", marginTop: "0.5rem" }}>
+              {totalCount > 0
+                ? "Registro requiere validación SENA"
+                : "Sube un archivo para activar la validación"}
+            </div>
+          </div>
+        </div>
+
+        {/* Upload section */}
+        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, padding: "1.5rem", marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+            <h2 style={{ fontFamily: "'Sora', system-ui", fontWeight: 700, fontSize: "1rem", color: "#0d1117", margin: 0 }}>
+              Importar archivo
+            </h2>
+            <button
+              onClick={downloadTemplate}
+              style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.4rem 0.75rem", background: "white", border: "1.5px solid #d0d7de", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 600, color: "#6e7681", cursor: "pointer" }}
+            >
+              <Download size={13} /> Plantilla CSV
+            </button>
+          </div>
+
+          {/* Drop zone */}
+          {!preview && (
+            <div
+              className={`drop-zone${dragging ? " drag" : ""}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+            >
+              <Upload size={32} color="#39a900" style={{ marginBottom: "0.75rem" }} />
+              <p style={{ fontWeight: 600, color: "#24292f", margin: "0 0 0.375rem", fontSize: "0.9375rem" }}>
+                Arrastra tu archivo aquí o haz clic para seleccionar
+              </p>
+              <p style={{ color: "#8b949e", fontSize: "0.8125rem", margin: "0 0 0.75rem" }}>
+                Formatos soportados: <strong>.csv</strong> y <strong>.xlsx</strong>
+              </p>
+              <div style={{ display: "inline-flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center" }}>
+                {["cedula (requerida)", "ficha (requerida)", "nombre (opcional)", "programa (opcional)"].map(col => (
+                  <span key={col} className="badge" style={{ background: "#f3f4f6", color: "#6e7681" }}>{col}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            onChange={handleInputChange}
+            style={{ display: "none" }}
+          />
+
+          {/* Preview */}
+          {preview && (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+                  <FileSpreadsheet size={16} color="#39a900" />
+                  <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "#0d1117" }}>{preview.filename}</span>
+                  <span className="badge" style={{ background: "#dafbe1", color: "#1a7f37" }}>{preview.rows.length} filas válidas</span>
+                </div>
+                <button
+                  onClick={() => { setPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#8b949e", display: "flex" }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Preview table */}
+              <div style={{ border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden", marginBottom: "1rem", maxHeight: 260, overflowY: "auto" }}>
+                <table className="wl-table">
+                  <thead>
+                    <tr>
+                      <th>Cédula</th>
+                      <th>Ficha</th>
+                      <th>Nombre</th>
+                      <th>Programa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.rows.slice(0, 20).map((r, i) => (
+                      <tr key={i}>
+                        <td style={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{r.document_number}</td>
+                        <td style={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{r.ficha_number}</td>
+                        <td>{r.full_name || <span style={{ color: "#9ca3af" }}>—</span>}</td>
+                        <td>{r.program || <span style={{ color: "#9ca3af" }}>—</span>}</td>
+                      </tr>
+                    ))}
+                    {preview.rows.length > 20 && (
+                      <tr>
+                        <td colSpan={4} style={{ textAlign: "center", color: "#8b949e", fontStyle: "italic", padding: "0.75rem" }}>
+                          … y {preview.rows.length - 20} filas más
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ display: "flex", gap: "0.75rem" }}>
+                <button
+                  onClick={handleImport}
+                  disabled={importing}
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.75rem 1.25rem", background: "#39a900", color: "white", border: "none", borderRadius: 10, fontSize: "0.9rem", fontWeight: 700, cursor: importing ? "not-allowed" : "pointer", opacity: importing ? 0.7 : 1 }}
+                >
+                  {importing ? <RefreshCw size={15} style={{ animation: "spin 0.6s linear infinite" }} /> : <Upload size={15} />}
+                  {importing ? "Importando…" : `Importar ${preview.rows.length} aprendices`}
+                </button>
+                <button
+                  onClick={() => { setPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  style={{ padding: "0.75rem 1rem", background: "white", border: "1.5px solid #d0d7de", borderRadius: 10, fontSize: "0.9rem", fontWeight: 600, color: "#6e7681", cursor: "pointer" }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Current list */}
+        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden" }}>
+          <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
+            <h2 style={{ fontFamily: "'Sora', system-ui", fontWeight: 700, fontSize: "1rem", color: "#0d1117", margin: 0 }}>
+              Lista actual
+              {totalCount > 0 && <span className="badge" style={{ background: "#f3f4f6", color: "#6e7681", marginLeft: "0.5rem" }}>{totalCount}</span>}
+            </h2>
+            <div style={{ display: "flex", gap: "0.625rem", alignItems: "center" }}>
+              <div style={{ position: "relative" }}>
+                <Search size={14} style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+                <input
+                  type="text"
+                  placeholder="Buscar cédula, ficha, nombre…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{ paddingLeft: "2rem", paddingRight: "0.75rem", paddingTop: "0.5rem", paddingBottom: "0.5rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.8125rem", outline: "none", width: 220, fontFamily: "inherit" }}
+                />
+              </div>
+              {totalCount > 0 && !confirmClear && (
+                <button
+                  onClick={() => setConfirmClear(true)}
+                  style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 0.875rem", background: "white", border: "1.5px solid #fca5a5", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 600, color: "#dc2626", cursor: "pointer" }}
+                >
+                  <Trash2 size={13} /> Borrar todo
+                </button>
+              )}
+              {confirmClear && (
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.8125rem", color: "#dc2626", fontWeight: 600 }}>¿Seguro?</span>
+                  <button
+                    onClick={handleClearAll}
+                    disabled={clearing}
+                    style={{ padding: "0.5rem 0.875rem", background: "#dc2626", color: "white", border: "none", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    {clearing ? "Borrando…" : "Sí, borrar"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmClear(false)}
+                    style={{ padding: "0.5rem 0.75rem", background: "white", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 600, color: "#6e7681", cursor: "pointer" }}
+                  >
+                    No
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {loadingList ? (
+            <div style={{ padding: "3rem", textAlign: "center", color: "#9ca3af" }}>
+              <RefreshCw size={20} style={{ animation: "spin 0.6s linear infinite", marginBottom: "0.5rem" }} />
+              <p style={{ margin: 0, fontSize: "0.875rem" }}>Cargando lista…</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div style={{ padding: "3rem", textAlign: "center" }}>
+              <Users size={32} color="#e5e7eb" style={{ marginBottom: "0.75rem" }} />
+              <p style={{ fontWeight: 600, color: "#6e7681", margin: "0 0 0.25rem" }}>
+                {totalCount === 0 ? "La lista está vacía" : "Sin resultados"}
+              </p>
+              <p style={{ fontSize: "0.8125rem", color: "#9ca3af", margin: 0 }}>
+                {totalCount === 0
+                  ? "Sube un archivo CSV o Excel para habilitar la validación de registro"
+                  : "Prueba con otro término de búsqueda"}
+              </p>
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table className="wl-table">
+                <thead>
+                  <tr>
+                    <th>Cédula</th>
+                    <th>Ficha</th>
+                    <th>Nombre</th>
+                    <th>Programa</th>
+                    <th>Importado</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(r => (
+                    <tr key={r.id}>
+                      <td style={{ fontFamily: "monospace", fontSize: "0.8125rem", fontWeight: 600, color: "#0d1117" }}>{r.document_number}</td>
+                      <td style={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{r.ficha_number}</td>
+                      <td>{r.full_name || <span style={{ color: "#9ca3af" }}>—</span>}</td>
+                      <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {r.program || <span style={{ color: "#9ca3af" }}>—</span>}
+                      </td>
+                      <td style={{ color: "#6e7681", fontSize: "0.8rem" }}>
+                        {new Date(r.uploaded_at).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <button
+                          onClick={() => handleDeleteOne(r.id)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#e5e7eb", padding: "0.25rem", display: "flex", borderRadius: 6, transition: "color 0.15s" }}
+                          onMouseOver={e => e.currentTarget.style.color = "#dc2626"}
+                          onMouseOut={e => e.currentTarget.style.color = "#e5e7eb"}
+                          title="Eliminar"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {totalCount > 200 && (
+                <p style={{ textAlign: "center", padding: "0.75rem", color: "#9ca3af", fontSize: "0.8125rem", margin: 0, borderTop: "1px solid #f3f4f6" }}>
+                  Mostrando los primeros 200 registros. Usa la búsqueda para encontrar registros específicos.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </>
+  );
+}

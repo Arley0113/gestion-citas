@@ -18,6 +18,7 @@ const MODULES = [
   { icon: Activity,  title: "Registro de actividad", desc: "Logs y auditoría del sistema",    accent: "#f59e0b", bg: "#fffbeb", permission: P.APPOINTMENTS_READ_ALL, path: "/admin/actividad" },
   { icon: Database,  title: "Exportar datos",        desc: "Reportes y exportación de datos", accent: "#ef4444", bg: "#fef2f2", permission: P.REPORTS_EXPORT,        path: "/reportes" },
   { icon: Settings,  title: "Configuración general", desc: "Parámetros del sistema",          accent: "#6b7280", bg: "#f9fafb", permission: P.SYSTEM_CONFIG,         path: "/admin/configuracion" },
+  { icon: Database,  title: "Fichas activas",         desc: "Lista blanca de aprendices SENA", accent: "#0ea5e9", bg: "#f0f9ff", permission: P.USERS_MANAGE_ROLES,    path: "/admin/fichas" },
 ];
 
 const STATUS_META = {
