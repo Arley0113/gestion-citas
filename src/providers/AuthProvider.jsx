@@ -3,43 +3,7 @@ import { supabase } from "../lib/supabase";
 import { ROLE_PERMISSIONS } from "../shared/rbac/permissions";
 import { toast } from "sonner";
 
-const AUTH_LOCK_MAX_RETRIES = 3;
-const AUTH_LOCK_BASE_DELAY = 250;
-
-const isAuthLockError = (err) => {
-  const msg = err?.message || "";
-  return msg.includes("Lock \"lock:sb-") && msg.includes("auth-token") && msg.includes("stole it");
-};
-
-const retryAuthRequest = async (fn) => {
-  let attempt = 0;
-  while (true) {
-    try {
-      return await fn();
-    } catch (err) {
-      attempt += 1;
-      if (attempt >= AUTH_LOCK_MAX_RETRIES || !isAuthLockError(err)) {
-        throw err;
-      }
-      await new Promise((resolve) => setTimeout(resolve, AUTH_LOCK_BASE_DELAY * attempt));
-    }
-  }
-};
-
-const withTimeout = async (promise, ms, label = "operation") => {
-  let timeoutId;
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-  });
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-};
-
 const AuthContext = createContext(null);
-let pendingSessionCheck = null;
 
 // DEV preview — constante de módulo (no cambia durante el ciclo de vida)
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
@@ -65,7 +29,6 @@ export function AuthProvider({ children }) {
   const devProfile = isDev ? DEV_PROFILES[DEV_ROLE] : null;
   const devUser    = isDev ? { id: "dev-user", email: "dev@sena.edu.co" } : null;
 
-  // Hooks siempre en el mismo orden — sin retorno condicional antes de hooks
   const [user,    setUser]    = useState(devUser);
   const [profile, setProfile] = useState(devProfile);
   const [loading, setLoading] = useState(!isDev);
@@ -74,13 +37,12 @@ export function AuthProvider({ children }) {
   const fetchProfile = useCallback(async (userId) => {
     if (isDev) return devProfile;
     try {
-      const { data, error } = await retryAuthRequest(() =>
-        supabase
-          .from("profiles")
-          .select("*, roles(name, label), dependencies(name)")
-          .eq("id", userId)
-          .single()
-      );
+      // Llamada directa — las queries de DB no compiten con el auth lock
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*, roles(name, label), dependencies(name)")
+        .eq("id", userId)
+        .single();
       if (error) throw error;
       if (!data) throw new Error("Perfil no encontrado");
       setProfile(data);
@@ -88,7 +50,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       if (import.meta.env.DEV) console.error("Error cargando perfil:", err);
       setProfile(null);
-      const isMissingProfile = err.message.includes("Perfil no encontrado");
+      const isMissingProfile = err.message?.includes("Perfil no encontrado");
       const message = isMissingProfile
         ? "No se encontró tu perfil en Bienestar SENA. Contacta al administrador."
         : "No se pudo cargar tu perfil. Intenta de nuevo.";
@@ -104,128 +66,67 @@ export function AuthProvider({ children }) {
   }, [user, isDev, fetchProfile]);
 
   useEffect(() => {
-    if (isDev) return; // modo DEV — no conectar Supabase
+    if (isDev) return;
 
     let mounted = true;
-    const TIMEOUT = 5_000;
-    // Si hay un token de invitación/recovery en el hash, esperar más antes del fallback
     const hasAuthHash = typeof window !== "undefined" && (
       window.location.hash.includes("access_token") ||
       window.location.hash.includes("type=invite") ||
       window.location.hash.includes("type=recovery")
     );
-    const FAST_FALLBACK = hasAuthHash ? 8_000 : 700;
+    // Fallback de seguridad por si el evento INITIAL_SESSION tarda
     const fallbackTimer = setTimeout(() => {
       if (mounted) setLoading(false);
-    }, FAST_FALLBACK);
+    }, hasAuthHash ? 8_000 : 3_000);
 
-    const isRefreshTokenError = (err) => {
-      const msg = err?.message || "";
-      return msg.toLowerCase().includes("refresh token") || msg.toLowerCase().includes("refresh_token");
-    };
+    // onAuthStateChange es la única fuente de verdad — elimina competencia de locks
+    // supabase-js dispara INITIAL_SESSION al suscribirse y luego los eventos subsiguientes
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
 
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await retryAuthRequest(() => supabase.auth.getSession());
-        if (error) throw error;
-
-        if (session?.user) {
-          // Si el access token está expirado o por vencer en los próximos 30s,
-          // intentar refrescar proactivamente antes de renderizar la app
-          const expiresAt = (session.expires_at || 0) * 1000;
-          const isExpiredOrExpiring = expiresAt < Date.now() + 30_000;
-
-          if (isExpiredOrExpiring) {
-            const refreshResult = await Promise.race([
-              supabase.auth.refreshSession(),
-              new Promise(resolve => setTimeout(() => resolve({ data: null, error: new Error("refresh timeout") }), 5_000)),
-            ]);
-            const { data: refreshed, error: refreshErr } = refreshResult;
-            if (refreshErr || !refreshed?.session) {
-              // Refresh token inválido o timeout — limpiar todo y mostrar login
-              await supabase.auth.signOut().catch(() => {});
-              setUser(null);
-              setProfile(null);
-              return;
-            }
-            setUser(refreshed.session.user);
-            const profileData = await fetchProfile(refreshed.session.user.id);
-            if (!profileData) {
-              await supabase.auth.signOut().catch(() => {});
-              setUser(null);
-              setProfile(null);
-            }
-          } else {
-            setUser(session.user);
-            const profileData = await fetchProfile(session.user.id);
-            if (!profileData) {
-              await supabase.auth.signOut().catch(() => {});
-              setUser(null);
-              setProfile(null);
-            }
-          }
-        }
-      } catch (err) {
-        if (isRefreshTokenError(err)) {
-          await supabase.auth.signOut().catch(() => {});
-        } else if (!err.message.includes("timed out")) {
-          if (import.meta.env.DEV) console.warn("Session init failed:", err.message);
-        }
-        setUser(null);
-        setProfile(null);
-        setError(null);
-      } finally {
+      if (event === "PASSWORD_RECOVERY") {
         clearTimeout(fallbackTimer);
         if (mounted) setLoading(false);
-      }
-    };
-
-    checkSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
         window.location.href = "/reset-password" + window.location.hash;
         return;
       }
-      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session?.user) {
+
+      if (session?.user) {
         setUser(session.user);
-        const profileData = await fetchProfile(session.user.id);
-        if (!profileData) {
-          await supabase.auth.signOut().catch(() => {});
-          setUser(null);
-          setProfile(null);
+        // TOKEN_REFRESHED solo actualiza el token; el perfil no cambia
+        if (event !== "TOKEN_REFRESHED") {
+          const profileData = await fetchProfile(session.user.id);
+          if (!mounted) return;
+          if (!profileData) {
+            await supabase.auth.signOut().catch(() => {});
+            setUser(null);
+            setProfile(null);
+          }
         }
-      } else if (event === "TOKEN_REFRESHED" && !session) {
-        // Refresh token inválido — forzar logout
-        await supabase.auth.signOut().catch(() => {});
-        setUser(null);
-        setProfile(null);
-      } else if (event === "SIGNED_OUT") {
+      } else {
         setUser(null);
         setProfile(null);
       }
-      setLoading(false);
+
+      clearTimeout(fallbackTimer);
+      if (mounted) setLoading(false);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(fallbackTimer);
+      listener.subscription.unsubscribe();
+    };
   }, [isDev, fetchProfile]);
 
   const signIn = async (email, password) => {
     try {
       setError(null);
-      const { data, error } = await retryAuthRequest(() => supabase.auth.signInWithPassword({ email, password }));
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      // Establecer user inmediatamente para UX fluida; profile carga vía SIGNED_IN event
       const sessionUser = data?.user || data?.session?.user;
-      if (sessionUser) {
-        setUser(sessionUser);
-        const profileData = await fetchProfile(sessionUser.id);
-        if (!profileData) {
-          await supabase.auth.signOut().catch(() => {});
-          setUser(null);
-          setProfile(null);
-          return { success: false, error: "No se encontró tu perfil en Bienestar SENA. Contacta al administrador." };
-        }
-      }
+      if (sessionUser) setUser(sessionUser);
       return { success: true, data };
     } catch (err) {
       const msg = err.message === "Invalid login credentials"
