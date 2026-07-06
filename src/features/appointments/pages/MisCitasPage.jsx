@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, Clock, CheckCircle2, X, UserX, Check, ChevronRight, Search } from "lucide-react";
+import { CalendarDays, Clock, CheckCircle2, X, UserX, Check, ChevronRight, Search, Download } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "../../../providers/AuthProvider";
@@ -66,6 +66,51 @@ export default function MisCitasPage() {
 
   const deps = [...new Set(citas.map(c => c.dependencies?.name).filter(Boolean))];
 
+  const exportPDF = () => {
+    if (!citas.length) { toast.info("No tienes citas para exportar"); return; }
+    const rows = [...citas]
+      .sort((a, b) => (a.scheduled_date < b.scheduled_date ? 1 : -1))
+      .map(c => `
+        <tr>
+          <td>${format(parseISO(c.scheduled_date + "T12:00:00"), "d MMM yyyy", { locale: es })}</td>
+          <td>${timeLabel(c.scheduled_time)}</td>
+          <td>${c.dependencies?.name || "—"}</td>
+          <td>${c.professional?.full_name || c.professional_name || "—"}</td>
+          <td>${(STATUS_CFG[c.status] || STATUS_CFG.pending).label}</td>
+          <td>${(c.reason || "—").replace(/</g, "&lt;")}</td>
+        </tr>`).join("");
+    const nombre = user?.user_metadata?.full_name || "";
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Historial de citas — Bienestar SENA</title>
+      <style>
+        * { font-family: system-ui, -apple-system, sans-serif; }
+        body { padding: 32px; color: #111827; }
+        h1 { font-size: 20px; margin: 0 0 4px; }
+        .sub { color: #6b7280; font-size: 13px; margin-bottom: 24px; }
+        .brand { color: #39a900; font-weight: 800; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { text-align: left; background: #f0fce4; color: #166534; padding: 8px 10px; border-bottom: 2px solid #39a900; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+        td { padding: 8px 10px; border-bottom: 1px solid #eef0f2; }
+        tr:nth-child(even) td { background: #fafafa; }
+        .footer { margin-top: 24px; font-size: 11px; color: #9ca3af; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <div class="brand">Bienestar SENA</div>
+      <h1>Historial de citas</h1>
+      <div class="sub">${nombre ? nombre + " · " : ""}${citas.length} cita${citas.length !== 1 ? "s" : ""} · Generado el ${format(new Date(), "d 'de' MMMM yyyy", { locale: es })}</div>
+      <table>
+        <thead><tr><th>Fecha</th><th>Hora</th><th>Dependencia</th><th>Profesional</th><th>Estado</th><th>Motivo</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="footer">Documento generado automáticamente por el Sistema de Citas de Bienestar SENA · República de Colombia</div>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { toast.error("Permite las ventanas emergentes para exportar"); return; }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  };
+
   const filtered = citas.filter(c => {
     if (activeTab === "proximas"   && !["pending","confirmed"].includes(c.status)) return false;
     if (activeTab === "pasadas"    && !["completed","no_show"].includes(c.status)) return false;
@@ -99,9 +144,21 @@ export default function MisCitasPage() {
             <h1 style={{ fontSize:"1.625rem", fontWeight:800, color:"#111827", letterSpacing:"-0.025em", margin:0, fontFamily:"var(--font-display)" }}>
               Historial de citas
             </h1>
-            <div style={{ display:"flex", alignItems:"center", gap:"0.375rem", padding:"0.25rem 0.75rem", background:"#f0fce4", borderRadius:20, border:"1px solid #bbf7d0" }}>
-              <CalendarDays size={12} color="#16a34a" />
-              <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#166534" }}>{citas.length} total</span>
+            <div style={{ display:"flex", alignItems:"center", gap:"0.625rem" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:"0.375rem", padding:"0.25rem 0.75rem", background:"#f0fce4", borderRadius:20, border:"1px solid #bbf7d0" }}>
+                <CalendarDays size={12} color="#16a34a" />
+                <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#166534" }}>{citas.length} total</span>
+              </div>
+              {citas.length > 0 && (
+                <button
+                  onClick={exportPDF}
+                  style={{ display:"flex", alignItems:"center", gap:"0.375rem", padding:"0.375rem 0.75rem", background:"white", border:"1.5px solid #e5e7eb", borderRadius:8, fontSize:"0.75rem", fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"var(--font-sans)" }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor="#39a900"}
+                  onMouseLeave={e => e.currentTarget.style.borderColor="#e5e7eb"}
+                >
+                  <Download size={13} /> Exportar PDF
+                </button>
+              )}
             </div>
           </div>
         </div>

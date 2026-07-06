@@ -32,7 +32,19 @@ Deno.serve(async (req) => {
     }
 
     const payload = await req.json();
-    const { to_email, to_name, subject, html } = payload;
+    const { to_name, subject, html, user_id } = payload;
+    let to_email = payload.to_email;
+
+    // El email vive en auth.users, no en profiles. Si el llamador no lo tiene,
+    // lo resolvemos por user_id con la service-role key.
+    if (!to_email && user_id) {
+      const admin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      const { data: authUser } = await admin.auth.admin.getUserById(user_id);
+      to_email = authUser?.user?.email || null;
+    }
 
     // Notificaciones son best-effort: si no hay email, no hacer nada
     if (!to_email || !subject || !html) {
