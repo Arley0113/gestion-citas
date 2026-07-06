@@ -16,6 +16,7 @@ const DOC_TYPES = [
 
 export default function ProfilePage() {
   const { profile, user } = useAuth();
+  const isAprendizRole = profile?.roles?.name === "APRENDIZ";
 
   const [form, setForm] = useState({
     full_name:       profile?.full_name       || "",
@@ -145,7 +146,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Documento */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.875rem", marginBottom: "1.25rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.875rem", marginBottom: isAprendizRole ? "1.25rem" : "1.5rem" }}>
             <div>
               <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.5rem" }}>
                 Tipo de documento
@@ -191,53 +192,55 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Ficha + Programa */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.875rem", marginBottom: "1.5rem" }}>
-            <div>
-              <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.5rem" }}>
-                <Hash size={13} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
-                Número de ficha
-              </label>
-              <input
-                type="text"
-                value={form.ficha_number}
-                onChange={e => set("ficha_number", e.target.value)}
-                placeholder="Ej. 2847193"
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  padding: "0.625rem 0.875rem",
-                  border: "1.5px solid #e5e7eb", borderRadius: 9,
-                  fontSize: "0.9375rem", color: "#111827",
-                  outline: "none", fontFamily: "var(--font-sans)",
-                  transition: "border-color 0.15s",
-                }}
-                onFocus={e => e.target.style.borderColor = "#39a900"}
-                onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-              />
+          {/* Ficha + Programa — solo para aprendices */}
+          {isAprendizRole && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.875rem", marginBottom: "1.5rem" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.5rem" }}>
+                  <Hash size={13} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
+                  Número de ficha
+                </label>
+                <input
+                  type="text"
+                  value={form.ficha_number}
+                  onChange={e => set("ficha_number", e.target.value)}
+                  placeholder="Ej. 2847193"
+                  style={{
+                    width: "100%", boxSizing: "border-box",
+                    padding: "0.625rem 0.875rem",
+                    border: "1.5px solid #e5e7eb", borderRadius: 9,
+                    fontSize: "0.9375rem", color: "#111827",
+                    outline: "none", fontFamily: "var(--font-sans)",
+                    transition: "border-color 0.15s",
+                  }}
+                  onFocus={e => e.target.style.borderColor = "#39a900"}
+                  onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.5rem" }}>
+                  <BookOpen size={13} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
+                  Programa de formación
+                </label>
+                <input
+                  type="text"
+                  value={form.program}
+                  onChange={e => set("program", e.target.value)}
+                  placeholder="Ej. Desarrollo de Software"
+                  style={{
+                    width: "100%", boxSizing: "border-box",
+                    padding: "0.625rem 0.875rem",
+                    border: "1.5px solid #e5e7eb", borderRadius: 9,
+                    fontSize: "0.9375rem", color: "#111827",
+                    outline: "none", fontFamily: "var(--font-sans)",
+                    transition: "border-color 0.15s",
+                  }}
+                  onFocus={e => e.target.style.borderColor = "#39a900"}
+                  onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                />
+              </div>
             </div>
-            <div>
-              <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.5rem" }}>
-                <BookOpen size={13} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
-                Programa de formación
-              </label>
-              <input
-                type="text"
-                value={form.program}
-                onChange={e => set("program", e.target.value)}
-                placeholder="Ej. Desarrollo de Software"
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  padding: "0.625rem 0.875rem",
-                  border: "1.5px solid #e5e7eb", borderRadius: 9,
-                  fontSize: "0.9375rem", color: "#111827",
-                  outline: "none", fontFamily: "var(--font-sans)",
-                  transition: "border-color 0.15s",
-                }}
-                onFocus={e => e.target.style.borderColor = "#39a900"}
-                onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-              />
-            </div>
-          </div>
+          )}
 
           {/* Botón guardar */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.875rem" }}>

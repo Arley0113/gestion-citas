@@ -102,12 +102,17 @@ export function Layout({ children }) {
       return (
         <>
           <NavGroup label="Panel" />
-          <NavLink to="/admin"        icon={LayoutDashboard} label="Panel admin"  active={location.pathname === "/admin"} />
+          <NavLink to="/admin"          icon={LayoutDashboard} label="Panel admin"    active={location.pathname === "/admin"} />
+          <NavLink to="/coordination"   icon={Calendar}        label="Citas"          active={isActive("/coordination")} />
           <NavGroup label="Gestión" />
-          <NavLink to="/reportes"     icon={BarChart2}       label="Reportes"     active={isActive("/reportes")} />
-          <NavLink to="/coordination" icon={Calendar}        label="Citas"        active={isActive("/coordination")} />
-          <NavLink to="/aprendices"   icon={Users}           label="Aprendices"   active={isActive("/aprendices")} />
-          <NavLink to="/admin/usuarios" icon={Users}         label="Usuarios"     active={isActive("/admin/usuarios")} />
+          <NavLink to="/reportes"       icon={BarChart2}       label="Reportes"       active={isActive("/reportes")} />
+          <NavLink to="/aprendices"     icon={Users}           label="Aprendices"     active={isActive("/aprendices")} />
+          <NavLink to="/admin/usuarios" icon={Users}           label="Usuarios"       active={isActive("/admin/usuarios")} />
+          <NavLink to="/admin/fichas"   icon={ShieldCheck}     label="Fichas activas" active={isActive("/admin/fichas")} />
+          <NavGroup label="Mi cuenta" />
+          <NavLink to="/perfil"         icon={UserCircle}      label="Mi perfil"      active={isActive("/perfil")} />
+          <NavGroup label="Soporte" />
+          <NavLink to="/ayuda"          icon={HelpCircle}      label="Ayuda"          active={isActive("/ayuda")} />
         </>
       );
     }
@@ -189,9 +194,10 @@ export function Layout({ children }) {
   const renderMobileNav = () => {
     if (isAdmin?.()) {
       return [
-        { to: "/admin",        icon: LayoutDashboard, label: "Admin" },
-        { to: "/reportes",     icon: BarChart2,       label: "Reportes" },
-        { to: "/coordination", icon: Calendar,        label: "Citas" },
+        { to: "/admin",          icon: LayoutDashboard, label: "Admin" },
+        { to: "/coordination",   icon: Calendar,        label: "Citas" },
+        { to: "/reportes",       icon: BarChart2,       label: "Reportes" },
+        { to: "/admin/usuarios", icon: Users,           label: "Usuarios" },
       ];
     }
     if (isCoordination?.()) {

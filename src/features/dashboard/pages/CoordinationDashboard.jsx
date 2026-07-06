@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, TrendingDown, Calendar, Users, BarChart2, ChevronRight, Bell, Download, RefreshCw, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, Calendar, Users, BarChart2, ChevronRight, Bell, Download, RefreshCw, AlertTriangle, ShieldCheck } from "lucide-react";
 import { format, startOfWeek, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from "recharts";
@@ -327,6 +327,7 @@ export default function CoordinationDashboard() {
                   const isEven = i % 2 === 0;
                   return (
                     <div key={i}
+                      onClick={() => apt.id && navigate(`/cita/${apt.id}`)}
                       style={{ minWidth: 520, display: "grid", gridTemplateColumns: "1fr 160px 100px 120px", gap: "1rem", padding: "0.75rem", borderBottom: i < todayApts.length - 1 ? "1px solid #f3f4f6" : "none", alignItems: "center", cursor: "pointer", borderRadius: 6, background: hoveredRow === i ? "#f0fce4" : isEven ? "white" : "#fafafa", transition: "background 0.1s" }}
                       onMouseEnter={() => setHoveredRow(i)}
                       onMouseLeave={() => setHoveredRow(null)}
@@ -397,9 +398,9 @@ export default function CoordinationDashboard() {
               Acciones rápidas
             </div>
             {[
-              { icon: Users,    label: "Gestionar aprendices",  sub: "Ver todos los perfiles",   color: "#39a900", bg: "#f0fce4", path: "/aprendices" },
-              { icon: BarChart2,label: "Reporte de período",     sub: "Exportar en PDF o Excel",  color: "#3b82f6", bg: "#eff6ff", path: "/reportes" },
-              { icon: Calendar, label: "Citas de hoy",           sub: "Ver agenda del día",        color: "#8b5cf6", bg: "#f5f3ff", path: null },
+              { icon: Users,       label: "Gestionar aprendices",  sub: "Ver todos los perfiles",     color: "#39a900", bg: "#f0fce4", path: "/aprendices" },
+              { icon: BarChart2,   label: "Reporte de período",     sub: "Exportar en PDF o Excel",    color: "#3b82f6", bg: "#eff6ff", path: "/reportes" },
+              { icon: ShieldCheck, label: "Fichas activas",         sub: "Padrón de aprendices SENA",  color: "#0ea5e9", bg: "#f0f9ff", path: "/admin/fichas" },
             ].map(({ icon: Icon, label, sub, color, bg, path }) => (
               <div key={label}
                 onClick={() => path && navigate(path)}
@@ -431,9 +432,9 @@ export default function CoordinationDashboard() {
               Hay <strong style={{ fontSize: "1rem" }}>{data?.pending ?? "—"} citas pendientes</strong> sin confirmar por profesionales.
             </p>
             <button
-              onClick={() => navigate("/aprendices")}
+              onClick={() => navigate("/coordination")}
               style={{ width: "100%", padding: "0.5625rem", background: "#f59e0b", color: "white", border: "none", borderRadius: 8, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
-              Ver aprendices →
+              Ver citas pendientes →
             </button>
           </div>
         </aside>
