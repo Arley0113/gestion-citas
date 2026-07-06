@@ -10,6 +10,7 @@ import { es } from "date-fns/locale";
 import { useAppointments } from "../hooks/useAppointments";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useAppointmentModal } from "../../../providers/AppointmentModalContext";
+import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 
 const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
@@ -64,7 +65,7 @@ const MOODS = [
 
 export default function AprendizDashboard() {
   const navigate   = useNavigate();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { openModal } = useAppointmentModal();
   const { appointments, cancelAppointment, fetchAppointments } = useAppointments();
   const [tab, setTab]             = useState("Próximas");
@@ -76,6 +77,24 @@ export default function AprendizDashboard() {
     if (!IS_DEV) fetchAppointments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Cargar estado de ánimo guardado
+  useEffect(() => {
+    if (!IS_DEV && profile?.last_mood !== undefined && profile?.last_mood !== null) {
+      const idx = MOODS.findIndex(m => m.label === profile.last_mood);
+      if (idx !== -1) setMood(idx);
+    }
+  }, [profile?.last_mood]);
+
+  const saveMood = async (idx) => {
+    setMood(idx);
+    toast.success(`Estado: ${MOODS[idx].label}`);
+    if (!IS_DEV && user) {
+      await supabase.from("profiles")
+        .update({ last_mood: MOODS[idx].label, last_mood_at: new Date().toISOString() })
+        .eq("id", user.id);
+    }
+  };
 
   const apts      = IS_DEV ? MOCK_APTS : (appointments || []);
   const firstName = IS_DEV ? "Juan" : (profile?.full_name?.split(" ")[0] || "Aprendiz");
@@ -241,7 +260,7 @@ export default function AprendizDashboard() {
             {MOODS.map((m, i) => (
               <button
                 key={i}
-                onClick={() => { if (mood !== i) toast.success(`Estado: ${m.label}`); setMood(i); }}
+                onClick={() => { if (mood !== i) saveMood(i); }}
                 title={m.label}
                 style={{
                   width: 40, height: 40, borderRadius: 10, border: "2px solid",

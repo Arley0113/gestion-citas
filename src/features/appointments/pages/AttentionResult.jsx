@@ -40,7 +40,7 @@ export default function AttentionResult() {
     if (state || IS_DEV) return;
     supabase
       .from("appointments")
-      .select("id, scheduled_date, scheduled_time, reason, notes, tags, observations, objectives_checked, user_id, profiles!user_id(full_name, document_number), dependencies(name)")
+      .select("id, scheduled_date, scheduled_time, reason, notes, tags, observations, objectives_checked, user_id, started_at, updated_at, profiles!user_id(full_name, document_number), dependencies(name)")
       .eq("id", id)
       .maybeSingle()
       .then(({ data: apt }) => {
@@ -54,6 +54,8 @@ export default function AttentionResult() {
               user_id: apt.user_id,
               profiles: apt.profiles,
               dependencies: apt.dependencies,
+              started_at: apt.started_at,
+              updated_at: apt.updated_at,
             },
             notes:      apt.notes      || "",
             tags:       apt.tags       || [],
@@ -89,6 +91,9 @@ export default function AttentionResult() {
   const { apt, notes, tags, objectives, obs } = data;
   const hasFollow = obs.includes("follow");
   const initials  = apt?.profiles?.full_name?.split(" ").slice(0, 2).map(w => w[0]).join("") || "?";
+  const durationMin = apt?.started_at
+    ? Math.max(1, Math.round((new Date(apt.updated_at || Date.now()) - new Date(apt.started_at)) / 60000))
+    : null;
 
   return (
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
@@ -174,7 +179,7 @@ export default function AttentionResult() {
                     <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#374151", textTransform: "capitalize" }}>
                       {format(parseISO(apt.scheduled_date), "d 'de' MMMM, yyyy", { locale: es })}
                     </div>
-                    <div style={{ fontSize: "0.8125rem", color: "#9ca3af" }}>~60 minutos</div>
+                    <div style={{ fontSize: "0.8125rem", color: "#9ca3af" }}>{durationMin ? `${durationMin} minutos` : "~60 minutos"}</div>
                   </div>
                 )}
               </div>

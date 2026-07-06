@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, Clock, CheckCircle2, X, UserX, Check, ChevronRight } from "lucide-react";
+import { CalendarDays, Clock, CheckCircle2, X, UserX, Check, ChevronRight, Search } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "../../../providers/AuthProvider";
@@ -46,6 +46,8 @@ export default function MisCitasPage() {
   const [activeTab, setActiveTab] = useState("proximas");
   const [citas, setCitas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [depFilter, setDepFilter] = useState("");
 
   useEffect(() => {
     if (IS_DEV) { setCitas(MOCK_CITAS); setLoading(false); return; }
@@ -62,11 +64,20 @@ export default function MisCitasPage() {
       });
   }, [user]);
 
+  const deps = [...new Set(citas.map(c => c.dependencies?.name).filter(Boolean))];
+
   const filtered = citas.filter(c => {
-    if (activeTab === "proximas")   return ["pending","confirmed"].includes(c.status);
-    if (activeTab === "pasadas")    return ["completed","no_show"].includes(c.status);
-    if (activeTab === "canceladas") return c.status === "cancelled";
-    return false;
+    if (activeTab === "proximas"   && !["pending","confirmed"].includes(c.status)) return false;
+    if (activeTab === "pasadas"    && !["completed","no_show"].includes(c.status)) return false;
+    if (activeTab === "canceladas" && c.status !== "cancelled") return false;
+    if (depFilter && c.dependencies?.name !== depFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (c.dependencies?.name || "").toLowerCase().includes(q)
+          || (c.reason || "").toLowerCase().includes(q)
+          || (c.professional?.full_name || c.professional_name || "").toLowerCase().includes(q);
+    }
+    return true;
   });
 
   const EMPTY_MSG = {
@@ -97,6 +108,35 @@ export default function MisCitasPage() {
       </div>
 
       <div style={{ maxWidth:720, margin:"0 auto", padding:"1.5rem 2rem" }}>
+
+        {/* Búsqueda */}
+        <div style={{ position:"relative", marginBottom:"0.75rem" }}>
+          <Search size={15} color="#9ca3af" style={{ position:"absolute", left:"0.875rem", top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }} />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por dependencia, motivo o profesional..."
+            style={{ width:"100%", padding:"0.625rem 0.875rem 0.625rem 2.375rem", border:"1.5px solid #e5e7eb", borderRadius:10, fontSize:"0.875rem", fontFamily:"var(--font-sans)", outline:"none", boxSizing:"border-box", background:"white" }}
+            onFocus={e => e.target.style.borderColor="#39a900"}
+            onBlur={e => e.target.style.borderColor="#e5e7eb"}
+          />
+          {search && (
+            <button onClick={() => setSearch("")} style={{ position:"absolute", right:"0.75rem", top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#9ca3af", padding:0 }}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Filtros por dependencia */}
+        {deps.length > 1 && (
+          <div style={{ display:"flex", gap:"0.375rem", marginBottom:"0.75rem", flexWrap:"wrap" }}>
+            <button onClick={() => setDepFilter("")} style={{ padding:"0.25rem 0.75rem", borderRadius:20, fontSize:"0.75rem", fontWeight:600, border:"1.5px solid", borderColor:!depFilter?"#39a900":"#e5e7eb", background:!depFilter?"#f0fce4":"white", color:!depFilter?"#166534":"#6b7280", cursor:"pointer", fontFamily:"var(--font-sans)" }}>Todas</button>
+            {deps.map(d => (
+              <button key={d} onClick={() => setDepFilter(depFilter===d?"":d)} style={{ padding:"0.25rem 0.75rem", borderRadius:20, fontSize:"0.75rem", fontWeight:600, border:"1.5px solid", borderColor:depFilter===d?"#39a900":"#e5e7eb", background:depFilter===d?"#f0fce4":"white", color:depFilter===d?"#166534":"#6b7280", cursor:"pointer", fontFamily:"var(--font-sans)" }}>{d}</button>
+            ))}
+          </div>
+        )}
 
         {/* Tabs */}
         <div style={{ display:"flex", gap:"0.5rem", marginBottom:"1.25rem", background:"white", border:"1px solid #e5e7eb", borderRadius:12, padding:"0.375rem" }}>

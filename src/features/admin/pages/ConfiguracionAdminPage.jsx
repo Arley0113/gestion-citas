@@ -5,11 +5,12 @@ import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 
 const SETTINGS = [
-  { key: "max_appointments_per_day", label: "Máx. citas por día (por profesional)", type: "number", default: 8 },
-  { key: "appointment_duration_min", label: "Duración de cita (minutos)", type: "number", default: 30 },
-  { key: "allow_same_day_booking",   label: "Permitir citas en el mismo día", type: "boolean", default: true },
-  { key: "require_cancel_reason",    label: "Requerir motivo al cancelar", type: "boolean", default: false },
-  { key: "notification_emails",      label: "Notificaciones por email", type: "boolean", default: true },
+  { key: "max_appointments_per_day", label: "Máx. citas por día (por profesional)", type: "number",  default: 8 },
+  { key: "appointment_duration_min", label: "Duración de cita (minutos)",            type: "number",  default: 30 },
+  { key: "allow_same_day_booking",   label: "Permitir citas en el mismo día",         type: "boolean", default: true },
+  { key: "require_cancel_reason",    label: "Requerir motivo al cancelar",            type: "boolean", default: false },
+  { key: "notification_emails",      label: "Notificaciones por email",               type: "boolean", default: true },
+  { key: "appointment_location",     label: "Ubicación de las citas",                 type: "text",    default: "Bienestar SENA - Sede principal" },
 ];
 
 const DEFAULTS = Object.fromEntries(SETTINGS.map(s => [s.key, s.default]));
@@ -97,6 +98,15 @@ export default function ConfiguracionAdminPage() {
                 >
                   <div style={{ width: 18, height: 18, borderRadius: 9, background: "white", position: "absolute", top: 3, left: values[s.key] ? 23 : 3, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
                 </button>
+              ) : s.type === "text" ? (
+                <input
+                  type="text"
+                  value={values[s.key] || ""}
+                  onChange={e => setValues(v => ({ ...v, [s.key]: e.target.value }))}
+                  style={{ width: 260, padding: "0.375rem 0.625rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", fontFamily: "var(--font-sans)", outline: "none" }}
+                  onFocus={e => e.target.style.borderColor = "#39a900"}
+                  onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                />
               ) : (
                 <input
                   type="number"

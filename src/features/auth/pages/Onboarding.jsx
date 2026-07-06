@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, ChevronRight, ChevronLeft, Check, BookOpen, Award } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
@@ -6,17 +6,15 @@ import { useAuth } from "../../../providers/AuthProvider";
 import { toast } from "sonner";
 import { SenaLogo } from "../../../shared/components/SenaLogo";
 
-const PROGRAMS = [
-  "Tecnología en Desarrollo de Software",
-  "Tecnología en Análisis y Desarrollo de Sistemas de Información",
+const PROGRAMS_FALLBACK = [
+  "Tecnología en Análisis y Desarrollo de Software",
   "Gestión Empresarial",
   "Contabilidad y Finanzas",
-  "Administración de Empresas",
   "Salud Ocupacional",
   "Electrónica",
   "Mecánica Industrial",
   "Cocina",
-  "Gastronomía",
+  "Otro",
 ];
 
 const DOC_TYPES = ["Cédula de ciudadanía", "Tarjeta de identidad", "Pasaporte", "Cédula de extranjería"];
@@ -31,6 +29,13 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [programs, setPrograms] = useState(PROGRAMS_FALLBACK);
+  const [programSearch, setProgramSearch] = useState("");
+
+  useEffect(() => {
+    supabase.from("programs").select("name").eq("active", true).order("name")
+      .then(({ data }) => { if (data?.length) setPrograms(data.map(p => p.name)); });
+  }, []);
 
   const [form, setForm] = useState({
     first_name: user?.user_metadata?.full_name?.split(" ")[0] || "",
@@ -259,7 +264,7 @@ export default function Onboarding() {
                     { key: "doc_type", label: "Tipo de documento", type: "select", options: DOC_TYPES, placeholder: "Selecciona el tipo" },
                     { key: "doc_number", label: "Número de documento", type: "text", placeholder: "Ej: 1234567890" },
                     { key: "ficha", label: "Número de ficha", type: "text", placeholder: "Ej: 2672345" },
-                    { key: "program", label: "Programa de formación", type: "select", options: PROGRAMS, placeholder: "Selecciona tu programa" },
+                    { key: "program", label: "Programa de formación", type: "select", options: programs, placeholder: "Selecciona tu programa" },
                   ].map(({ key, label, type, options, placeholder }) => (
                     <div key={key}>
                       <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.375rem" }}>

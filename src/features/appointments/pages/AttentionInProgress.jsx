@@ -39,22 +39,22 @@ const MOCK_APT = {
   profiles: { full_name: "Juan Pérez", document_number: "1034567890", program: "Tecnología en Desarrollo de Software" },
 };
 
-function useElapsed(scheduledTime) {
-  const getElapsed = (t) => {
-    if (!t) return 0;
-    const [h, m] = t.split(":").map(Number);
-    const now = new Date();
-    const start = new Date(now);
+function useElapsed(startedAt, scheduledTime) {
+  const getElapsed = () => {
+    if (startedAt) return Math.max(0, Math.floor((Date.now() - new Date(startedAt)) / 60000));
+    if (!scheduledTime) return 0;
+    const [h, m] = scheduledTime.split(":").map(Number);
+    const start = new Date();
     start.setHours(h, m, 0, 0);
-    return Math.max(0, Math.floor((now - start) / 60000));
+    return Math.max(0, Math.floor((Date.now() - start) / 60000));
   };
-  const [elapsed, setElapsed] = useState(() => getElapsed(scheduledTime));
+  const [elapsed, setElapsed] = useState(() => getElapsed());
   const ref = useRef(null);
   useEffect(() => {
-    setElapsed(getElapsed(scheduledTime));
-    ref.current = setInterval(() => setElapsed(getElapsed(scheduledTime)), 60000);
+    setElapsed(getElapsed());
+    ref.current = setInterval(() => setElapsed(getElapsed()), 30000);
     return () => clearInterval(ref.current);
-  }, [scheduledTime]);
+  }, [startedAt, scheduledTime]);
   return elapsed;
 }
 
@@ -68,7 +68,7 @@ export default function AttentionInProgress() {
   const [checkedObjs, setObjs]    = useState([]);
   const [selectedObs, setObs]     = useState([]);
   const [saving, setSaving]       = useState(false);
-  const elapsed = useElapsed(apt?.scheduled_time);
+  const elapsed = useElapsed(apt?.started_at, apt?.scheduled_time);
 
   useEffect(() => {
     if (DEV_ROLE) return;
@@ -78,10 +78,12 @@ export default function AttentionInProgress() {
       .eq("id", id)
       .single()
       .then(({ data }) => {
-        setApt(data);
+        if (!data) return;
+        const startedAt = data.started_at || new Date().toISOString();
+        setApt({ ...data, started_at: startedAt });
         if (!DEV_ROLE && profile?.id) {
           supabase.from("appointments")
-            .update({ status: "in_progress", professional_id: profile.id, updated_at: new Date() })
+            .update({ status: "in_progress", professional_id: profile.id, started_at: startedAt, updated_at: new Date() })
             .eq("id", parseInt(id))
             .then(() => {});
         }

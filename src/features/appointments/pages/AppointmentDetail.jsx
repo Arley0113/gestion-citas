@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ChevronLeft, Check, Clock, Calendar, MapPin, FileText,
-  Paperclip, Play, UserX, User, X,
+  Paperclip, Play, UserX, User, X, Star,
   AlertCircle, Brain, Heart, Users, Shield, Eye,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -12,6 +12,7 @@ import { useAuth } from "../../../providers/AuthProvider";
 import { usePermissions } from "../../../shared/rbac/usePermissions";
 import { P } from "../../../shared/rbac/permissions";
 import { toast } from "sonner";
+import { notifyAppointmentConfirmed } from "../../../lib/notifications";
 
 const STATUS_STEPS = ["pending","confirmed","in_progress","completed"];
 const STEP_LABELS  = ["Pendiente","Confirmada","En atención","Completada"];
@@ -38,8 +39,9 @@ const DEP_ICON = {
 
 function formatTime(t) {
   if (!t) return "—";
-  const [h] = t.split(":").map(Number);
-  return h < 12 ? `${h}:00 a.m.` : h === 12 ? "12:00 p.m." : `${h-12}:00 p.m.`;
+  const [h, m] = t.split(":").map(Number);
+  const mm = String(m ?? 0).padStart(2, "0");
+  return h < 12 ? `${h}:${mm} a.m.` : h === 12 ? `12:${mm} p.m.` : `${h-12}:${mm} p.m.`;
 }
 
 const STATUS_CFG = {
@@ -65,6 +67,12 @@ export default function AppointmentDetail() {
   const [docs, setDocs]     = useState([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
+  const [aptLocation, setAptLocation] = useState("Bienestar SENA");
+  const [survey, setSurvey] = useState(null);
+  const [surveyRating, setSurveyRating] = useState(0);
+  const [surveyHover, setSurveyHover] = useState(0);
+  const [surveyComment, setSurveyComment] = useState("");
+  const [surveyLoaded, setSurveyLoaded] = useState(false);
 
   useEffect(() => {
     if (DEV_ROLE) return;
@@ -91,11 +99,32 @@ export default function AppointmentDetail() {
       .then(({ data }) => setDocs(data || []));
   }, [id]);
 
+  useEffect(() => {
+    supabase.from("system_settings").select("value").eq("key", "appointment_location").maybeSingle()
+      .then(({ data }) => { if (data?.value) setAptLocation(data.value); });
+  }, []);
+
+  useEffect(() => {
+    if (!apt || DEV_ROLE || !user || apt.status !== "completed" || apt.user_id !== user.id || surveyLoaded) return;
+    setSurveyLoaded(true);
+    supabase.from("satisfaction_surveys").select("rating, comment").eq("appointment_id", id).eq("user_id", user.id).maybeSingle()
+      .then(({ data }) => { if (data) { setSurvey(data); setSurveyRating(data.rating); } });
+  }, [apt?.status, apt?.user_id, id, user?.id, surveyLoaded]);
+
   const confirm = async () => {
     const { error } = await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date() }).eq("id", id);
     if (error) { toast.error("No se pudo confirmar la cita"); return; }
     toast.success("Cita confirmada");
     setApt(a => ({ ...a, status: "confirmed" }));
+    notifyAppointmentConfirmed({ to_email: null, user_id: apt.user_id, to_name: apt.profiles?.full_name || "Aprendiz", service_name: apt.dependencies?.name, scheduled_date: apt.scheduled_date, scheduled_time: apt.scheduled_time }).catch(() => {});
+  };
+
+  const submitSurvey = async () => {
+    if (!surveyRating || !user) return;
+    const { error } = await supabase.from("satisfaction_surveys").insert({ appointment_id: parseInt(id), user_id: user.id, rating: surveyRating, comment: surveyComment.trim() || null });
+    if (error) { toast.error("Error al enviar la encuesta"); return; }
+    setSurvey({ rating: surveyRating, comment: surveyComment.trim() });
+    toast.success("¡Gracias por tu retroalimentación!");
   };
 
   const markNoShow = async () => {
@@ -269,7 +298,7 @@ export default function AppointmentDetail() {
               {[
                 { icon: Calendar, label: "Fecha",     val: dateShort,          cap: true },
                 { icon: Clock,    label: "Hora",      val: timeStr              },
-                { icon: MapPin,   label: "Lugar",     val: "Bloque B, Piso 2"  },
+                { icon: MapPin,   label: "Lugar",     val: aptLocation         },
               ].map(({ icon: Ic, label, val, cap }) => (
                 <div key={label}>
                   <div style={{ fontSize: "var(--text-xs)", color: "var(--gray-500)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
@@ -514,6 +543,71 @@ export default function AppointmentDetail() {
               >
                 <X size={15} /> Cancelar esta cita
               </button>
+            </div>
+          )}
+
+          {/* Encuesta de satisfacción — solo aprendiz en cita completada */}
+          {!DEV_ROLE && user && apt?.status === "completed" && apt?.user_id === user.id && (
+            <div className="detail-card">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "1rem" }}>
+                <div style={{ width: 32, height: 32, borderRadius: "var(--radius-sm)", background: "#fef9c3", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Star size={15} color="#ca8a04" fill="#ca8a04" />
+                </div>
+                <h3 style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--gray-900)" }}>
+                  {survey ? "Tu valoración" : "¿Cómo fue tu atención?"}
+                </h3>
+              </div>
+              {survey ? (
+                <div>
+                  <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.625rem" }}>
+                    {[1,2,3,4,5].map(i => (
+                      <Star key={i} size={22} color={i <= survey.rating ? "#ca8a04" : "#e5e7eb"} fill={i <= survey.rating ? "#ca8a04" : "none"} />
+                    ))}
+                  </div>
+                  {survey.comment && (
+                    <p style={{ fontSize: "var(--text-sm)", color: "var(--gray-600)", fontStyle: "italic", lineHeight: 1.6 }}>"{survey.comment}"</p>
+                  )}
+                  <p style={{ fontSize: "var(--text-xs)", color: "var(--gray-400)", marginTop: "0.5rem" }}>Gracias por tu retroalimentación.</p>
+                </div>
+              ) : (
+                <div>
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--gray-500)", marginBottom: "0.875rem", lineHeight: 1.55 }}>
+                    Tu opinión nos ayuda a mejorar el servicio de Bienestar.
+                  </p>
+                  <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+                    {[1,2,3,4,5].map(i => (
+                      <button
+                        key={i}
+                        onClick={() => setSurveyRating(i)}
+                        onMouseEnter={() => setSurveyHover(i)}
+                        onMouseLeave={() => setSurveyHover(0)}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: "0.125rem" }}
+                      >
+                        <Star size={28} color="#ca8a04" fill={(surveyHover || surveyRating) >= i ? "#ca8a04" : "none"} strokeWidth={1.5} />
+                      </button>
+                    ))}
+                  </div>
+                  {surveyRating > 0 && (
+                    <>
+                      <textarea
+                        placeholder="Comentario opcional..."
+                        value={surveyComment}
+                        onChange={e => e.target.value.length <= 400 && setSurveyComment(e.target.value)}
+                        rows={3}
+                        style={{ width: "100%", boxSizing: "border-box", padding: "0.625rem 0.875rem", border: "1.5px solid var(--gray-200)", borderRadius: 10, fontSize: "var(--text-sm)", resize: "none", outline: "none", fontFamily: "var(--font-sans)", marginBottom: "0.75rem" }}
+                        onFocus={e => e.target.style.borderColor = "var(--sena-green)"}
+                        onBlur={e => e.target.style.borderColor = "var(--gray-200)"}
+                      />
+                      <button
+                        onClick={submitSurvey}
+                        style={{ padding: "0.5rem 1.25rem", background: "var(--sena-green)", color: "white", border: "none", borderRadius: 8, fontSize: "var(--text-sm)", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)" }}
+                      >
+                        Enviar valoración
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
