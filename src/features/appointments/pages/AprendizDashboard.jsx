@@ -88,12 +88,13 @@ export default function AprendizDashboard() {
 
   const saveMood = async (idx) => {
     setMood(idx);
-    toast.success(`Estado: ${MOODS[idx].label}`);
     if (!IS_DEV && user) {
-      await supabase.from("profiles")
+      const { error } = await supabase.from("profiles")
         .update({ last_mood: MOODS[idx].label, last_mood_at: new Date().toISOString() })
         .eq("id", user.id);
+      if (error) { toast.error("No se pudo guardar tu estado de ánimo"); return; }
     }
+    toast.success(`Estado: ${MOODS[idx].label}`);
   };
 
   const apts      = IS_DEV ? MOCK_APTS : (appointments || []);

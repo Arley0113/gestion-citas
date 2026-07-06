@@ -115,7 +115,7 @@ export default function RegisterPage() {
 
       const newUser = data?.user;
       if (newUser) {
-        await supabase.from("profiles").upsert({
+        const { error: profileErr } = await supabase.from("profiles").upsert({
           id: newUser.id,
           full_name,
           document_type:   form.document_type,
@@ -124,6 +124,11 @@ export default function RegisterPage() {
           program:         form.program.trim()        || null,
           onboarding_completed: true,
         }, { onConflict: "id" });
+        if (profileErr) {
+          toast.error("Cuenta creada, pero hubo un error guardando tus datos. Contacta al administrador.");
+          navigate("/login");
+          return;
+        }
       }
 
       toast.success("¡Cuenta creada! Revisa tu correo para verificarla.");

@@ -112,23 +112,27 @@ export default function AppointmentDetail() {
   }, [apt?.status, apt?.user_id, id, user?.id, surveyLoaded]);
 
   const confirm = async () => {
-    const { error } = await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date() }).eq("id", id);
+    const { error } = await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast.error("No se pudo confirmar la cita"); return; }
     toast.success("Cita confirmada");
     setApt(a => ({ ...a, status: "confirmed" }));
     notifyAppointmentConfirmed({ to_email: null, user_id: apt.user_id, to_name: apt.profiles?.full_name || "Aprendiz", service_name: apt.dependencies?.name, scheduled_date: apt.scheduled_date, scheduled_time: apt.scheduled_time }).catch(() => {});
   };
 
+  const [surveySubmitting, setSurveySubmitting] = useState(false);
+
   const submitSurvey = async () => {
-    if (!surveyRating || !user) return;
-    const { error } = await supabase.from("satisfaction_surveys").insert({ appointment_id: parseInt(id), user_id: user.id, rating: surveyRating, comment: surveyComment.trim() || null });
+    if (!surveyRating || !user || surveySubmitting) return;
+    setSurveySubmitting(true);
+    const { error } = await supabase.from("satisfaction_surveys").insert({ appointment_id: id, user_id: user.id, rating: surveyRating, comment: surveyComment.trim() || null });
+    setSurveySubmitting(false);
     if (error) { toast.error("Error al enviar la encuesta"); return; }
     setSurvey({ rating: surveyRating, comment: surveyComment.trim() });
     toast.success("¡Gracias por tu retroalimentación!");
   };
 
   const markNoShow = async () => {
-    const { error } = await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", id);
+    const { error } = await supabase.from("appointments").update({ status: "no_show", updated_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast.error("No se pudo actualizar la cita"); return; }
     toast.info("Marcada como no asistió");
     setApt(a => ({ ...a, status: "no_show" }));
@@ -144,7 +148,7 @@ export default function AppointmentDetail() {
     const { error } = await supabase.from("appointments").update({
       status: "cancelled",
       cancelled_reason: cancelModal.reason.trim() || null,
-      updated_at: new Date(),
+      updated_at: new Date().toISOString(),
     }).eq("id", id);
     if (error) { toast.error("No se pudo cancelar la cita"); return; }
     toast.success("Cita cancelada correctamente");
@@ -166,7 +170,7 @@ export default function AppointmentDetail() {
     if (upErr) { toast.error("Error al subir el archivo"); setUploading(false); return; }
     const { error: dbErr, data: dbData } = await supabase.from("user_documents").insert({
       user_id: user.id,
-      appointment_id: parseInt(id),
+      appointment_id: id,
       name: file.name,
       file_path: path,
       file_size: file.size,
@@ -185,8 +189,10 @@ export default function AppointmentDetail() {
   const executeDeleteDoc = async () => {
     const doc = deleteModal.doc;
     setDeleteModal({ open: false, doc: null });
-    await supabase.storage.from("user-documents").remove([doc.file_path]);
-    await supabase.from("user_documents").delete().eq("id", doc.id);
+    const { error: storageErr } = await supabase.storage.from("user-documents").remove([doc.file_path]);
+    if (storageErr) { toast.error("Error al eliminar el archivo"); return; }
+    const { error: dbErr } = await supabase.from("user_documents").delete().eq("id", doc.id);
+    if (dbErr) { toast.error("Error al eliminar el registro"); return; }
     setDocs(d => d.filter(x => x.id !== doc.id));
     toast.success("Documento eliminado");
   };
@@ -199,7 +205,7 @@ export default function AppointmentDetail() {
   const saveNotes = async () => {
     if (DEV_ROLE) { toast.success("Notas guardadas (demo)"); return; }
     setSaving(true);
-    const { error } = await supabase.from("appointments").update({ notes, updated_at: new Date() }).eq("id", id);
+    const { error } = await supabase.from("appointments").update({ notes, updated_at: new Date().toISOString() }).eq("id", id);
     setSaving(false);
     if (error) { toast.error("No se pudieron guardar las notas"); return; }
     toast.success("Notas guardadas");
@@ -600,9 +606,10 @@ export default function AppointmentDetail() {
                       />
                       <button
                         onClick={submitSurvey}
-                        style={{ padding: "0.5rem 1.25rem", background: "var(--sena-green)", color: "white", border: "none", borderRadius: 8, fontSize: "var(--text-sm)", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)" }}
+                        disabled={surveySubmitting}
+                        style={{ padding: "0.5rem 1.25rem", background: "var(--sena-green)", color: "white", border: "none", borderRadius: 8, fontSize: "var(--text-sm)", fontWeight: 600, cursor: surveySubmitting ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", opacity: surveySubmitting ? 0.7 : 1 }}
                       >
-                        Enviar valoración
+                        {surveySubmitting ? "Enviando..." : "Enviar valoración"}
                       </button>
                     </>
                   )}

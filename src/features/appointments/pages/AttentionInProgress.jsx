@@ -77,14 +77,17 @@ export default function AttentionInProgress() {
       .select("*, dependencies(name), profiles!user_id(full_name,document_number,program)")
       .eq("id", id)
       .single()
-      .then(({ data }) => {
-        if (!data) return;
+      .then(({ data, error }) => {
+        if (error || !data) {
+          toast.error("No se pudo cargar la cita");
+          return;
+        }
         const startedAt = data.started_at || new Date().toISOString();
         setApt({ ...data, started_at: startedAt });
-        if (!DEV_ROLE && profile?.id) {
+        if (profile?.id) {
           supabase.from("appointments")
-            .update({ status: "in_progress", professional_id: profile.id, started_at: startedAt, updated_at: new Date() })
-            .eq("id", parseInt(id))
+            .update({ status: "in_progress", professional_id: profile.id, started_at: startedAt, updated_at: new Date().toISOString() })
+            .eq("id", id)
             .then(() => {});
         }
       });

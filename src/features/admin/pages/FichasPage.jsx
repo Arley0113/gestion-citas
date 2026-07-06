@@ -103,7 +103,7 @@ export default function FichasPage() {
   const loadWhitelist = useCallback(async () => {
     setLoadingList(true);
     try {
-      const [{ count }, { data }, { data: setting }] = await Promise.all([
+      const [countRes, listRes, settingRes] = await Promise.all([
         supabase.from("aprendiz_whitelist").select("*", { count: "exact", head: true }),
         supabase.from("aprendiz_whitelist")
           .select("*")
@@ -111,9 +111,11 @@ export default function FichasPage() {
           .limit(200),
         supabase.from("system_settings").select("value").eq("key", "whitelist_enabled").single(),
       ]);
-      setTotalCount(count ?? 0);
-      setWhitelist(data ?? []);
-      setWlEnabled(setting?.value === "true");
+      if (countRes.error) throw countRes.error;
+      if (listRes.error) throw listRes.error;
+      setTotalCount(countRes.count ?? 0);
+      setWhitelist(listRes.data ?? []);
+      setWlEnabled(settingRes.data?.value === "true");
     } catch {
       toast.error("Error al cargar la lista");
     } finally {
