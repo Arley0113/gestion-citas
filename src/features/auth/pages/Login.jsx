@@ -43,12 +43,56 @@ export default function Login() {
     e.preventDefault();
     if (!email || !password) { toast.error("Completa todos los campos"); return; }
     setLoading(true);
+
     const { success, error } = await signIn(email.trim().toLowerCase(), password);
-    setLoading(false);
     if (!success) {
+      setLoading(false);
       toast.error(error);
       return;
     }
+
+    // Validar whitelist solo para aprendices (staff/coordinación pasan siempre)
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: wlSetting } = await supabase
+          .from("system_settings")
+          .select("value")
+          .eq("key", "whitelist_enabled")
+          .single();
+
+        if (wlSetting?.value === "true") {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("document_number, ficha_number, roles(name)")
+            .eq("id", session.user.id)
+            .single();
+
+          if (profile?.roles?.name === "APRENDIZ") {
+            const { data: found } = await supabase
+              .from("aprendiz_whitelist")
+              .select("id")
+              .eq("document_number", profile.document_number || "")
+              .eq("ficha_number",    profile.ficha_number    || "")
+              .maybeSingle();
+
+            if (!found) {
+              await supabase.auth.signOut();
+              toast.error(
+                "Tu cédula o número de ficha no aparecen en la base de datos activa del SENA. Contacta al equipo de Bienestar SENA.",
+                { duration: 7000 }
+              );
+              setLoading(false);
+              return;
+            }
+          }
+        }
+      }
+    } catch {
+      // Si la validación falla por error de red, dejamos entrar (best-effort)
+    }
+
+    setLoading(false);
   };
 
   return (

@@ -92,27 +92,47 @@ export default function FichasPage() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing]         = useState(false);
 
+  const [wlEnabled, setWlEnabled]       = useState(false);
+  const [togglingWl, setTogglingWl]     = useState(false);
+
   const fileInputRef = useRef(null);
 
-  // ─── Load whitelist ──────────────────────────────────────────────────────
+  // ─── Load whitelist + setting ────────────────────────────────────────────
   const loadWhitelist = useCallback(async () => {
     setLoadingList(true);
     try {
-      const [{ count }, { data }] = await Promise.all([
+      const [{ count }, { data }, { data: setting }] = await Promise.all([
         supabase.from("aprendiz_whitelist").select("*", { count: "exact", head: true }),
         supabase.from("aprendiz_whitelist")
           .select("*")
           .order("uploaded_at", { ascending: false })
           .limit(200),
+        supabase.from("system_settings").select("value").eq("key", "whitelist_enabled").single(),
       ]);
       setTotalCount(count ?? 0);
       setWhitelist(data ?? []);
+      setWlEnabled(setting?.value === "true");
     } catch {
       toast.error("Error al cargar la lista");
     } finally {
       setLoadingList(false);
     }
   }, []);
+
+  const toggleWhitelistEnabled = async (next) => {
+    setTogglingWl(true);
+    const { error } = await supabase
+      .from("system_settings")
+      .update({ value: next ? "true" : "false" })
+      .eq("key", "whitelist_enabled");
+    if (error) {
+      toast.error("No se pudo cambiar el estado de la validación");
+    } else {
+      setWlEnabled(next);
+      toast.success(next ? "Validación activada — solo aprendices del padrón pueden registrarse" : "Validación desactivada — registro abierto para todos");
+    }
+    setTogglingWl(false);
+  };
 
   useEffect(() => { loadWhitelist(); }, [loadWhitelist]);
 
@@ -260,6 +280,55 @@ export default function FichasPage() {
           </div>
         </div>
 
+        {/* Toggle de validación */}
+        <div style={{ background: "white", border: `1.5px solid ${wlEnabled ? "#86efac" : "#e5e7eb"}`, borderRadius: 14, padding: "1.25rem 1.5rem", marginBottom: "1.5rem", transition: "border-color 0.2s" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.25rem" }}>
+                {wlEnabled
+                  ? <CheckCircle2 size={16} color="#16a34a" />
+                  : <AlertCircle  size={16} color="#f59e0b" />}
+                <span style={{ fontFamily: "'Sora',system-ui", fontWeight: 700, fontSize: "0.9375rem", color: "#0d1117" }}>
+                  Validación de registro
+                </span>
+              </div>
+              <p style={{ fontSize: "0.8125rem", color: "#6e7681", margin: 0, lineHeight: 1.5 }}>
+                {wlEnabled
+                  ? "Activa — solo aprendices que aparezcan en el padrón pueden crear cuenta o iniciar sesión."
+                  : "Inactiva — cualquier persona puede registrarse sin restricción."}
+              </p>
+            </div>
+            {/* Toggle switch */}
+            <button
+              onClick={() => toggleWhitelistEnabled(!wlEnabled)}
+              disabled={togglingWl}
+              title={wlEnabled ? "Desactivar validación" : "Activar validación"}
+              style={{
+                position: "relative", width: 52, height: 28, borderRadius: 9999,
+                background: wlEnabled ? "#39a900" : "#d1d5db",
+                border: "none", cursor: togglingWl ? "not-allowed" : "pointer",
+                transition: "background 0.2s", flexShrink: 0, opacity: togglingWl ? 0.6 : 1,
+              }}
+            >
+              <span style={{
+                position: "absolute", top: 3, left: wlEnabled ? 27 : 3,
+                width: 22, height: 22, borderRadius: "50%", background: "white",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.2)", transition: "left 0.2s",
+              }} />
+            </button>
+          </div>
+
+          {/* Advertencia: activa pero lista vacía */}
+          {wlEnabled && totalCount === 0 && (
+            <div style={{ marginTop: "0.875rem", display: "flex", alignItems: "flex-start", gap: "0.625rem", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 10, padding: "0.75rem 1rem" }}>
+              <AlertCircle size={15} color="#b45309" style={{ flexShrink: 0, marginTop: 1 }} />
+              <p style={{ fontSize: "0.8125rem", color: "#92400e", margin: 0, lineHeight: 1.5 }}>
+                <strong>Atención:</strong> La validación está activa pero la lista de fichas está vacía — ningún aprendiz podrá registrarse ni iniciar sesión. Sube un archivo con las fichas activas.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.875rem", marginBottom: "1.75rem" }}>
           <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1rem 1.25rem" }}>
@@ -270,31 +339,29 @@ export default function FichasPage() {
             <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0d1117", letterSpacing: "-0.03em" }}>
               {loadingList ? "—" : totalCount.toLocaleString("es-CO")}
             </div>
-            <div style={{ fontSize: "0.75rem", color: totalCount > 0 ? "#39a900" : "#f59e0b", marginTop: "0.25rem", fontWeight: 600 }}>
-              {totalCount > 0 ? "Validación activa" : "Sin restricción — todos pueden registrarse"}
+            <div style={{ fontSize: "0.75rem", color: "#8b949e", marginTop: "0.25rem" }}>
+              {totalCount > 0 ? `${totalCount} registros cargados` : "Lista vacía"}
             </div>
           </div>
 
           <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1rem 1.25rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.375rem" }}>
               <FileSpreadsheet size={15} color="#3b82f6" />
-              <span style={{ fontSize: "0.75rem", color: "#6e7681", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Estado</span>
+              <span style={{ fontSize: "0.75rem", color: "#6e7681", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Estado del registro</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
-              {totalCount > 0 ? (
+              {wlEnabled ? (
                 <span className="badge" style={{ background: "#dafbe1", color: "#1a7f37" }}>
-                  <CheckCircle2 size={12} /> Activo
+                  <CheckCircle2 size={12} /> Validación activa
                 </span>
               ) : (
                 <span className="badge" style={{ background: "#fff8e1", color: "#b45309" }}>
-                  <AlertCircle size={12} /> Sin lista cargada
+                  <AlertCircle size={12} /> Registro abierto
                 </span>
               )}
             </div>
             <div style={{ fontSize: "0.75rem", color: "#8b949e", marginTop: "0.5rem" }}>
-              {totalCount > 0
-                ? "Registro requiere validación SENA"
-                : "Sube un archivo para activar la validación"}
+              {wlEnabled ? "Solo aprendices del padrón" : "Sin restricción de acceso"}
             </div>
           </div>
         </div>

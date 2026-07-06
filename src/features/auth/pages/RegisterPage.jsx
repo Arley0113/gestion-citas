@@ -59,11 +59,13 @@ export default function RegisterPage() {
     const full_name = `${form.first_name.trim()} ${form.last_name.trim()}`;
     try {
       // ── Validación lista blanca SENA ───────────────────────────────────
-      const { count: wlCount } = await supabase
-        .from("aprendiz_whitelist")
-        .select("*", { count: "exact", head: true });
+      const { data: wlSetting } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "whitelist_enabled")
+        .single();
 
-      if (wlCount > 0) {
+      if (wlSetting?.value === "true") {
         if (!form.ficha_number.trim()) {
           setWhitelistError("Debes ingresar tu número de ficha para registrarte en esta plataforma.");
           setLoading(false);
@@ -71,7 +73,7 @@ export default function RegisterPage() {
         }
         const { data: found } = await supabase
           .from("aprendiz_whitelist")
-          .select("id")
+          .select("id, full_name, program")
           .eq("document_number", form.document_number.trim())
           .eq("ficha_number", form.ficha_number.trim())
           .maybeSingle();
@@ -79,6 +81,10 @@ export default function RegisterPage() {
           setWhitelistError("Tu cédula o número de ficha no aparecen en la base de datos del SENA. Verifica tu información o contacta al equipo de Bienestar SENA.");
           setLoading(false);
           return;
+        }
+        // Auto-completar programa desde el padrón si el aprendiz no lo escribió
+        if (found.program && !form.program.trim()) {
+          setForm(prev => ({ ...prev, program: found.program }));
         }
       }
       // ──────────────────────────────────────────────────────────────────
