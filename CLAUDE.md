@@ -75,7 +75,8 @@ database/
 supabase/functions/
   delete-user/          index.ts — elimina usuario (solo SUPERADMIN)
   invite-staff/         index.ts — crea/actualiza staff con contraseña
-  notify-appointment/   index.ts — emails via Resend API
+  notify-appointment/   index.ts — emails via Resend API (resuelve email por user_id)
+  send-reminders/       index.ts — recordatorios 24h (cron, CRON_SECRET/service-role)
 ```
 
 ## Database — estado actual en Supabase
@@ -83,7 +84,10 @@ Schema aplicado vía migración MCP. Tablas activas:
 - **roles** — 7 roles seed, con columna `label`
 - **dependencies** — 3 dependencias seed (Psicología, Enfermería, Trabajo Social), con `icon`, `active`, `updated_at`
 - **profiles** — extiende `auth.users`. Columnas: `full_name`, `document_number`, `document_type`, `ficha_number`, `phone`, `program`, `role_id`, `dependency_id`, `onboarding_completed`, `avatar_url`
-- **appointments** — `status` enum incluye `in_progress`. Columnas: `reason`, `notes`, `tags[]`, `objectives_checked[]`, `observations[]`, `cancelled_reason`
+- **appointments** — `status` enum incluye `in_progress`. Columnas: `reason`, `notes`, `tags[]`, `objectives_checked[]`, `observations[]`, `cancelled_reason`, `started_at` (duración real), `reminder_sent` (recordatorio 24h)
+- **profiles** también: `last_mood`, `last_mood_at` (widget de ánimo del aprendiz)
+- **programs** — 44 programas SENA seed, RLS (lectura todos, escritura admin) — usado en Onboarding
+- **satisfaction_surveys** — encuesta post-cita (`appointment_id`, `user_id`, `rating` 1-5, `comment`), RLS insert/read propio + read staff
 - **Vista** `appointments_full` — join completo con perfiles y dependencias
 - RLS habilitado en todas las tablas. Función `public.auth_role_name()` usada en políticas.
 - Trigger `on_auth_user_created` → crea perfil automático con rol APRENDIZ
@@ -205,7 +209,21 @@ Clases globales vía `<style>` tag en Layout:
 Soporta Resend API para emails. Requiere secreto `RESEND_API_KEY` en Supabase Dashboard → Edge Functions → Secrets.
 Sin el secreto retorna `{ ok: false, reason: "no_api_key" }` sin romper el flujo.
 
+## Sesión actual — mejoras UX + notificaciones
+- ✅ AuthProvider reescrito: `onAuthStateChange` como única fuente de verdad (elimina `NavigatorLockAcquireTimeoutError` al refrescar/reloguear). Sin `retryAuthRequest`, sin `refreshSession()` manual
+- ✅ AppointmentDetail: encuesta de satisfacción (estrellas + comentario) para aprendiz en citas completadas; `formatTime` con minutos; ubicación dinámica desde `system_settings.appointment_location`; notifica al confirmar
+- ✅ AttentionInProgress: cronómetro usa `started_at` real, lo persiste al entrar
+- ✅ AttentionResult: duración real calculada `started_at` → `updated_at`
+- ✅ MisCitasPage: búsqueda por texto + filtro por dependencia + **Exportar PDF** (vía `window.print`, cero deps)
+- ✅ AprendizDashboard: estado de ánimo persiste en `profiles.last_mood`
+- ✅ Onboarding: programas cargados desde tabla `programs` (fallback a lista fija)
+- ✅ ConfiguracionAdminPage: campo de texto para ubicación de citas
+- ✅ notify-appointment (código actualizado): resuelve email desde `auth.users` por `user_id` con service-role — antes las notificaciones al confirmar nunca llegaban (profiles no tiene email)
+
 ## Pendiente (acciones manuales en Supabase Dashboard)
+- **Deploy Edge Functions** (bloqueado por classifier en esta sesión): `notify-appointment` (código nuevo) y `send-reminders` (nueva). Ejecutar `supabase functions deploy notify-appointment` y `supabase functions deploy send-reminders`, o vía Dashboard
+- Edge Functions → Secrets: añadir `CRON_SECRET` (para send-reminders) además de `RESEND_API_KEY`
+- Programar cron diario que invoque `send-reminders` (pg_cron o Supabase Scheduled Functions) con header `x-cron-secret`
 - Auth → Emails → SMTP Settings: configurar Resend (host: smtp.resend.com, port: 465, user: resend)
 - Edge Functions → Secrets: añadir `RESEND_API_KEY` para activar emails reales
 - Auth → Attack Protection: activar "Leaked Password Protection"
