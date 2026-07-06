@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, Calendar, Users, BarChart2, ChevronRight, Bell, Download, RefreshCw, AlertTriangle } from "lucide-react";
 import { format, startOfWeek, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
@@ -54,6 +55,7 @@ function useDashboardData(period) {
   const [todayApts, setTodayApts] = useState(DEV_ROLE ? MOCK_RECENT : []);
   const [loadingToday, setLoadingToday] = useState(!DEV_ROLE);
   const [depData, setDepData]     = useState([]);
+  const [trendData, setTrendData] = useState(DEV_ROLE ? TREND_DATA : []);
 
   const loadToday = useCallback(async () => {
     if (DEV_ROLE) return;
@@ -77,12 +79,18 @@ function useDashboardData(period) {
     const load = async () => {
       setLoading(true);
       try {
-        const [{ count: total }, { count: pending }, { count: completed }, { count: cancelled }, { data: depRows }] = await Promise.all([
+        // 6 semanas de datos para la gráfica de tendencia
+        const sixWeeksAgo = new Date();
+        sixWeeksAgo.setDate(sixWeeksAgo.getDate() - 42);
+        const sixWeeksAgoStr = sixWeeksAgo.toISOString().slice(0, 10);
+
+        const [{ count: total }, { count: pending }, { count: completed }, { count: cancelled }, { data: depRows }, { data: weeklyRows }] = await Promise.all([
           applyFilter(supabase.from("appointments").select("*", { count: "exact", head: true })),
           applyFilter(supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "pending")),
           applyFilter(supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "completed")),
           applyFilter(supabase.from("appointments").select("*", { count: "exact", head: true }).in("status", ["cancelled","no_show"])),
           applyFilter(supabase.from("appointments").select("dependency_id, dependencies(name, color)")),
+          supabase.from("appointments").select("scheduled_date").gte("scheduled_date", sixWeeksAgoStr).not("status", "in", "('cancelled','no_show')"),
         ]);
         setData({ total: total || 0, pending: pending || 0, completed: completed || 0, cancelled: cancelled || 0 });
 
@@ -96,6 +104,15 @@ function useDashboardData(period) {
         const depList  = Object.values(depMap).sort((a, b) => b.count - a.count);
         const depTotal = depList.reduce((s, d) => s + d.count, 0) || 1;
         setDepData(depList.map(d => ({ ...d, pct: Math.round((d.count / depTotal) * 100) })));
+
+        const weekMap = {};
+        (weeklyRows || []).forEach(r => {
+          const weekStart = startOfWeek(new Date(r.scheduled_date + "T12:00:00"), { weekStartsOn: 1 });
+          const key = format(weekStart, "d MMM", { locale: es });
+          weekMap[key] = (weekMap[key] || 0) + 1;
+        });
+        const trend = Object.entries(weekMap).slice(-6).map(([week, citas]) => ({ week, citas, meta: Math.round(citas * 0.9) }));
+        setTrendData(trend.length ? trend : TREND_DATA);
       } catch { setData(MOCK_DATA); }
       finally  { setLoading(false); }
     };
@@ -103,7 +120,7 @@ function useDashboardData(period) {
     loadToday();
   }, [period, loadToday]);
 
-  return { data, loading, todayApts, loadingToday, loadToday, depData };
+  return { data, loading, todayApts, loadingToday, loadToday, depData, trendData };
 }
 
 function fmtTime(t = "08:00:00") {
@@ -113,8 +130,9 @@ function fmtTime(t = "08:00:00") {
 }
 
 export default function CoordinationDashboard() {
+  const navigate = useNavigate();
   const [period, setPeriod] = useState("Este mes");
-  const { data, loading, todayApts, loadingToday, loadToday, depData } = useDashboardData(period);
+  const { data, loading, todayApts, loadingToday, loadToday, depData, trendData } = useDashboardData(period);
   const { can } = usePermissions();
   const today = new Date();
   const [hoveredRow, setHoveredRow] = useState(null);
@@ -215,7 +233,7 @@ export default function CoordinationDashboard() {
               </button>
             </div>
             <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={TREND_DATA} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
+              <LineChart data={trendData} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
                 <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} formatter={v => [`${v} citas`]} />
@@ -379,13 +397,14 @@ export default function CoordinationDashboard() {
               Acciones rápidas
             </div>
             {[
-              { icon: Users,    label: "Gestionar aprendices",  sub: "Ver todos los perfiles",   color: "#39a900", bg: "#f0fce4" },
-              { icon: BarChart2,label: "Reporte de período",     sub: "Exportar en PDF o Excel",  color: "#3b82f6", bg: "#eff6ff" },
-              { icon: Calendar, label: "Horarios disponibles",   sub: "Gestionar disponibilidad", color: "#8b5cf6", bg: "#f5f3ff" },
-            ].map(({ icon: Icon, label, sub, color, bg }) => (
+              { icon: Users,    label: "Gestionar aprendices",  sub: "Ver todos los perfiles",   color: "#39a900", bg: "#f0fce4", path: "/aprendices" },
+              { icon: BarChart2,label: "Reporte de período",     sub: "Exportar en PDF o Excel",  color: "#3b82f6", bg: "#eff6ff", path: "/reportes" },
+              { icon: Calendar, label: "Citas de hoy",           sub: "Ver agenda del día",        color: "#8b5cf6", bg: "#f5f3ff", path: null },
+            ].map(({ icon: Icon, label, sub, color, bg, path }) => (
               <div key={label}
-                style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", borderRadius: 8, cursor: "pointer", transition: "background 0.1s, border-color 0.1s", border: "1.5px solid transparent", marginBottom: "0.25rem" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#fafafa"; e.currentTarget.style.borderColor = "#e5e7eb"; }}
+                onClick={() => path && navigate(path)}
+                style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", borderRadius: 8, cursor: path ? "pointer" : "default", transition: "background 0.1s, border-color 0.1s", border: "1.5px solid transparent", marginBottom: "0.25rem" }}
+                onMouseEnter={e => { if (path) { e.currentTarget.style.background = "#fafafa"; e.currentTarget.style.borderColor = "#e5e7eb"; } }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; }}
               >
                 <div style={{ width: 38, height: 38, borderRadius: 9, background: bg, display: "flex", alignItems: "center", justifyContent: "center", color, flexShrink: 0 }}>
@@ -411,8 +430,10 @@ export default function CoordinationDashboard() {
             <p style={{ fontSize: "0.8125rem", color: "#92400e", lineHeight: 1.6, margin: "0 0 0.875rem" }}>
               Hay <strong style={{ fontSize: "1rem" }}>{data?.pending ?? "—"} citas pendientes</strong> sin confirmar por profesionales.
             </p>
-            <button style={{ width: "100%", padding: "0.5625rem", background: "#f59e0b", color: "white", border: "none", borderRadius: 8, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
-              Ver pendientes →
+            <button
+              onClick={() => navigate("/aprendices")}
+              style={{ width: "100%", padding: "0.5625rem", background: "#f59e0b", color: "white", border: "none", borderRadius: 8, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
+              Ver aprendices →
             </button>
           </div>
         </aside>

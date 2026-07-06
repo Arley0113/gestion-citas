@@ -39,10 +39,11 @@ const TABS = ["Próximas", "Todas", "Historial"];
 
 function timeLabel(t) {
   if (!t) return "—";
-  const [h] = t.split(":").map(Number);
-  if (h < 12) return `${h}:00 a.m.`;
-  if (h === 12) return "12:00 p.m.";
-  return `${h - 12}:00 p.m.`;
+  const [h, m] = t.split(":").map(Number);
+  const mm = String(m).padStart(2, "0");
+  if (h < 12) return `${h}:${mm} a.m.`;
+  if (h === 12) return `12:${mm} p.m.`;
+  return `${h - 12}:${mm} p.m.`;
 }
 
 function getDepMeta(name) {

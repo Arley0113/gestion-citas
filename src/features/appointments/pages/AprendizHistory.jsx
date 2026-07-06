@@ -70,11 +70,13 @@ export default function AprendizHistory() {
     ? formatDistanceToNow(parseISO(lastApt.scheduled_date), { locale: es, addSuffix: true })
     : null;
 
-  const chartData = apts
-    .filter(a => a.status === "completed")
-    .slice(0, 6)
-    .reverse()
-    .map((a, i) => ({ name: a.scheduled_date ? format(parseISO(a.scheduled_date), "MMM", { locale: es }) : `${i+1}`, value: Math.min(25 + i * 12, 100) }));
+  // Agrupar citas completadas por mes para la gráfica
+  const monthMap = {};
+  apts.filter(a => a.status === "completed" && a.scheduled_date).forEach(a => {
+    const key = format(parseISO(a.scheduled_date), "MMM yy", { locale: es });
+    monthMap[key] = (monthMap[key] || 0) + 1;
+  });
+  const chartData = Object.entries(monthMap).slice(-6).map(([name, value]) => ({ name, value }));
 
   const initials = profile.full_name?.split(" ").slice(0, 2).map(w => w[0]).join("") || "?";
 
@@ -115,7 +117,11 @@ export default function AprendizHistory() {
                 {profile.full_name}
               </div>
               <div style={{ fontSize: "0.8125rem", color: "#9ca3af" }}>
-                Ficha: {profile.document_number || "—"}
+                {profile.ficha_number
+                  ? `Ficha: ${profile.ficha_number}`
+                  : profile.document_number
+                    ? `CC: ${profile.document_number}`
+                    : "—"}
               </div>
               {profile.program && (
                 <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "0.25rem" }}>{profile.program}</div>
@@ -295,9 +301,9 @@ export default function AprendizHistory() {
 
           {tab === "Evolución" && (
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "1.5rem" }}>
-              <div style={sectionLabel}>Progreso últimos 6 meses</div>
-              <div style={{ fontSize: "3rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", marginBottom: "0.25rem" }}>{pct}%</div>
-              <div style={{ fontSize: "0.875rem", color: "#9ca3af", marginBottom: "2rem" }}>Evolución positiva basada en citas completadas</div>
+              <div style={sectionLabel}>Citas completadas por mes</div>
+              <div style={{ fontSize: "3rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", marginBottom: "0.25rem" }}>{completed}</div>
+              <div style={{ fontSize: "0.875rem", color: "#9ca3af", marginBottom: "2rem" }}>Total completadas · {pct}% de tasa de asistencia</div>
               {chartData.length > 1 ? (
                 <ResponsiveContainer width="100%" height={160}>
                   <LineChart data={chartData}>
@@ -307,7 +313,7 @@ export default function AprendizHistory() {
                 </ResponsiveContainer>
               ) : (
                 <div style={{ textAlign: "center", padding: "2rem", color: "#d1d5db", fontSize: "0.875rem" }}>
-                  Se necesitan más citas para mostrar la evolución.
+                  Se necesitan más citas completadas para mostrar la evolución.
                 </div>
               )}
             </div>

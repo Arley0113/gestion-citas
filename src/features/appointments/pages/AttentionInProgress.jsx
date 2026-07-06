@@ -22,8 +22,9 @@ const OBSERVATIONS = [
 
 const timeLabel = (t) => {
   if (!t) return "—";
-  const [h] = t.split(":").map(Number);
-  return h < 12 ? `${h}:00 a. m.` : h === 12 ? "12:00 p. m." : `${h-12}:00 p. m.`;
+  const [h, m] = t.split(":").map(Number);
+  const mm = String(m).padStart(2, "0");
+  return h < 12 ? `${h}:${mm} a. m.` : h === 12 ? `12:${mm} p. m.` : `${h-12}:${mm} p. m.`;
 };
 
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("preview") : null;
