@@ -229,7 +229,7 @@ export default function AppointmentDetail() {
   const canStart      = can(P.APPOINTMENTS_START);
   const canNoShow     = can(P.APPOINTMENTS_NO_SHOW);
   const isOwnApt      = can(P.APPOINTMENTS_READ_OWN) && (DEV_ROLE || apt.user_id === user?.id);
-  const canCancelOwn  = can(P.APPOINTMENTS_CANCEL_OWN) && isOwnApt && apt.status === "pending";
+  const canCancelOwn  = can(P.APPOINTMENTS_CANCEL_OWN) && isOwnApt && ["pending", "confirmed"].includes(apt.status);
   const canCancelAny  = can(P.APPOINTMENTS_CANCEL_ANY) && ["pending","confirmed"].includes(apt.status);
   const showActions   = canConfirm || canStart || canNoShow;
 
@@ -534,7 +534,7 @@ export default function AppointmentDetail() {
               <p style={{ fontSize: "var(--text-sm)", color: "var(--gray-500)", marginBottom: "1rem", lineHeight: 1.55 }}>
                 {canCancelAny
                   ? "Como coordinador puedes cancelar cualquier cita activa. Esta acción queda registrada en el sistema."
-                  : <>Solo puedes cancelar citas con estado <strong>pendiente</strong>. Una vez cancelada no podrás reactivarla.</>}
+                  : <>Puedes cancelar citas <strong>pendientes o confirmadas</strong>. Una vez cancelada no podrás reactivarla.</>}
               </p>
               <button
                 className="btn-danger-outline"

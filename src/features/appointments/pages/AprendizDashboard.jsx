@@ -466,7 +466,7 @@ export default function AprendizDashboard() {
 
                         {/* Acciones */}
                         <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexShrink: 0 }}>
-                          {apt.status === "pending" && (
+                          {["pending", "confirmed"].includes(apt.status) && (
                             <button
                               onClick={e => handleCancel(e, apt.id)}
                               title="Cancelar cita"
