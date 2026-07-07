@@ -188,11 +188,19 @@ export default function FichasPage() {
     if (!preview) return;
     setImporting(true);
     try {
-      const rows = preview.rows.map(r => ({
+      const rawRows = preview.rows.map(r => ({
         ...r,
         uploaded_by: profile?.id ?? null,
         uploaded_at: new Date().toISOString(),
       }));
+
+      // Deduplicar por clave única antes del upsert — PostgreSQL no puede
+      // actualizar la misma fila dos veces en un mismo batch
+      const seen = new Map();
+      for (const r of rawRows) {
+        seen.set(`${r.document_number}|${r.ficha_number}`, r);
+      }
+      const rows = Array.from(seen.values());
 
       // Upsert in batches of 500
       for (let i = 0; i < rows.length; i += 500) {
@@ -203,7 +211,11 @@ export default function FichasPage() {
         if (error) throw error;
       }
 
-      toast.success(`${rows.length} aprendices importados correctamente`);
+      const dupes = rawRows.length - rows.length;
+      toast.success(
+        `${rows.length} aprendices importados correctamente` +
+        (dupes > 0 ? ` (${dupes} duplicados ignorados)` : "")
+      );
       setPreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       await loadWhitelist();

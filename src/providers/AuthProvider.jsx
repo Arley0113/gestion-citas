@@ -42,7 +42,7 @@ export function AuthProvider({ children }) {
           .from("profiles")
           .select("*, roles(name, label), dependencies(name)")
           .eq("id", userId)
-          .single(),
+          .maybeSingle(),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error("timeout")), 6000)
         ),

@@ -90,7 +90,7 @@ function useDashboardData(period) {
           applyFilter(supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "completed")),
           applyFilter(supabase.from("appointments").select("*", { count: "exact", head: true }).in("status", ["cancelled","no_show"])),
           applyFilter(supabase.from("appointments").select("dependency_id, dependencies(name, color)")),
-          supabase.from("appointments").select("scheduled_date").gte("scheduled_date", sixWeeksAgoStr).not("status", "in", "('cancelled','no_show')"),
+          supabase.from("appointments").select("scheduled_date").gte("scheduled_date", sixWeeksAgoStr).not("status", "in", "(cancelled,no_show)"),
         ]);
         setData({ total: total || 0, pending: pending || 0, completed: completed || 0, cancelled: cancelled || 0 });
 
