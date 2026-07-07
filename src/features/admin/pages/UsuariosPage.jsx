@@ -83,7 +83,8 @@ export default function UsuariosPage() {
     const { data, error } = await supabase
       .from("profiles")
       .select("id, full_name, document_number, onboarding_completed, roles(name), dependencies(name)")
-      .order("full_name");
+      .order("full_name")
+      .limit(500);
     if (error) { toast.error("Error cargando usuarios"); setLoading(false); return; }
     setUsers(data || []);
     setLoading(false);

@@ -67,9 +67,12 @@ export default function AprendizHistory() {
   const completed = apts.filter(a => a.status === "completed").length;
   const pending   = apts.filter(a => a.status === "pending").length;
   const pct       = total ? Math.round((completed / total) * 100) : 0;
-  const lastApt   = apts[0];
-  const lastAgo   = lastApt?.scheduled_date
-    ? formatDistanceToNow(parseISO(lastApt.scheduled_date), { locale: es, addSuffix: true })
+  const lastApt     = apts[0];
+  const lastAptDate = lastApt?.scheduled_date ? parseISO(lastApt.scheduled_date) : null;
+  const isFutureApt = lastAptDate && lastAptDate > new Date();
+  const lastAptLabel = isFutureApt ? "Próxima cita" : "Última cita";
+  const lastAgo     = lastAptDate
+    ? formatDistanceToNow(lastAptDate, { locale: es, addSuffix: true })
     : null;
 
   // Agrupar citas completadas por mes para la gráfica
@@ -136,7 +139,7 @@ export default function AprendizHistory() {
             <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {[
                 { label: "Dependencia", value: profile.dependencies?.name || "—" },
-                { label: "Última cita", value: lastAgo || "Sin citas" },
+                { label: lastAptLabel, value: lastAgo || "Sin citas" },
               ].map(({ label, value }) => (
                 <div key={label}>
                   <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.125rem" }}>{label}</div>
@@ -207,7 +210,7 @@ export default function AprendizHistory() {
               {/* Resumen rápido */}
               {lastApt && (
                 <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "1.5rem" }}>
-                  <div style={sectionLabel}>Última cita</div>
+                  <div style={sectionLabel}>{lastAptLabel}</div>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
                     <div style={{ width: 48, height: 48, borderRadius: "10px", background: "#f0fce4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <span style={{ fontSize: "1.125rem", fontWeight: 800, color: "#39a900", lineHeight: 1 }}>

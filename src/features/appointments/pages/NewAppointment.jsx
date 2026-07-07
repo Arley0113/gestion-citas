@@ -133,8 +133,9 @@ function DateCalendar({ selected, onChange }) {
 export default function NewAppointment() {
   const navigate = useNavigate();
   const { createAppointment, isCreating } = useAppointments();
-  const [services, setServices] = useState(SERVICES);
-  const [sel, setSel] = useState({ serviceKey: null, depId: null, date: null, time: null, reason: "" });
+  const [services, setServices]   = useState(SERVICES);
+  const [sel, setSel]             = useState({ serviceKey: null, depId: null, date: null, time: null, reason: "" });
+  const [bookedTimes, setBookedTimes] = useState([]);
 
   useEffect(() => {
     if (DEV_ROLE) return;
@@ -149,9 +150,26 @@ export default function NewAppointment() {
     });
   }, []);
 
-  const set = (k, v) => setSel(s => ({ ...s, [k]: v }));
-  const canSubmit = sel.serviceKey && sel.date && sel.time && !isCreating && (DEV_ROLE || !!selSvc?.id);
   const selSvc = services.find(s => s.key === sel.serviceKey);
+
+  useEffect(() => {
+    if (DEV_ROLE || !sel.date || !selSvc?.id) { setBookedTimes([]); return; }
+    supabase
+      .from("appointments")
+      .select("scheduled_time")
+      .eq("scheduled_date", format(sel.date, "yyyy-MM-dd"))
+      .eq("dependency_id", selSvc.id)
+      .in("status", ["pending", "confirmed", "in_progress"])
+      .then(({ data }) => {
+        setBookedTimes((data || []).map(r => r.scheduled_time.slice(0, 5)));
+      });
+  }, [sel.date, selSvc?.id]);
+
+  const set = (k, v) => setSel(s => {
+    if (k === "date" && s.time && bookedTimes.includes(s.time)) return { ...s, [k]: v, time: null };
+    return { ...s, [k]: v };
+  });
+  const canSubmit = sel.serviceKey && sel.date && sel.time && !isCreating && (DEV_ROLE || !!selSvc?.id);
 
   const steps = [
     { label: "Servicio",  done: !!sel.serviceKey },
@@ -336,15 +354,21 @@ export default function NewAppointment() {
               </div>
             </div>
             <div className="time-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-              {HOURS.map(h => (
-                <button
-                  key={h}
-                  className={`time-chip ${sel.time === h ? "selected" : ""}`}
-                  onClick={() => set("time", h)}
-                >
-                  {formatHour(h)}
-                </button>
-              ))}
+              {HOURS.map(h => {
+                const booked = bookedTimes.includes(h);
+                return (
+                  <button
+                    key={h}
+                    className={`time-chip ${sel.time === h ? "selected" : ""} ${booked ? "booked" : ""}`}
+                    onClick={() => !booked && set("time", h)}
+                    disabled={booked}
+                    title={booked ? "Horario no disponible" : ""}
+                    style={booked ? { opacity: 0.45, cursor: "not-allowed", textDecoration: "line-through" } : {}}
+                  >
+                    {formatHour(h)}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

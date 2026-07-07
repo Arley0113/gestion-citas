@@ -72,25 +72,23 @@ export default function AttentionInProgress() {
 
   useEffect(() => {
     if (DEV_ROLE) return;
-    supabase
-      .from("appointments")
-      .select("*, dependencies(name), profiles!user_id(full_name,document_number,program)")
-      .eq("id", id)
-      .single()
-      .then(({ data, error }) => {
-        if (error || !data) {
-          toast.error("No se pudo cargar la cita");
-          return;
-        }
-        const startedAt = data.started_at || new Date().toISOString();
-        setApt({ ...data, started_at: startedAt });
-        if (profile?.id) {
-          supabase.from("appointments")
-            .update({ status: "in_progress", professional_id: profile.id, started_at: startedAt, updated_at: new Date().toISOString() })
-            .eq("id", id)
-            .then(() => {});
-        }
-      });
+    const load = async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("*, dependencies(name), profiles!user_id(full_name,document_number,program)")
+        .eq("id", id)
+        .single();
+      if (error || !data) { toast.error("No se pudo cargar la cita"); return; }
+      const startedAt = data.started_at || new Date().toISOString();
+      if (profile?.id && !data.started_at) {
+        const { error: upErr } = await supabase.from("appointments")
+          .update({ status: "in_progress", professional_id: profile.id, started_at: startedAt, updated_at: new Date().toISOString() })
+          .eq("id", id);
+        if (upErr) { toast.error("Error al iniciar la atención"); return; }
+      }
+      setApt({ ...data, started_at: startedAt });
+    };
+    load();
   }, [id]);
 
   const toggleTag = t => setTags(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
