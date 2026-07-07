@@ -48,6 +48,37 @@ export default function RegisterPage() {
   };
 
   const [whitelistError, setWhitelistError] = useState(null);
+  const [wlMatch, setWlMatch] = useState(null); // null=sin verificar, true=encontrado, false=no encontrado
+
+  const lookupWhitelist = async () => {
+    const doc   = form.document_number.trim();
+    const ficha = form.ficha_number.trim();
+    if (!doc || !ficha) return;
+    setWlMatch(null);
+    try {
+      const { data } = await supabase
+        .from("aprendiz_whitelist")
+        .select("full_name, program")
+        .eq("document_number", doc)
+        .eq("ficha_number", ficha)
+        .maybeSingle();
+      if (data) {
+        const words = (data.full_name || "").trim().split(/\s+/).filter(Boolean);
+        const mid   = Math.ceil(words.length / 2);
+        setForm(p => ({
+          ...p,
+          first_name: p.first_name || words.slice(0, mid).join(" "),
+          last_name:  p.last_name  || words.slice(mid).join(" "),
+          program:    p.program    || data.program || "",
+        }));
+        setWlMatch(true);
+      } else {
+        setWlMatch(false);
+      }
+    } catch {
+      setWlMatch(null);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -298,7 +329,7 @@ export default function RegisterPage() {
                     <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Número de documento</label>
                     <div style={{ position: "relative" }}>
                       <FileText size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
-                      <input className="reg-input" type="text" value={form.document_number} onChange={e => set("document_number", e.target.value)} placeholder="1001234567" required />
+                      <input className="reg-input" type="text" value={form.document_number} onChange={e => set("document_number", e.target.value)} onBlur={lookupWhitelist} placeholder="1001234567" required />
                     </div>
                   </div>
                 </div>
@@ -309,7 +340,7 @@ export default function RegisterPage() {
                     <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Ficha</label>
                     <div style={{ position: "relative" }}>
                       <Hash size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
-                      <input className="reg-input" type="text" value={form.ficha_number} onChange={e => set("ficha_number", e.target.value)} placeholder="2847193" />
+                      <input className="reg-input" type="text" value={form.ficha_number} onChange={e => set("ficha_number", e.target.value)} onBlur={lookupWhitelist} placeholder="2847193" />
                     </div>
                   </div>
                   <div>
@@ -320,6 +351,20 @@ export default function RegisterPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Badge verificación whitelist */}
+                {wlMatch === true && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#dafbe1", border: "1.5px solid #6fdd8b", borderRadius: 10, padding: "0.6rem 1rem", marginBottom: "0.875rem", fontSize: "0.8125rem", color: "#1a7f37", fontWeight: 600 }}>
+                    <Shield size={14} color="#2da44e" />
+                    Aprendiz verificado en la base de datos del SENA. Datos completados automáticamente.
+                  </div>
+                )}
+                {wlMatch === false && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#fff8e6", border: "1.5px solid #f5c842", borderRadius: 10, padding: "0.6rem 1rem", marginBottom: "0.875rem", fontSize: "0.8125rem", color: "#92601a", fontWeight: 600 }}>
+                    <Shield size={14} color="#d97706" />
+                    Cédula o ficha no encontrada — verifica los datos o déjala en blanco.
+                  </div>
+                )}
 
                 {/* Alerta lista blanca SENA */}
                 {whitelistError && (
