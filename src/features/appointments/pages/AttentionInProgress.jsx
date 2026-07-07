@@ -114,7 +114,10 @@ export default function AttentionInProgress() {
   };
 
   const markNoShow = async () => {
-    if (!DEV_ROLE) await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", id);
+    if (!DEV_ROLE) {
+      const { error } = await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", id);
+      if (error) { toast.error("Error al registrar no asistencia"); return; }
+    }
     toast.info("Marcada como no asistió");
     navigate(`/professional${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`);
   };

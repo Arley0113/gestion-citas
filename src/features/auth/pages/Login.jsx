@@ -22,7 +22,7 @@ export default function Login() {
     if (!forgotEmail) { toast.error("Ingresa tu correo"); return; }
     setForgotLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim().toLowerCase(), {
-      redirectTo: "https://gestion-citas-nu.vercel.app/reset-password",
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     setForgotLoading(false);
     if (error) { toast.error("No se pudo enviar el correo"); return; }

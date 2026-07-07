@@ -150,7 +150,7 @@ export default function NewAppointment() {
   }, []);
 
   const set = (k, v) => setSel(s => ({ ...s, [k]: v }));
-  const canSubmit = sel.serviceKey && sel.date && sel.time && !isCreating;
+  const canSubmit = sel.serviceKey && sel.date && sel.time && !isCreating && (DEV_ROLE || !!selSvc?.id);
   const selSvc = services.find(s => s.key === sel.serviceKey);
 
   const steps = [
