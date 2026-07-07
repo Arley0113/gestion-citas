@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ChevronLeft, Check, Clock, Calendar, MapPin, FileText,
-  Paperclip, Play, UserX, User, X, Star,
+  Paperclip, Play, UserX, User, X, Star, Hash, BookOpen,
   AlertCircle, Brain, Heart, Users, Shield, Eye,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -78,7 +78,7 @@ export default function AppointmentDetail() {
     if (DEV_ROLE) return;
     supabase
       .from("appointments")
-      .select("*, dependencies(name,color), profiles!user_id(full_name,document_number), professional:profiles!professional_id(full_name)")
+      .select("*, dependencies(name,color), profiles!user_id(full_name,document_number,ficha_number,program), professional:profiles!professional_id(full_name)")
       .eq("id", id)
       .single()
       .then(({ data, error }) => {
@@ -286,9 +286,20 @@ export default function AppointmentDetail() {
                 <h2 style={{ fontSize: "var(--text-xl)", fontWeight: 800, color: "var(--gray-900)", marginBottom: "0.25rem" }}>
                   {apt.profiles?.full_name || "Aprendiz"}
                 </h2>
-                <div style={{ fontSize: "var(--text-sm)", color: "var(--gray-500)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.75rem" }}>
+                <div style={{ fontSize: "var(--text-sm)", color: "var(--gray-500)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.375rem" }}>
                   <User size={13} /> Documento: <strong style={{ color: "var(--gray-700)" }}>{apt.profiles?.document_number || "—"}</strong>
                 </div>
+                {apt.profiles?.ficha_number && (
+                  <div style={{ fontSize: "var(--text-sm)", color: "var(--gray-500)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.375rem" }}>
+                    <Hash size={13} /> Ficha: <strong style={{ color: "var(--gray-700)" }}>{apt.profiles.ficha_number}</strong>
+                  </div>
+                )}
+                {apt.profiles?.program && (
+                  <div style={{ fontSize: "var(--text-sm)", color: "var(--gray-500)", display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.75rem" }}>
+                    <BookOpen size={13} /> <span style={{ color: "var(--gray-700)", fontWeight: 600 }}>{apt.profiles.program}</span>
+                  </div>
+                )}
+                {!apt.profiles?.program && <div style={{ marginBottom: "0.75rem" }} />}
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0.75rem", background: "var(--green-50)", borderRadius: "var(--radius-full)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--sena-green)" }}>
                     <DepIcon size={13} /> {depName}

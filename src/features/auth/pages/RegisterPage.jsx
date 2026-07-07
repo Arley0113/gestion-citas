@@ -129,23 +129,9 @@ export default function RegisterPage() {
         return;
       }
 
-      const newUser = data?.user;
-      if (newUser) {
-        const { error: profileErr } = await supabase.from("profiles").upsert({
-          id: newUser.id,
-          full_name,
-          document_type:   form.document_type,
-          document_number: form.document_number.trim(),
-          ficha_number:    form.ficha_number.trim()  || null,
-          program:         form.program.trim()        || null,
-          onboarding_completed: true,
-        }, { onConflict: "id" });
-        if (profileErr) {
-          toast.error("Cuenta creada, pero hubo un error guardando tus datos. Contacta al administrador.");
-          navigate("/login");
-          return;
-        }
-      }
+      // El trigger handle_new_user en Supabase crea el perfil automáticamente
+      // con todos los campos del metadata. No se hace upsert manual aquí porque
+      // signUp con confirmación de email devuelve session:null y el RLS lo rechaza.
 
       toast.success("¡Cuenta creada! Revisa tu correo para verificarla.");
       navigate("/login");

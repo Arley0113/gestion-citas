@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
           .eq("id", userId)
           .maybeSingle(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("timeout")), 6000)
+          setTimeout(() => reject(new Error("timeout")), 12000)
         ),
       ]);
       if (error) throw error;
@@ -53,17 +53,22 @@ export function AuthProvider({ children }) {
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error("Error cargando perfil:", err);
+      const isTimeout = err.message === "timeout";
+      const isMissing = err.message?.includes("Perfil no encontrado");
+
+      if (isTimeout) {
+        // Red lenta — no cerrar sesión, solo avisar. El perfil existe pero tardó.
+        toast.error("Conexión lenta. Si ves problemas, recarga la página.", { duration: 6000 });
+        return "timeout"; // señal: no hacer signOut
+      }
+
       setProfile(null);
-      const isTimeout  = err.message === "timeout";
-      const isMissing  = err.message?.includes("Perfil no encontrado");
-      const message = isTimeout
-        ? "Tiempo de respuesta agotado. Por favor intenta iniciar sesión de nuevo."
-        : isMissing
-          ? "No se encontró tu perfil en Bienestar SENA. Contacta al administrador."
-          : "No se pudo cargar tu perfil. Intenta de nuevo.";
+      const message = isMissing
+        ? "No se encontró tu perfil en Bienestar SENA. Contacta al administrador."
+        : "No se pudo cargar tu perfil. Intenta de nuevo.";
       setError(message);
       toast.error(message, { duration: 5000 });
-      return null;
+      return null; // señal: perfil inexistente → sí hacer signOut
     }
   }, [isDev, devProfile]);
 
@@ -104,7 +109,9 @@ export function AuthProvider({ children }) {
         if (event !== "TOKEN_REFRESHED") {
           const profileData = await fetchProfile(session.user.id);
           if (!mounted) return;
-          if (!profileData) {
+          // Solo cerrar sesión si el perfil definitivamente no existe (null).
+          // "timeout" = red lenta → dejar al usuario activo.
+          if (profileData === null) {
             await Promise.race([
               supabase.auth.signOut().catch(() => {}),
               new Promise(resolve => setTimeout(resolve, 2000)),
