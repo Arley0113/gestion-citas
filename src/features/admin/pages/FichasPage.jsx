@@ -8,6 +8,27 @@ import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { toast } from "sonner";
 
+// Detecta la columna de número de documento sin confundirla con "Tipo de Documento".
+// Prioridad: "número"/"cedula" > "documento" sin "tipo"
+function findDocCol(headers) {
+  // 1. columna que tenga "número" o "cedula" (muy específico)
+  let idx = headers.findIndex(h => /n[uú]mero|cedula/.test(h));
+  if (idx !== -1) return idx;
+  // 2. "documento" o "document" pero que NO sea "tipo de documento"
+  idx = headers.findIndex(h => /documento|document/.test(h) && !/tipo/.test(h));
+  if (idx !== -1) return idx;
+  // 3. columna llamada exactamente "cc"
+  return headers.findIndex(h => /^cc$/.test(h));
+}
+
+// Combina nombre y apellidos si vienen en columnas separadas
+function buildFullName(cols, nameIdx, lastNameIdx) {
+  const first = nameIdx >= 0 ? (cols[nameIdx]?.trim() || "") : "";
+  const last  = lastNameIdx >= 0 ? (cols[lastNameIdx]?.trim() || "") : "";
+  const full  = [first, last].filter(Boolean).join(" ");
+  return full || null;
+}
+
 // ─── CSV parser (nativo) ──────────────────────────────────────────────────────
 function parseCSVText(text) {
   const lines = text.trim().split(/\r?\n/);
@@ -18,28 +39,36 @@ function parseCSVText(text) {
     h.trim().toLowerCase().replace(/['"]/g, "")
   );
 
-  const docIdx   = headers.findIndex(h => /cedula|documento|document|cc/.test(h));
-  const fichaIdx = headers.findIndex(h => /ficha/.test(h));
-  const nameIdx  = headers.findIndex(h => /nombre|name/.test(h));
-  const progIdx  = headers.findIndex(h => /programa|program/.test(h));
+  const docIdx      = findDocCol(headers);
+  const fichaIdx    = headers.findIndex(h => /ficha/.test(h));
+  const nameIdx     = headers.findIndex(h => /^nombre$|^name$|^nombres$/.test(h));
+  const lastNameIdx = headers.findIndex(h => /apellido/.test(h));
+  // si no hay columna "nombre" por separado, buscar "nombre completo"
+  const fullNameIdx = nameIdx === -1 ? headers.findIndex(h => /nombre|name/.test(h)) : -1;
+  const progIdx     = headers.findIndex(h => /programa|program/.test(h));
 
   if (docIdx === -1 || fichaIdx === -1) {
-    throw new Error("El archivo debe tener columnas 'cedula' (o 'documento') y 'ficha'");
+    throw new Error("El archivo debe tener columnas con el número de documento y la ficha");
   }
 
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-    const cols = line.split(delim).map(c => c.trim().replace(/^["']|["']$/g, ""));
-    const doc  = cols[docIdx]?.trim();
+    const cols  = line.split(delim).map(c => c.trim().replace(/^["']|["']$/g, ""));
+    const doc   = cols[docIdx]?.trim();
     const ficha = cols[fichaIdx]?.trim();
     if (!doc || !ficha) continue;
+
+    const full_name = nameIdx !== -1 || lastNameIdx !== -1
+      ? buildFullName(cols, nameIdx, lastNameIdx)
+      : (fullNameIdx >= 0 ? cols[fullNameIdx]?.trim() || null : null);
+
     rows.push({
       document_number: doc,
       ficha_number:    ficha,
-      full_name: nameIdx >= 0 ? cols[nameIdx]?.trim() || null : null,
-      program:   progIdx >= 0 ? cols[progIdx]?.trim() || null : null,
+      full_name,
+      program: progIdx >= 0 ? cols[progIdx]?.trim() || null : null,
     });
   }
   return rows;
@@ -54,25 +83,35 @@ async function parseExcelBuffer(buffer) {
 
   if (json.length === 0) throw new Error("La hoja de cálculo está vacía");
 
-  // Normalize headers
-  const sample = json[0];
-  const keys   = Object.keys(sample).map(k => k.toLowerCase().trim());
+  const sample   = json[0];
+  const origKeys = Object.keys(sample);
+  const keys     = origKeys.map(k => k.toLowerCase().trim());
 
-  const docKey   = Object.keys(sample).find((_, i) => /cedula|documento|document|cc/.test(keys[i]));
-  const fichaKey = Object.keys(sample).find((_, i) => /ficha/.test(keys[i]));
-  const nameKey  = Object.keys(sample).find((_, i) => /nombre|name/.test(keys[i]));
-  const progKey  = Object.keys(sample).find((_, i) => /programa|program/.test(keys[i]));
+  const docKey      = origKeys[findDocCol(keys)] ?? null;
+  const fichaKey    = origKeys.find((_, i) => /ficha/.test(keys[i]));
+  const nameKey     = origKeys.find((_, i) => /^nombre$|^name$|^nombres$/.test(keys[i]));
+  const lastNameKey = origKeys.find((_, i) => /apellido/.test(keys[i]));
+  const fullNameKey = !nameKey ? origKeys.find((_, i) => /nombre|name/.test(keys[i])) : null;
+  const progKey     = origKeys.find((_, i) => /programa|program/.test(keys[i]));
 
   if (!docKey || !fichaKey) {
-    throw new Error("El archivo debe tener columnas 'cedula' (o 'documento') y 'ficha'");
+    throw new Error("El archivo debe tener columnas con el número de documento y la ficha");
   }
 
-  return json.map(row => ({
-    document_number: String(row[docKey] ?? "").trim(),
-    ficha_number:    String(row[fichaKey] ?? "").trim(),
-    full_name: nameKey ? String(row[nameKey] ?? "").trim() || null : null,
-    program:   progKey ? String(row[progKey] ?? "").trim() || null : null,
-  })).filter(r => r.document_number && r.ficha_number);
+  return json.map(row => {
+    const first    = nameKey     ? String(row[nameKey]     ?? "").trim() : "";
+    const lastName = lastNameKey ? String(row[lastNameKey] ?? "").trim() : "";
+    const full_name = (first || lastName)
+      ? [first, lastName].filter(Boolean).join(" ")
+      : fullNameKey ? String(row[fullNameKey] ?? "").trim() || null : null;
+
+    return {
+      document_number: String(row[docKey]   ?? "").trim(),
+      ficha_number:    String(row[fichaKey]  ?? "").trim(),
+      full_name:       full_name || null,
+      program:         progKey ? String(row[progKey] ?? "").trim() || null : null,
+    };
+  }).filter(r => r.document_number && r.ficha_number);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
