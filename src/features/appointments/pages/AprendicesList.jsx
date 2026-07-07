@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Users, ChevronRight, ChevronLeft, Calendar, Clock, AlertCircle } from "lucide-react";
+import { Search, Users, ChevronRight, ChevronLeft, Calendar, Clock, AlertCircle, Trash2, Check, X } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
+import { toast } from "sonner";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -54,6 +55,15 @@ export default function AprendicesList() {
   const [search, setSearch]           = useState("");
   const [activeFilter, setActiveFilter] = useState("todos");
   const [page, setPage]               = useState(0);
+
+  const canDelete = ["COORDINACION", "ADMINISTRADOR", "SUPERADMIN"].includes(profile?.roles?.name);
+
+  const handleDelete = async (id) => {
+    const { error } = await supabase.rpc("delete_aprendiz", { target_id: id });
+    if (error) { toast.error("Error al eliminar: " + error.message); return; }
+    setAprendices(prev => prev.filter(a => a.id !== id));
+    toast.success("Aprendiz eliminado correctamente");
+  };
 
   const fetchAprendices = useCallback(async () => {
     if (DEV_ROLE) {
@@ -233,6 +243,8 @@ export default function AprendicesList() {
                 <AprendizCard
                   key={a.id}
                   aprendiz={a}
+                  canDelete={canDelete}
+                  onDelete={handleDelete}
                   onClick={() => navigate(`/aprendiz/${a.id}/historial${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
                 />
               ))}
@@ -268,8 +280,10 @@ export default function AprendicesList() {
   );
 }
 
-function AprendizCard({ aprendiz, onClick }) {
-  const [hovered, setHovered] = useState(false);
+function AprendizCard({ aprendiz, onClick, canDelete, onDelete }) {
+  const [hovered, setHovered]       = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting]     = useState(false);
   const initial   = aprendiz.full_name?.charAt(0).toUpperCase() || "?";
   const avatarColor = AVATAR_COLORS[aprendiz.full_name?.charCodeAt(0) % AVATAR_COLORS.length] || "#9ca3af";
   const progColor = PROGRAM_COLORS[aprendiz.program] || DEFAULT_PROGRAM_COLOR;
@@ -359,14 +373,46 @@ function AprendizCard({ aprendiz, onClick }) {
         }}
       >
         <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#374151" }}>Ver historial</span>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8,
-          background: hovered ? "#f0fce4" : "#f9fafb",
-          border: `1px solid ${hovered ? "#bbf7d0" : "#e5e7eb"}`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          transition: "all 0.15s",
-        }}>
-          <ChevronRight size={14} color={hovered ? "#39a900" : "#9ca3af"} />
+        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+          {canDelete && !confirming && (
+            <button
+              onClick={e => { e.stopPropagation(); setConfirming(true); }}
+              title="Eliminar aprendiz"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#d1d5db", display: "flex", borderRadius: 6, padding: "0.25rem", transition: "color 0.15s" }}
+              onMouseOver={e => e.currentTarget.style.color = "#dc2626"}
+              onMouseOut={e => e.currentTarget.style.color = "#d1d5db"}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+          {canDelete && confirming && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "0.2rem 0.5rem" }}
+              onClick={e => e.stopPropagation()}>
+              <span style={{ fontSize: "0.6875rem", color: "#dc2626", fontWeight: 600 }}>¿Eliminar?</span>
+              <button
+                disabled={deleting}
+                onClick={async e => { e.stopPropagation(); setDeleting(true); await onDelete(aprendiz.id); setDeleting(false); setConfirming(false); }}
+                style={{ background: "#dc2626", border: "none", borderRadius: 5, padding: "0.15rem 0.3rem", cursor: "pointer", display: "flex", alignItems: "center" }}
+              >
+                <Check size={11} color="white" />
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setConfirming(false); }}
+                style={{ background: "#e5e7eb", border: "none", borderRadius: 5, padding: "0.15rem 0.3rem", cursor: "pointer", display: "flex", alignItems: "center" }}
+              >
+                <X size={11} color="#374151" />
+              </button>
+            </div>
+          )}
+          <div style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: hovered ? "#f0fce4" : "#f9fafb",
+            border: `1px solid ${hovered ? "#bbf7d0" : "#e5e7eb"}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "all 0.15s",
+          }}>
+            <ChevronRight size={14} color={hovered ? "#39a900" : "#9ca3af"} />
+          </div>
         </div>
       </div>
     </div>
