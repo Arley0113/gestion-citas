@@ -277,6 +277,22 @@ export default function FichasPage() {
       }
       const rows = Array.from(seen.values());
 
+      // Verificar cuáles document_number+ficha_number ya existían, para poder
+      // informar nuevos vs. actualizados (el upsert sobrescribe sin avisar)
+      const docNumbers = [...new Set(rows.map(r => r.document_number))];
+      const existingKeys = new Set();
+      for (let i = 0; i < docNumbers.length; i += 500) {
+        const chunk = docNumbers.slice(i, i + 500);
+        const { data: existing, error: existErr } = await supabase
+          .from("aprendiz_whitelist")
+          .select("document_number, ficha_number")
+          .in("document_number", chunk);
+        if (existErr) throw existErr;
+        existing?.forEach(e => existingKeys.add(`${e.document_number}|${e.ficha_number}`));
+      }
+      const updatedCount = rows.filter(r => existingKeys.has(`${r.document_number}|${r.ficha_number}`)).length;
+      const newCount = rows.length - updatedCount;
+
       // Upsert in batches of 500
       for (let i = 0; i < rows.length; i += 500) {
         const batch = rows.slice(i, i + 500);
@@ -287,9 +303,12 @@ export default function FichasPage() {
       }
 
       const dupes = rawRows.length - rows.length;
+      const parts = [];
+      if (newCount > 0)     parts.push(`${newCount} nuevos`);
+      if (updatedCount > 0) parts.push(`${updatedCount} actualizados`);
       toast.success(
-        `${rows.length} aprendices importados correctamente` +
-        (dupes > 0 ? ` (${dupes} duplicados ignorados)` : "")
+        `Importación completa: ${parts.join(", ")}` +
+        (dupes > 0 ? ` (${dupes} duplicados en el archivo ignorados)` : "")
       );
       setPreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
