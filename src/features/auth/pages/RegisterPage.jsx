@@ -4,6 +4,7 @@ import { Mail, Lock, Eye, EyeOff, User, FileText, Hash, BookOpen, ArrowRight, Sh
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { SenaLogo } from "../../../shared/components/SenaLogo";
+import { normalizeDocNumber } from "../../../lib/normalizeDoc";
 
 const DOC_TYPES = [
   { value: "CC", label: "Cédula de Ciudadanía" },
@@ -51,7 +52,7 @@ export default function RegisterPage() {
   const [wlMatch, setWlMatch] = useState(null); // null=sin verificar, true=encontrado, false=no encontrado
 
   const lookupWhitelist = async () => {
-    const doc   = form.document_number.trim();
+    const doc   = normalizeDocNumber(form.document_number);
     const ficha = form.ficha_number.trim();
     if (!doc || !ficha) return;
     setWlMatch(null);
@@ -114,7 +115,7 @@ export default function RegisterPage() {
         try {
           const res = await withTimeout(
             supabase.from("aprendiz_whitelist").select("id, full_name, program")
-              .eq("document_number", form.document_number.trim())
+              .eq("document_number", normalizeDocNumber(form.document_number))
               .eq("ficha_number", form.ficha_number.trim())
               .maybeSingle()
           );
@@ -144,7 +145,7 @@ export default function RegisterPage() {
           data: {
             full_name,
             document_type:   form.document_type,
-            document_number: form.document_number.trim(),
+            document_number: normalizeDocNumber(form.document_number),
             ficha_number:    form.ficha_number.trim()  || null,
             program:         form.program.trim()        || null,
           },

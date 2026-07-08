@@ -6,19 +6,28 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
+import { normalizeDocNumber } from "../../../lib/normalizeDoc";
 import { toast } from "sonner";
 
-// Detecta la columna de número de documento sin confundirla con "Tipo de Documento".
-// Prioridad: "número"/"cedula" > "documento" sin "tipo"
-function findDocCol(headers) {
-  // 1. columna que tenga "número" o "cedula" (muy específico)
-  let idx = headers.findIndex(h => /n[uú]mero|cedula/.test(h));
+// Normaliza encabezados quitando tildes ("Cédula" → "cedula") para que las
+// regex de detección de columnas no dependan de que el archivo use ASCII puro.
+function normalizeHeader(h) {
+  return String(h ?? "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+// Detecta la columna de número de documento sin confundirla con "Tipo de Documento"
+// ni con la columna de ficha (evita colisión cuando esta se llama "Número de Ficha").
+// Prioridad: "numero"/"cedula" > "documento" sin "tipo"
+function findDocCol(headers, excludeIdx = -1) {
+  const candidates = headers.map((h, i) => (i === excludeIdx ? "" : h));
+  // 1. columna que tenga "numero" o "cedula" (muy específico)
+  let idx = candidates.findIndex(h => /numero|cedula/.test(h));
   if (idx !== -1) return idx;
   // 2. "documento" o "document" pero que NO sea "tipo de documento"
-  idx = headers.findIndex(h => /documento|document/.test(h) && !/tipo/.test(h));
+  idx = candidates.findIndex(h => /documento|document/.test(h) && !/tipo/.test(h));
   if (idx !== -1) return idx;
   // 3. columna llamada exactamente "cc"
-  return headers.findIndex(h => /^cc$/.test(h));
+  return candidates.findIndex(h => /^cc$/.test(h));
 }
 
 // Combina nombre y apellidos si vienen en columnas separadas
@@ -29,18 +38,44 @@ function buildFullName(cols, nameIdx, lastNameIdx) {
   return full || null;
 }
 
+// Divide una línea CSV respetando campos entre comillas que contengan el
+// delimitador (ej. `"Pérez, Juan"` en un archivo separado por comas).
+function splitCSVLine(line, delim) {
+  const out = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else {
+        cur += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === delim) {
+      out.push(cur.trim());
+      cur = "";
+    } else {
+      cur += c;
+    }
+  }
+  out.push(cur.trim());
+  return out;
+}
+
 // ─── CSV parser (nativo) ──────────────────────────────────────────────────────
 function parseCSVText(text) {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) throw new Error("El archivo no tiene datos");
 
   const delim = lines[0].includes(";") ? ";" : ",";
-  const headers = lines[0].split(delim).map(h =>
-    h.trim().toLowerCase().replace(/['"]/g, "")
-  );
+  const headers = splitCSVLine(lines[0], delim).map(normalizeHeader);
 
-  const docIdx      = findDocCol(headers);
   const fichaIdx    = headers.findIndex(h => /ficha/.test(h));
+  const docIdx      = findDocCol(headers, fichaIdx);
   const nameIdx     = headers.findIndex(h => /^nombre$|^name$|^nombres$/.test(h));
   const lastNameIdx = headers.findIndex(h => /apellido/.test(h));
   // si no hay columna "nombre" por separado, buscar "nombre completo"
@@ -55,8 +90,8 @@ function parseCSVText(text) {
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-    const cols  = line.split(delim).map(c => c.trim().replace(/^["']|["']$/g, ""));
-    const doc   = cols[docIdx]?.trim();
+    const cols  = splitCSVLine(line, delim);
+    const doc   = normalizeDocNumber(cols[docIdx]);
     const ficha = cols[fichaIdx]?.trim();
     if (!doc || !ficha) continue;
 
@@ -85,10 +120,11 @@ async function parseExcelBuffer(buffer) {
 
   const sample   = json[0];
   const origKeys = Object.keys(sample);
-  const keys     = origKeys.map(k => k.toLowerCase().trim());
+  const keys     = origKeys.map(normalizeHeader);
 
-  const docKey      = origKeys[findDocCol(keys)] ?? null;
-  const fichaKey    = origKeys.find((_, i) => /ficha/.test(keys[i]));
+  const fichaIdx    = keys.findIndex(k => /ficha/.test(k));
+  const fichaKey    = origKeys[fichaIdx];
+  const docKey      = origKeys[findDocCol(keys, fichaIdx)] ?? null;
   const nameKey     = origKeys.find((_, i) => /^nombre$|^name$|^nombres$/.test(keys[i]));
   const lastNameKey = origKeys.find((_, i) => /apellido/.test(keys[i]));
   const fullNameKey = !nameKey ? origKeys.find((_, i) => /nombre|name/.test(keys[i])) : null;
@@ -106,7 +142,7 @@ async function parseExcelBuffer(buffer) {
       : fullNameKey ? String(row[fullNameKey] ?? "").trim() || null : null;
 
     return {
-      document_number: String(row[docKey]   ?? "").trim(),
+      document_number: normalizeDocNumber(row[docKey]),
       ficha_number:    String(row[fichaKey]  ?? "").trim(),
       full_name:       full_name || null,
       program:         progKey ? String(row[progKey] ?? "").trim() || null : null,

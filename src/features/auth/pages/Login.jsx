@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, Shield, X } from "lucide-react";
 import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
+import { normalizeDocNumber } from "../../../lib/normalizeDoc";
 import { toast } from "sonner";
 import { SenaLogo } from "../../../shared/components/SenaLogo";
 
@@ -70,7 +71,7 @@ export default function Login() {
           if (wlProfile?.roles?.name === "APRENDIZ") {
             const { data: found } = await withTimeout(
               supabase.from("aprendiz_whitelist").select("id")
-                .eq("document_number", wlProfile.document_number || "")
+                .eq("document_number", normalizeDocNumber(wlProfile.document_number))
                 .eq("ficha_number",    wlProfile.ficha_number    || "")
                 .maybeSingle()
             );
