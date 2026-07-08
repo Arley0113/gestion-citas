@@ -220,6 +220,13 @@ Sin el secreto retorna `{ ok: false, reason: "no_api_key" }` sin romper el flujo
 - ✅ ConfiguracionAdminPage: campo de texto para ubicación de citas
 - ✅ notify-appointment (código actualizado): resuelve email desde `auth.users` por `user_id` con service-role — antes las notificaciones al confirmar nunca llegaban (profiles no tiene email)
 
+## Sesión actual — auditoría de bugs + hardening RLS
+- ✅ Seguridad DB: `prevent_role_escalation` con `search_path` fijo (`'public','pg_temp'`)
+- ✅ RBAC: `USERS_DELETE` añadido a COORDINACION en `permissions.js` (ya lo permitía el RPC `delete_aprendiz`, la matriz no lo reflejaba); `AprendicesList.jsx` usa `can(P.USERS_DELETE)` en vez de lista de roles hardcodeada
+- ✅ ReportsDashboard: fix de desfase UTC en gráfico "Citas por mes" (`parseISO` en vez de `new Date` sobre fecha-string)
+- ✅ Anti doble-reserva: `CREATE UNIQUE INDEX unique_active_appointment_slot ON appointments (dependency_id, scheduled_date, scheduled_time) WHERE status IN ('pending','confirmed')` + `appointments.repository.js` traduce el error `23505` a "Este horario ya está ocupado"
+- ✅ RLS `appointments`: política `apts_update` ya NO incluye rama APRENDIZ (antes permitía UPDATE sin `WITH CHECK`, un aprendiz podía en teoría alterar cualquier columna de su propia cita vía API directa). Cancelación propia ahora solo vía RPC `cancel_own_appointment(p_appointment_id, p_reason)` (SECURITY DEFINER, valida `user_id = auth.uid()` y `status IN ('pending','confirmed')` server-side). `useAppointments.cancelAppointment` y `AppointmentDetail.executeCancel` (rama `!canCancelAny`) migrados al RPC; cancelación por COORDINACION/ADMIN/SUPERADMIN sigue usando `.update()` directo (su rama de `apts_update` no cambió)
+
 ## Pendiente (acciones manuales en Supabase Dashboard)
 - **Deploy Edge Functions** (bloqueado por classifier en esta sesión): `notify-appointment` (código nuevo) y `send-reminders` (nueva). Ejecutar `supabase functions deploy notify-appointment` y `supabase functions deploy send-reminders`, o vía Dashboard
 - Edge Functions → Secrets: añadir `CRON_SECRET` (para send-reminders) además de `RESEND_API_KEY`

@@ -5,7 +5,7 @@ import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { usePermissions } from "../../../shared/rbac/usePermissions";
 import { P } from "../../../shared/rbac/permissions";
-import { format, subMonths, startOfWeek, startOfMonth } from "date-fns";
+import { format, subMonths, startOfWeek, startOfMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 
@@ -103,7 +103,7 @@ function useReportsData(period) {
 
         const monthCutoff = dateFrom || sixMonthsAgo;
         if (r.scheduled_date >= monthCutoff) {
-          const mo = format(new Date(r.scheduled_date), "MMM", { locale: es });
+          const mo = format(parseISO(r.scheduled_date), "MMM", { locale: es });
           const key = r.scheduled_date.slice(0, 7);
           monthMap[key] = { month: mo.charAt(0).toUpperCase() + mo.slice(1), total: (monthMap[key]?.total || 0) + 1 };
         }

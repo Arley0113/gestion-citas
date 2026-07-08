@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { AppointmentRepository } from "../api/appointments.repository";
 import { toast } from "sonner";
 import { useAuth } from "../../../providers/AuthProvider";
+import { supabase } from "../../../lib/supabase";
 
 const STATUS = {
   IDLE: "idle",
@@ -164,7 +165,7 @@ export function useAppointments() {
     }
   };
 
-  // CANCEL: Cancelar cita (solo si está pending)
+  // CANCEL: Cancelar cita propia (vía RPC — respeta reglas de negocio en servidor)
   const cancelAppointment = async (appointmentId, cancelledReason = null) => {
     const appointment = appointments.find((a) => a.id === appointmentId);
 
@@ -175,7 +176,29 @@ export function useAppointments() {
       return { success: false };
     }
 
-    return updateStatus(appointmentId, "cancelled", null, cancelledReason);
+    setStatus(STATUS.UPDATING);
+    try {
+      const { error } = await supabase.rpc("cancel_own_appointment", {
+        p_appointment_id: appointmentId,
+        p_reason: cancelledReason,
+      });
+      if (error) throw error;
+
+      setAppointments((prev) =>
+        prev.map((a) =>
+          a.id === appointmentId
+            ? { ...a, status: "cancelled", cancelled_reason: cancelledReason }
+            : a,
+        ),
+      );
+      toast.success("Cita cancelada");
+      return { success: true };
+    } catch (err) {
+      toast.error("Error cancelando cita");
+      return { success: false, error: err.message };
+    } finally {
+      setStatus(STATUS.IDLE);
+    }
   };
 
   return {

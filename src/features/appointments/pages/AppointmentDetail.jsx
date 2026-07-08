@@ -145,11 +145,14 @@ export default function AppointmentDetail() {
       setCancelModal({ open: false, reason: "" });
       return;
     }
-    const { error } = await supabase.from("appointments").update({
-      status: "cancelled",
-      cancelled_reason: cancelModal.reason.trim() || null,
-      updated_at: new Date().toISOString(),
-    }).eq("id", id);
+    const reason = cancelModal.reason.trim() || null;
+    const { error } = canCancelAny
+      ? await supabase.from("appointments").update({
+          status: "cancelled",
+          cancelled_reason: reason,
+          updated_at: new Date().toISOString(),
+        }).eq("id", id)
+      : await supabase.rpc("cancel_own_appointment", { p_appointment_id: id, p_reason: reason });
     if (error) { toast.error("No se pudo cancelar la cita"); return; }
     toast.success("Cita cancelada correctamente");
     setApt(a => ({ ...a, status: "cancelled" }));

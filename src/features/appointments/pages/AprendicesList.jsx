@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Search, Users, ChevronRight, ChevronLeft, Calendar, Clock, AlertCircle, Trash2, Check, X } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
+import { usePermissions } from "../../../shared/rbac/usePermissions";
+import { P } from "../../../shared/rbac/permissions";
 import { toast } from "sonner";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -49,6 +51,7 @@ const FILTERS = [
 
 export default function AprendicesList() {
   const { profile } = useAuth();
+  const { can } = usePermissions();
   const navigate = useNavigate();
   const [aprendices, setAprendices]   = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -56,7 +59,7 @@ export default function AprendicesList() {
   const [activeFilter, setActiveFilter] = useState("todos");
   const [page, setPage]               = useState(0);
 
-  const canDelete = ["COORDINACION", "ADMINISTRADOR", "SUPERADMIN"].includes(profile?.roles?.name);
+  const canDelete = can(P.USERS_DELETE);
 
   const handleDelete = async (id) => {
     const { error } = await supabase.rpc("delete_aprendiz", { target_id: id });
