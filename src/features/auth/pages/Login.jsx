@@ -156,14 +156,11 @@ export default function Login() {
         }
 
         .login-brand-logo {
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
-          background: #39a900;
+          width: 52px;
+          height: 52px;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 2px 8px rgba(57,169,0,0.35);
         }
 
         .login-title {
@@ -331,7 +328,7 @@ export default function Login() {
           {/* Brand */}
           <div className="login-brand">
             <div className="login-brand-logo">
-              <SenaLogo size={26} />
+              <SenaLogo size={34} />
             </div>
             <div>
               <div style={{ fontFamily: "'Sora', system-ui", fontWeight: 700, fontSize: "0.9375rem", color: "#0d1117", letterSpacing: "-0.01em" }}>
