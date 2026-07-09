@@ -259,7 +259,7 @@ export function Layout({ children }) {
         {/* Brand */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-logo">
-            <SenaLogo size={18} />
+            <SenaLogo size={26} />
           </div>
           <div>
             <div className="sidebar-brand-name">Bienestar SENA</div>

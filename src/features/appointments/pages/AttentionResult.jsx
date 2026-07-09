@@ -109,8 +109,8 @@ export default function AttentionResult() {
               <ArrowLeft size={18} />
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <div style={{ width: 32, height: 32, borderRadius: "8px", background: "#39a900", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <SenaLogo size={18} />
+              <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <SenaLogo size={24} />
               </div>
               <div>
                 <div style={{ fontSize: "0.9375rem", fontWeight: 700, color: "#111827" }}>Resultado de atención</div>
@@ -311,8 +311,8 @@ export default function AttentionResult() {
 
           {/* Reconocimiento institucional */}
           <div style={{ background: "linear-gradient(to bottom, #f0fce4, #ecfdf5)", borderRadius: "14px", padding: "1.375rem 1.5rem", border: "1px solid #bbf7d0" }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#39a900", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.875rem" }}>
-              <SenaLogo size={22} />
+            <div style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.875rem" }}>
+              <SenaLogo size={30} />
             </div>
             <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "#166534", marginBottom: "0.25rem" }}>
               Gracias por tu dedicación

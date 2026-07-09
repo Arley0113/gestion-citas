@@ -31,8 +31,8 @@ export default function AppointmentConfirmed() {
       <div style={{ background: "white", borderBottom: "1px solid #e2e8f0" }}>
         <div style={{ maxWidth: 680, margin: "0 auto", padding: "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div style={{ width: 34, height: 34, borderRadius: "8px", background: "#39a900", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <SenaLogo size={20} />
+            <div style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <SenaLogo size={26} />
             </div>
             <div>
               <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "#1a202c", letterSpacing: "-0.01em" }}>

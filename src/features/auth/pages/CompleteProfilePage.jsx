@@ -153,8 +153,8 @@ export default function CompleteProfilePage() {
 
           {/* Brand */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.75rem" }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "#39a900", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <SenaLogo size={22} />
+            <div style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <SenaLogo size={30} />
             </div>
             <div>
               <div style={{ fontFamily: "'Sora',system-ui", fontWeight: 700, fontSize: "0.9375rem", color: "#0d1117" }}>Bienestar SENA</div>

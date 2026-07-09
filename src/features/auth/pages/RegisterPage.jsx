@@ -238,8 +238,8 @@ export default function RegisterPage() {
 
           {/* Brand */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "#39a900", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(57,169,0,0.35)" }}>
-              <SenaLogo size={22} />
+            <div style={{ width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <SenaLogo size={34} />
             </div>
             <div>
               <div style={{ fontFamily: "'Sora',system-ui", fontWeight: 700, fontSize: "0.9375rem", color: "#0d1117" }}>Bienestar SENA</div>
