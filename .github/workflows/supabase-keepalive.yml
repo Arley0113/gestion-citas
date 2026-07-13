@@ -1,0 +1,35 @@
+name: Supabase Keepalive (backup)
+
+# Respaldo del Cloudflare Worker (workers/supabase-keepalive/). El mecanismo
+# principal es el Worker: corre todos los días y no depende de la actividad
+# del repo. Este workflow solo existe por si el Worker falla o se borra.
+#
+# IMPORTANTE: los cron de GitHub Actions solo corren desde la rama por
+# defecto (main), y GitHub los desactiva automáticamente si el repositorio
+# pasa ~60 días sin actividad (commits, PRs, etc.) — por eso este workflow
+# NO puede ser el único mecanismo de keepalive.
+
+on:
+  schedule:
+    - cron: "0 12 */2 * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        env:
+          SUPABASE_URL: https://hopjfppngueuhwuakzwf.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvcGpmcHBuZ3VldWh3dWFrendmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNzUyMTIsImV4cCI6MjA5Mjk1MTIxMn0.dkW2J9f9ltV94_V0qcPBbjZtH1e39m-LhvLhsM7UVxY
+        run: |
+          STATUS=$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/programs?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "HTTP status: $STATUS"
+          cat /tmp/resp.json
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Supabase respondió $STATUS (se esperaba 200)"
+            exit 1
+          fi
