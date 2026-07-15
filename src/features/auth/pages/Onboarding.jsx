@@ -80,9 +80,17 @@ export default function Onboarding() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
+      <style>{`
+        @media (max-width: 768px) { .onb-sidebar { display: none !important; } }
+        @media (max-width: 480px) {
+          .onb-topbar, .onb-footer { padding-left: 1.25rem !important; padding-right: 1.25rem !important; flex-wrap: wrap; gap: 0.5rem; }
+          .onb-formwrap { padding: 1.5rem 1rem !important; }
+          .onb-card { padding: 1.5rem !important; }
+        }
+      `}</style>
 
-      {/* ─── Panel izquierdo institucional ─── */}
-      <div style={{
+      {/* ─── Panel izquierdo institucional (oculto en móvil) ─── */}
+      <div className="onb-sidebar" style={{
         width: 360, flexShrink: 0, position: "relative", overflow: "hidden",
         background: "linear-gradient(170deg, #0d4500 0%, #1a6b00 45%, #39a900 100%)",
         display: "flex", flexDirection: "column",
@@ -187,7 +195,7 @@ export default function Onboarding() {
       <div style={{ flex: 1, background: "#f7f8fc", display: "flex", flexDirection: "column" }}>
 
         {/* Barra superior */}
-        <div style={{ background: "white", borderBottom: "1px solid #eaecf0", padding: "1rem 2.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="onb-topbar" style={{ background: "white", borderBottom: "1px solid #eaecf0", padding: "1rem 2.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <BookOpen size={14} color="#39a900" />
             <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#6b7280" }}>
@@ -202,8 +210,8 @@ export default function Onboarding() {
         </div>
 
         {/* Contenido del formulario */}
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "3rem 2.5rem" }}>
-          <div style={{ width: "100%", maxWidth: 460, background: "white", borderRadius: "16px", padding: "2.5rem", border: "1px solid #eaecf0", boxShadow: "0 4px 24px rgba(0,0,0,0.05)" }}>
+        <div className="onb-formwrap" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "3rem 2.5rem" }}>
+          <div className="onb-card" style={{ width: "100%", maxWidth: 460, background: "white", borderRadius: "16px", padding: "2.5rem", border: "1px solid #eaecf0", boxShadow: "0 4px 24px rgba(0,0,0,0.05)" }}>
 
             {/* Paso indicator */}
             <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "1.5rem" }}>
@@ -332,7 +340,7 @@ export default function Onboarding() {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "1rem 2.5rem", borderTop: "1px solid #eaecf0", background: "white", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="onb-footer" style={{ padding: "1rem 2.5rem", borderTop: "1px solid #eaecf0", background: "white", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: "0.6875rem", color: "#9ca3af" }}>
             © SENA · Servicio Nacional de Aprendizaje · República de Colombia
           </span>

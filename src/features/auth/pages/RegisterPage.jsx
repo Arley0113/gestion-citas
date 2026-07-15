@@ -231,6 +231,7 @@ export default function RegisterPage() {
           flex: 1; height: 4px; border-radius: 2px; transition: background 0.3s;
         }
         @media (max-width: 520px) { .reg-card { padding: 1.75rem 1.5rem; } }
+        @media (max-width: 400px) { .reg-grid-2col { grid-template-columns: 1fr !important; } }
       `}</style>
 
       <div className="reg-root">
@@ -301,7 +302,7 @@ export default function RegisterPage() {
             ) : (
               <>
                 {/* Nombre + Apellido */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.875rem" }}>
+                <div className="reg-grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.875rem" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Nombre(s)</label>
                     <div style={{ position: "relative" }}>
@@ -319,7 +320,7 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Documento */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "0.75rem", marginBottom: "0.875rem" }}>
+                <div className="reg-grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "0.75rem", marginBottom: "0.875rem" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Tipo</label>
                     <select className="reg-select" value={form.document_type} onChange={e => set("document_type", e.target.value)}>
@@ -336,7 +337,7 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Ficha + Programa */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.75rem", marginBottom: "1.25rem" }}>
+                <div className="reg-grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.75rem", marginBottom: "1.25rem" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Ficha</label>
                     <div style={{ position: "relative" }}>

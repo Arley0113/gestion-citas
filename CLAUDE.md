@@ -227,6 +227,11 @@ Sin el secreto retorna `{ ok: false, reason: "no_api_key" }` sin romper el flujo
 - ✅ Anti doble-reserva: `CREATE UNIQUE INDEX unique_active_appointment_slot ON appointments (dependency_id, scheduled_date, scheduled_time) WHERE status IN ('pending','confirmed')` + `appointments.repository.js` traduce el error `23505` a "Este horario ya está ocupado"
 - ✅ RLS `appointments`: política `apts_update` ya NO incluye rama APRENDIZ (antes permitía UPDATE sin `WITH CHECK`, un aprendiz podía en teoría alterar cualquier columna de su propia cita vía API directa). Cancelación propia ahora solo vía RPC `cancel_own_appointment(p_appointment_id, p_reason)` (SECURITY DEFINER, valida `user_id = auth.uid()` y `status IN ('pending','confirmed')` server-side). `useAppointments.cancelAppointment` y `AppointmentDetail.executeCancel` (rama `!canCancelAny`) migrados al RPC; cancelación por COORDINACION/ADMIN/SUPERADMIN sigue usando `.update()` directo (su rama de `apts_update` no cambió)
 
+## Sesión actual — responsive en páginas de auth
+- ✅ RegisterPage: Paso 2 (Nombre/Apellido, Tipo/Documento, Ficha/Programa) truncaba placeholders en móvil (320-375px) por grids fijas de 2 columnas. Clase `.reg-grid-2col` + `@media (max-width: 400px)` apila a 1 columna
+- ✅ Onboarding: bug crítico — panel institucional izquierdo de `width: 360` fijo (sin media query) causaba scroll horizontal y formulario inutilizable en móvil. Se oculta con `.onb-sidebar` bajo `@media (max-width: 768px)`; padding de topbar/footer/card reducido bajo 480px
+- ✅ Login: revisado en 320-375px, ya era responsive (sin cambios)
+
 ## Pendiente (acciones manuales en Supabase Dashboard)
 - **Deploy Edge Functions** (bloqueado por classifier en esta sesión): `notify-appointment` (código nuevo) y `send-reminders` (nueva). Ejecutar `supabase functions deploy notify-appointment` y `supabase functions deploy send-reminders`, o vía Dashboard
 - Edge Functions → Secrets: añadir `CRON_SECRET` (para send-reminders) además de `RESEND_API_KEY`
