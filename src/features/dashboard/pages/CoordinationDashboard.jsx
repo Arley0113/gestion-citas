@@ -449,8 +449,8 @@ export default function CoordinationDashboard() {
           max-width: 1240px;
           margin: 0 auto;
         }
-        .coord-main { display: flex; flex-direction: column; gap: 1.25rem; }
-        .coord-sidebar-right { display: flex; flex-direction: column; gap: 1.25rem; }
+        .coord-main { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+        .coord-sidebar-right { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
         .coord-kpi-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);

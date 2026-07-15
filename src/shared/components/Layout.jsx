@@ -233,11 +233,15 @@ export function Layout({ children }) {
   return (
     <div className="app-wrapper">
       <style>{`
+        .kpi-grid-4 > *, .kpi-grid-2 > *, .stats-grid > *, .dashboard-grid > *,
+        .coord-kpi-grid > *, .modules-grid > *, .chart-grid > *,
+        .main-two-col > *, .chart-row > * { min-width: 0; }
         @media (max-width: 768px) {
           .kpi-grid-4    { grid-template-columns: repeat(2, 1fr) !important; }
           .kpi-grid-2    { grid-template-columns: 1fr !important; }
-          .main-two-col  { flex-direction: column !important; }
-          .chart-row     { flex-direction: column !important; }
+          .main-two-col  { flex-direction: column !important; grid-template-columns: 1fr !important; }
+          .chart-row     { flex-direction: column !important; grid-template-columns: 1fr !important; }
+          .main-two-col > *, .chart-row > * { width: 100% !important; }
           .hide-mobile   { display: none !important; }
           .full-mobile   { width: 100% !important; max-width: 100% !important; }
           .dashboard-grid { grid-template-columns: 1fr !important; }

@@ -131,7 +131,7 @@ export default function HorariosPage() {
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "1.5rem 2rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
         {/* Resumen */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+        <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
           {[
             { label: "Días activos", value: activeDays, icon: CheckCircle2, color: "#39a900", bg: "#f0fce4" },
             { label: "Duración de cita", value: `${duration} min`, icon: Clock, color: "#0ea5e9", bg: "#f0f9ff" },
@@ -191,7 +191,7 @@ export default function HorariosPage() {
               <div
                 key={key}
                 style={{
-                  display: "flex", alignItems: "center", gap: "1rem",
+                  display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap",
                   padding: "1rem 1.5rem",
                   borderBottom: i < DAYS.length - 1 ? "1px solid #f9fafb" : "none",
                   background: d.active ? "white" : "#f9fafb",
@@ -227,7 +227,7 @@ export default function HorariosPage() {
 
                 {/* Horas */}
                 {d.active ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flex: "1 1 220px", minWidth: 0, flexWrap: "wrap" }}>
                     <select
                       value={d.start}
                       onChange={e => setField(key, "start", e.target.value)}

@@ -230,10 +230,10 @@ export default function ProfessionalDashboard() {
 
             <div style={{ background: "white", borderRadius: 14, border: "1px solid #e5e7eb", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               {/* Tabs */}
-              <div style={{ display: "flex", borderBottom: "1px solid #f3f4f6", padding: "0 1.5rem" }}>
+              <div style={{ display: "flex", borderBottom: "1px solid #f3f4f6", padding: "0 1.5rem", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
                 {TABS.map(t => (
                   <button key={t.key} onClick={() => setTab(t.key)}
-                    style={{ padding: "1rem 0.875rem", border: "none", background: "none", fontFamily: "var(--font-sans)", fontSize: "0.875rem", fontWeight: tab === t.key ? 700 : 500, color: tab === t.key ? "#111827" : "#9ca3af", borderBottom: tab === t.key ? "2px solid #39a900" : "2px solid transparent", cursor: "pointer", marginBottom: "-1px", display: "flex", alignItems: "center", gap: "0.5rem", transition: "all 0.12s" }}
+                    style={{ padding: "1rem 0.875rem", border: "none", background: "none", fontFamily: "var(--font-sans)", fontSize: "0.875rem", fontWeight: tab === t.key ? 700 : 500, color: tab === t.key ? "#111827" : "#9ca3af", borderBottom: tab === t.key ? "2px solid #39a900" : "2px solid transparent", cursor: "pointer", marginBottom: "-1px", display: "flex", alignItems: "center", gap: "0.5rem", transition: "all 0.12s", flexShrink: 0, whiteSpace: "nowrap" }}
                   >
                     {t.label}
                     <span style={{ padding: "0.1rem 0.5rem", borderRadius: 99, fontSize: "0.6875rem", fontWeight: 700, background: tab === t.key ? "#39a900" : "#f3f4f6", color: tab === t.key ? "white" : "#9ca3af" }}>
@@ -294,7 +294,7 @@ export default function ProfessionalDashboard() {
                             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                               <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>CC: {apt.profiles?.document_number}</span>
                               {apt.reason && (
-                                <span style={{ fontSize: "0.75rem", color: "#6b7280", background: "#f3f4f6", padding: "0.125rem 0.5rem", borderRadius: 20, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240 }}>
+                                <span style={{ fontSize: "0.75rem", color: "#6b7280", background: "#f3f4f6", padding: "0.125rem 0.5rem", borderRadius: 20, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", display: "inline-block" }}>
                                   {apt.reason}
                                 </span>
                               )}
@@ -425,7 +425,7 @@ export default function ProfessionalDashboard() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @media (max-width: 900px) {
           .main-two-col { flex-direction: column !important; }
-          .main-two-col > div:last-child { width: 100% !important; }
+          .main-two-col > div { width: 100% !important; min-width: 0 !important; }
         }
         @media (max-width: 640px) {
           .kpi-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
