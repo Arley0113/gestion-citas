@@ -124,7 +124,7 @@ function useReportsData(period) {
         byProgram,
       });
     } catch (e) {
-      console.error(e);
+      if (import.meta.env.DEV) console.error(e);
     } finally {
       setLoading(false);
     }

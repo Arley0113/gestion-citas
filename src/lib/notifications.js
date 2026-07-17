@@ -53,7 +53,7 @@ async function send(payload) {
   try {
     await supabase.functions.invoke("notify-appointment", { body: payload });
   } catch (e) {
-    console.error("[notify]", e);
+    if (import.meta.env.DEV) console.error("[notify]", e);
   }
 }
 

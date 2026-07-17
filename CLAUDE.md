@@ -90,7 +90,8 @@ Schema aplicado vía migración MCP. Tablas activas:
 - **satisfaction_surveys** — encuesta post-cita (`appointment_id`, `user_id`, `rating` 1-5, `comment`), RLS insert/read propio + read staff
 - **Vista** `appointments_full` — join completo con perfiles y dependencias
 - RLS habilitado en todas las tablas. Función `public.auth_role_name()` usada en políticas.
-- Trigger `on_auth_user_created` → crea perfil automático con rol APRENDIZ
+- **SECURITY DEFINER revisadas (2026-07-16)**: `auth_role_name`, `cancel_own_appointment`, `current_user_role_name`, `delete_aprendiz`, `handle_new_user`, `prevent_role_escalation` — expuestas a anon/authenticated intencionalmente (RPCs con validación interna: `cancel_own_appointment` valida `user_id=auth.uid()`, `delete_aprendiz` restringido a roles admin, etc.). Advisor de Supabase las marca como WARN por convención, no por vulnerabilidad real detectada.
+- Trigger `on_auth_user_created` → crea perfil automático con rol APRENDIZ. Desde la migración `skip_onboarding_if_self_registered_complete` (2026-07-14): si el aprendiz se autorregistró en `/register` y ya dio documento+ficha+programa, el perfil se crea con `onboarding_completed=true` de una vez (evita pedirle lo mismo otra vez en `/onboarding`). Solo aplica a autorregistro (no a staff invitado)
 - Trigger `check_role_escalation` → bloquea cambios de `role_id` para no-admins (SECURITY)
 
 Para promover a SUPERADMIN:
