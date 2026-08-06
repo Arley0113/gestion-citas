@@ -242,10 +242,39 @@ Sin el secreto retorna `{ ok: false, reason: "no_api_key" }` sin romper el flujo
 - ⚠️ Pendiente menor (no bloqueante): un porcentaje se corta ligeramente en `/reportes` → "Top 5 programas" (fila 1); `/admin/usuarios` no se pudo probar con datos reales en modo `?preview=`
 - **Patrón para futuras páginas**: cualquier grid/flex de 2+ columnas necesita `min-width:0` en sus items directos para poder colapsar en móvil; texto largo en `<span>` necesita `display:inline-block` (o `block`) además de `overflow:hidden;text-overflow:ellipsis;white-space:nowrap` — un `span` inline ignora `max-width`
 
+## Auditoría pre-socialización (2026-08-04)
+- ✅ Build limpio (`npm run build`, ~9.6s, 0 errores)
+- ✅ Tests: 147/147 pasando (`npm run test`)
+- ✅ Producción viva y verificada visualmente: https://gestion-citas-nu.vercel.app/login (sin errores de consola)
+- ✅ Edge Functions confirmadas ACTIVE en Supabase: `invite-staff` v4, `notify-appointment` v6, `delete-user` v1, `send-reminders` v1 (el CLAUDE.md decía "deploy bloqueado" — desactualizado, ya estaban desplegadas)
+- ✅ Advisors de seguridad: sin hallazgos nuevos, solo los WARN ya revisados (SECURITY DEFINER intencionales) + Leaked Password Protection (ver pendiente abajo)
+- ✅ Logs de Auth/API/Edge Functions (24h): sin errores
+- ✅ Los 5 dashboards por rol (aprendiz/profesional/coordinación/admin/superadmin) probados vía `?preview=` en local: cargan sin errores de consola
+- ✅ Wizard de agendar cita (4 pasos: servicio → fecha → hora → confirmar): probado end-to-end, funciona
+- ⚠️ Lint: 54 errores preexistentes, todos cosméticos (variables `Icon`/`Ic` no usadas, regla nueva `react-hooks/set-state-in-effect` en patrones normales de fetch-on-mount, `Date.now()` en datos mock de `IS_DEV`). No afectan build ni funcionalidad — no bloqueante para la socialización
+- ⚠️ **pg_cron no está instalado** en el proyecto Supabase → `send-reminders` está deployada pero NO se ejecuta automáticamente (nadie la invoca). No afecta la demo en vivo, pero los recordatorios 24h no están activos en producción
+
+## Auditoría responsive móvil (2026-08-06)
+Usuario reportó "muchas inconsistencias" en móvil real. Barrido con Playwright (375px y 320px) en las 33 rutas + modal de citas:
+- ✅ **Corregido `/admin/invitar`**: crítico — grid de 2 columnas fijo (`StaffInvitePage.jsx`) sin colapsar en móvil dejaba el campo de contraseña en 56px y el botón "Actualizar" 100px fuera de pantalla. Fix: className `staff-invite-grid` + `@media (max-width:820px){grid-template-columns:1fr !important}`, `minWidth:0` en el input de contraseña, `flexWrap` en la fila del botón Actualizar
+- ✅ **Corregido `/reportes`**: "Top 5 programas" recortaba el `%` (columnas de grid en px fijos + `overflow:hidden` ocultando el desborde en vez de mostrarlo). Fix: className `top-programs-row` + media query que reduce columnas a `1fr 30px 24px 32px` bajo 480px, ellipsis en nombre del programa
+- ✅ **Corregido `layout.css` — causa raíz probable del "no aparece todo el contenido, ni el menú" reportado**: `.app-main { overflow-x: hidden }` sin `overflow-y` explícito — por la spec de CSS Overflow, cuando un eje no es `visible` y el otro sí, el navegador **fuerza** el otro eje a `auto`, convirtiendo `.app-main` en su propio contenedor de scroll interno en vez de dejar que la página (`html`) haga el scroll normal. Confirmado con Playwright: antes del fix `overflowY` computaba `auto` y el scroll quedaba atrapado en `.app-main`; después del fix (`overflow-x: clip` en vez de `hidden` — `clip` no dispara el forzado de la spec) `overflowY` vuelve a `visible` y `document.scrollingElement` es `HTML` como debe ser. Este patrón puede causar scroll errático/contenido inalcanzable especialmente en Safari iOS aunque no siempre se reproduce igual en Chrome desktop
+- Verificado: build limpio, 147/147 tests, sin overflow horizontal en `/admin/invitar`, `/reportes`, `/dashboard`, `/admin` tras los fixes
+
+**Bug funcional del modo `?preview=` — corregido (2026-08-06)**: el problema no era solo dashboard/mis-citas/documentos/configuración — era sistémico. Cualquier componente que revisara `if (!user)` en vez de `if (DEV_ROLE)` antes de llamar a Supabase disparaba queries/escrituras reales con el usuario falso `{id:"dev-user"}`, porque ese objeto es truthy. Auditado el proyecto completo (`grep user.id` en todo `src/`) y corregidos todos los casos encontrados:
+- `Layout.jsx` — efecto del badge de notificaciones (afectaba TODAS las páginas de aprendiz, era la causa de los 400 vistos en consola)
+- `useAppointments.js` — **`createAppointment` no tenía guard en absoluto**: agendar una cita completa desde el modal y hacer clic en "Confirmar cita" en modo preview habría fallado silenciosamente. También `updateStatus` y `cancelAppointment`. Verificado end-to-end con Playwright: el wizard completo ahora llega a "Cita confirmada" sin error
+- `AppointmentDetail.jsx` — `confirm`, `submitSurvey`, `markNoShow`, `handleFileUpload`, `executeDeleteDoc`
+- `AprendicesList.jsx` — `handleDelete`
+- `DocumentosPage.jsx`, `ConfiguracionPage.jsx`, `HorariosPage.jsx` — fetch inicial + acciones de guardado
+- `StaffInvitePage.jsx` — `fetchInvitations`, `handleSend`, `handleCancel`
+- `DependenciasPage.jsx` — no tenía NINGÚN guard (`toggleActive`, `saveEdit`)
+- `ConfiguracionAdminPage.jsx` — `save`
+
+Todos siguen el patrón ya establecido en el código: toast de éxito con "(demo)" + actualización de estado local, sin tocar Supabase, cuando `DEV_ROLE`/`IS_DEV` está activo.
+
 ## Pendiente (acciones manuales en Supabase Dashboard)
-- **Deploy Edge Functions** (bloqueado por classifier en esta sesión): `notify-appointment` (código nuevo) y `send-reminders` (nueva). Ejecutar `supabase functions deploy notify-appointment` y `supabase functions deploy send-reminders`, o vía Dashboard
-- Edge Functions → Secrets: añadir `CRON_SECRET` (para send-reminders) además de `RESEND_API_KEY`
-- Programar cron diario que invoque `send-reminders` (pg_cron o Supabase Scheduled Functions) con header `x-cron-secret`
+- Edge Functions → Secrets: verificar que `CRON_SECRET` y `RESEND_API_KEY` estén configurados (no se puede verificar valor vía MCP, solo presencia se infiere por comportamiento)
+- Programar cron diario que invoque `send-reminders` (requiere habilitar extensión `pg_cron` primero, luego `cron.schedule(...)`, o usar un servicio externo tipo cron-job.org contra la URL de la función) con header `x-cron-secret`
 - Auth → Emails → SMTP Settings: configurar Resend (host: smtp.resend.com, port: 465, user: resend)
-- Edge Functions → Secrets: añadir `RESEND_API_KEY` para activar emails reales
-- Auth → Attack Protection: activar "Leaked Password Protection"
+- Auth → Attack Protection: activar "Leaked Password Protection" (sigue pendiente, confirmado por advisor de seguridad)

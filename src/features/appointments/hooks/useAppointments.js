@@ -90,6 +90,13 @@ export function useAppointments() {
 
   // CREATE: Crear cita con validaciones de negocio
   const createAppointment = async (formData) => {
+    if (DEV_ROLE) {
+      const fakeAppointment = { id: `mock-${Date.now()}`, ...formData, user_id: "dev-user", status: "pending" };
+      setAppointments((prev) => [...prev, fakeAppointment]);
+      toast.success("Cita agendada correctamente");
+      return { success: true, data: fakeAppointment };
+    }
+
     setStatus(STATUS.CREATING);
 
     try {
@@ -136,6 +143,14 @@ export function useAppointments() {
 
   // UPDATE STATUS: Cambiar estado (confirmar, completar, cancelar)
   const updateStatus = async (appointmentId, newStatus, notes = null, cancelledReason = null) => {
+    if (DEV_ROLE) {
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === appointmentId ? { ...a, status: newStatus, ...(notes && { notes }), ...(cancelledReason && { cancelled_reason: cancelledReason }) } : a)),
+      );
+      toast.success(`Cita ${newStatus === "confirmed" ? "confirmada" : "actualizada"}`);
+      return { success: true };
+    }
+
     setStatus(STATUS.UPDATING);
 
     try {
@@ -174,6 +189,14 @@ export function useAppointments() {
     if (appointment.status !== "pending") {
       toast.error("Solo puedes cancelar citas pendientes");
       return { success: false };
+    }
+
+    if (DEV_ROLE) {
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === appointmentId ? { ...a, status: "cancelled", cancelled_reason: cancelledReason } : a)),
+      );
+      toast.success("Cita cancelada");
+      return { success: true };
     }
 
     setStatus(STATUS.UPDATING);

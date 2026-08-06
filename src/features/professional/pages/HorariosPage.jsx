@@ -3,6 +3,7 @@ import { Clock, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
+import { DEV_ROLE } from "../../../lib/devMode";
 
 const DAYS = [
   { key: "lunes",     label: "Lunes" },
@@ -49,7 +50,7 @@ export default function HorariosPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || DEV_ROLE) return;
     supabase
       .from("professional_schedules")
       .select("*")
@@ -90,6 +91,7 @@ export default function HorariosPage() {
         return;
       }
     }
+    if (DEV_ROLE) { toast.success("Horarios guardados correctamente"); return; }
     setSaving(true);
     const { error } = await supabase
       .from("professional_schedules")

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Settings, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
+import { DEV_ROLE } from "../../../lib/devMode";
 
 const SETTINGS = [
   { key: "max_appointments_per_day", label: "Máx. citas por día (por profesional)", type: "number",  default: 8 },
@@ -42,6 +43,7 @@ export default function ConfiguracionAdminPage() {
   }, []);
 
   const save = async () => {
+    if (DEV_ROLE) { toast.success("Configuración guardada (demo)"); return; }
     setSaving(true);
     const rows = SETTINGS.map(s => ({
       key: s.key,

@@ -112,6 +112,7 @@ export default function AppointmentDetail() {
   }, [apt?.status, apt?.user_id, id, user?.id, surveyLoaded]);
 
   const confirm = async () => {
+    if (DEV_ROLE) { toast.success("Cita confirmada (demo)"); setApt(a => ({ ...a, status: "confirmed" })); return; }
     const { error } = await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast.error("No se pudo confirmar la cita"); return; }
     toast.success("Cita confirmada");
@@ -123,6 +124,7 @@ export default function AppointmentDetail() {
 
   const submitSurvey = async () => {
     if (!surveyRating || !user || surveySubmitting) return;
+    if (DEV_ROLE) { setSurvey({ rating: surveyRating, comment: surveyComment.trim() }); toast.success("¡Gracias por tu retroalimentación!"); return; }
     setSurveySubmitting(true);
     const { error } = await supabase.from("satisfaction_surveys").insert({ appointment_id: id, user_id: user.id, rating: surveyRating, comment: surveyComment.trim() || null });
     setSurveySubmitting(false);
@@ -132,6 +134,7 @@ export default function AppointmentDetail() {
   };
 
   const markNoShow = async () => {
+    if (DEV_ROLE) { toast.info("Marcada como no asistió (demo)"); setApt(a => ({ ...a, status: "no_show" })); return; }
     const { error } = await supabase.from("appointments").update({ status: "no_show", updated_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast.error("No se pudo actualizar la cita"); return; }
     toast.info("Marcada como no asistió");
@@ -162,6 +165,7 @@ export default function AppointmentDetail() {
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
+    if (DEV_ROLE) { toast.error("Adjuntar archivos deshabilitado en vista previa"); e.target.value = ""; return; }
     const MAX = 5 * 1024 * 1024;
     if (file.size > MAX) { toast.error("El archivo no puede superar 5 MB"); return; }
     const ALLOWED = ["application/pdf","image/jpeg","image/png","image/webp","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
@@ -192,6 +196,7 @@ export default function AppointmentDetail() {
   const executeDeleteDoc = async () => {
     const doc = deleteModal.doc;
     setDeleteModal({ open: false, doc: null });
+    if (DEV_ROLE) { setDocs(d => d.filter(x => x.id !== doc.id)); toast.success("Documento eliminado (demo)"); return; }
     const { error: storageErr } = await supabase.storage.from("user-documents").remove([doc.file_path]);
     if (storageErr) { toast.error("Error al eliminar el archivo"); return; }
     const { error: dbErr } = await supabase.from("user_documents").delete().eq("id", doc.id);

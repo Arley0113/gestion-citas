@@ -332,7 +332,7 @@ export default function ReportsDashboard() {
                 <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", margin: 0, fontFamily: "var(--font-display)" }}>Top 5 programas con más citas</h2>
               </div>
               {/* Tabla header */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 60px", padding: "0.5rem 1.5rem", background: "#fafafa", borderTop: "1px solid #f3f4f6", borderBottom: "1px solid #f3f4f6" }}>
+              <div className="top-programs-row" style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 60px", padding: "0.5rem 1.5rem", background: "#fafafa", borderTop: "1px solid #f3f4f6", borderBottom: "1px solid #f3f4f6" }}>
                 {["Programa de formación", "Citas", "Distribución", "%"].map(h => (
                   <div key={h} style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
                 ))}
@@ -343,16 +343,17 @@ export default function ReportsDashboard() {
                 return (
                   <div
                     key={name}
+                    className="top-programs-row"
                     style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 60px", padding: "0.875rem 1.5rem", background: i % 2 === 0 ? "white" : "#fafafa", borderBottom: i < list.length - 1 ? "1px solid #f9fafb" : "none", alignItems: "center" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#f0fce4"}
                     onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? "white" : "#fafafa"}
                   >
-                    <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827" }}>{name}</div>
+                    <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
                     <div style={{ fontSize: "0.9375rem", fontWeight: 800, color: "#39a900", fontFamily: "var(--font-display)" }}>{count}</div>
                     <div style={{ height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${(pct / maxPct) * 100}%`, background: "linear-gradient(90deg, #39a900, #5bc700)", borderRadius: 3 }} />
                     </div>
-                    <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#6b7280" }}>{pct}%</div>
+                    <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#6b7280", whiteSpace: "nowrap" }}>{pct}%</div>
                   </div>
                 );
               })}
@@ -366,7 +367,12 @@ export default function ReportsDashboard() {
         )}
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 480px) {
+          .top-programs-row { grid-template-columns: 1fr 30px 24px 32px !important; column-gap: 0.4rem; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -88,7 +88,7 @@ export function Layout({ children }) {
   const isActive = (to) => location.pathname === to || location.pathname.startsWith(to + "/");
 
   useEffect(() => {
-    if (!user || !isAprendiz?.()) return;
+    if (IS_DEV || !user || !isAprendiz?.()) return;
     let cancelled = false;
     const today = new Date().toISOString().slice(0, 10);
     supabase

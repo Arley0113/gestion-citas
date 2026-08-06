@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
+import { DEV_ROLE } from "../../../lib/devMode";
 
 function formatSize(bytes) {
   if (!bytes) return "—";
@@ -34,6 +35,7 @@ export default function DocumentosPage() {
 
   const fetchDocs = useCallback(async () => {
     if (!user) return;
+    if (DEV_ROLE) { setLoading(false); return; }
     const { data, error } = await supabase
       .from("user_documents")
       .select("*")
@@ -47,6 +49,7 @@ export default function DocumentosPage() {
 
   const handleFile = async (file) => {
     if (!file || !user) return;
+    if (DEV_ROLE) { toast.error("Subida de archivos deshabilitada en vista previa"); return; }
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) { toast.error("El archivo supera los 5 MB"); return; }
     const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];

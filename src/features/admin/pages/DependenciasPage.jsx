@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Building2, ArrowLeft, ToggleLeft, ToggleRight, Edit2, Check, X, Users } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
+import { DEV_ROLE } from "../../../lib/devMode";
 
 const ICON_MAP = { "🧠": "🧠", "🩺": "🩺", "🤝": "🤝", "📋": "📋", "❤️": "❤️" };
 
@@ -38,6 +39,12 @@ export default function DependenciasPage() {
 
   const toggleActive = async (dep) => {
     setSaving(dep.id);
+    if (DEV_ROLE) {
+      setDeps(prev => prev.map(d => d.id === dep.id ? { ...d, active: !d.active } : d));
+      toast.success(`Dependencia ${!dep.active ? "activada" : "desactivada"} (demo)`);
+      setSaving(null);
+      return;
+    }
     const { error } = await supabase
       .from("dependencies")
       .update({ active: !dep.active, updated_at: new Date().toISOString() })
@@ -50,6 +57,13 @@ export default function DependenciasPage() {
   const saveEdit = async (dep) => {
     if (!editName.trim()) return;
     setSaving(dep.id);
+    if (DEV_ROLE) {
+      setDeps(prev => prev.map(d => d.id === dep.id ? { ...d, name: editName.trim() } : d));
+      toast.success("Nombre actualizado (demo)");
+      setEditId(null);
+      setSaving(null);
+      return;
+    }
     const { error } = await supabase
       .from("dependencies")
       .update({ name: editName.trim(), updated_at: new Date().toISOString() })

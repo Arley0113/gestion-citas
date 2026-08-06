@@ -62,6 +62,7 @@ export default function AprendicesList() {
   const canDelete = can(P.USERS_DELETE);
 
   const handleDelete = async (id) => {
+    if (DEV_ROLE) { setAprendices(prev => prev.filter(a => a.id !== id)); toast.success("Aprendiz eliminado (demo)"); return; }
     const { error } = await supabase.rpc("delete_aprendiz", { target_id: id });
     if (error) { toast.error("Error al eliminar: " + error.message); return; }
     setAprendices(prev => prev.filter(a => a.id !== id));

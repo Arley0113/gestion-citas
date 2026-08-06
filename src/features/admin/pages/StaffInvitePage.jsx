@@ -58,6 +58,7 @@ export default function StaffInvitePage() {
   }, []);
 
   const fetchInvitations = useCallback(async () => {
+    if (IS_DEV) { setInvitations([]); setLoadingInv(false); return; }
     setLoadingInv(true);
     try {
       const { data, error } = await supabase
@@ -89,6 +90,12 @@ export default function StaffInvitePage() {
       return;
     }
 
+    if (IS_DEV) {
+      toast.success(`Usuario creado: ${form.email} (demo)`);
+      setForm({ email: "", role_name: "", dependency_id: "", password: generatePassword() });
+      return;
+    }
+
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("invite-staff", {
@@ -116,6 +123,7 @@ export default function StaffInvitePage() {
   };
 
   const handleCancel = async (id) => {
+    if (IS_DEV) { setCancelConfirmId(null); toast.success("Invitación cancelada (demo)"); return; }
     const { error } = await supabase
       .from("staff_invitations")
       .update({ status: "cancelled" })
@@ -145,7 +153,7 @@ export default function StaffInvitePage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "1.5rem 2rem", display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "1.25rem", alignItems: "start" }}>
+      <div className="staff-invite-grid" style={{ maxWidth: 900, margin: "0 auto", padding: "1.5rem 2rem", display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "1.25rem", alignItems: "start" }}>
 
         {/* ─── Formulario de invitación ─── */}
         <div style={{ background: "white", borderRadius: 14, border: "1px solid #e5e7eb", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
@@ -221,7 +229,7 @@ export default function StaffInvitePage() {
                 Contraseña temporal
               </label>
               <div style={{ display: "flex", gap: "0.5rem" }}>
-                <div style={{ position: "relative", flex: 1 }}>
+                <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
                   <input
                     type={showPwd ? "text" : "password"}
                     value={form.password}
@@ -286,13 +294,13 @@ export default function StaffInvitePage() {
 
         {/* ─── Lista de invitaciones ─── */}
         <div style={{ background: "white", borderRadius: 14, border: "1px solid #e5e7eb", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <div style={{ padding: "1.125rem 1.5rem", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ padding: "1.125rem 1.5rem", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
             <div style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>
               Invitaciones enviadas
             </div>
             <button
               onClick={fetchInvitations}
-              style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0.75rem", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: "0.8125rem", color: "#6b7280", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+              style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0.75rem", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: "0.8125rem", color: "#6b7280", cursor: "pointer", fontFamily: "var(--font-sans)", flexShrink: 0 }}
             >
               <RefreshCw size={13} /> Actualizar
             </button>
@@ -357,7 +365,10 @@ export default function StaffInvitePage() {
         </div>
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 820px) { .staff-invite-grid { grid-template-columns: 1fr !important; padding-left: 1rem !important; padding-right: 1rem !important; } }
+      `}</style>
     </div>
   );
 }

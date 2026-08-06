@@ -3,6 +3,7 @@ import { Bell, Shield, Lock, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
+import { DEV_ROLE } from "../../../lib/devMode";
 
 function Toggle({ value, onChange }) {
   return (
@@ -71,7 +72,7 @@ export default function ConfiguracionPage() {
   const [privacy, setPrivacy] = useState(DEFAULT_PRIVACY);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || DEV_ROLE) return;
     supabase
       .from("user_settings")
       .select("settings")
@@ -88,14 +89,14 @@ export default function ConfiguracionPage() {
   const setNotif = (key) => (val) => {
     const next = { ...notifs, [key]: val };
     setNotifs(next);
-    if (user) upsertSettings(user.id, next, privacy);
+    if (user && !DEV_ROLE) upsertSettings(user.id, next, privacy);
     toast.success("Preferencia guardada");
   };
 
   const setPriv = (key) => (val) => {
     const next = { ...privacy, [key]: val };
     setPrivacy(next);
-    if (user) upsertSettings(user.id, notifs, next);
+    if (user && !DEV_ROLE) upsertSettings(user.id, notifs, next);
     toast.success("Preferencia guardada");
   };
 
