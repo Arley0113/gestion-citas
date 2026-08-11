@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Calendar, Users, BarChart2,
   LogOut, Plus, Heart, UserCircle, Bell,
   CalendarDays, ClipboardList, FileText, Settings, HelpCircle,
-  CalendarRange, Clock, ShieldCheck,
+  CalendarRange, Clock, ShieldCheck, Menu, X,
 } from "lucide-react";
 import { useAuth } from "../../providers/AuthProvider";
 import { useAppointmentModal } from "../../providers/AppointmentModalContext";
@@ -77,6 +77,7 @@ export function Layout({ children }) {
   const { isProfessional, isCoordination, isAdmin, isAprendiz, profile, user, signOut } = useAuth();
   const { openModal } = useAppointmentModal();
   const [notifCount, setNotifCount] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   // No mostrar badge cuando el usuario ya está viendo las notificaciones
   const onNotifPage = location.pathname === "/notificaciones";
   const notifBadge  = IS_DEV ? 0 : (onNotifPage ? 0 : notifCount);
@@ -86,6 +87,11 @@ export function Layout({ children }) {
   const initial  = fullName.charAt(0).toUpperCase();
   const roleName = ROLE_LABELS[role] || role || "Usuario";
   const isActive = (to) => location.pathname === to || location.pathname.startsWith(to + "/");
+
+  // Cierra el drawer móvil al navegar a otra ruta
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (IS_DEV || !user || !isAprendiz?.()) return;
@@ -230,6 +236,74 @@ export function Layout({ children }) {
 
   const mobileItems = renderMobileNav();
 
+  const sidebarContent = (
+    <>
+      {/* Brand */}
+      <div className="sidebar-brand">
+        <div className="sidebar-brand-logo">
+          <SenaLogo size={26} />
+        </div>
+        <div>
+          <div className="sidebar-brand-name">Bienestar SENA</div>
+          <div className="sidebar-brand-sub">Sistema de citas</div>
+        </div>
+      </div>
+
+      {/* Rol badge */}
+      <div style={{ padding: "0.625rem 0.75rem 0" }}>
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: "0.375rem",
+          padding: "0.25rem 0.625rem",
+          background: "rgba(57,169,0,0.12)",
+          borderRadius: 20,
+          fontSize: "0.6875rem", fontWeight: 700,
+          color: "#39a900",
+        }}>
+          <Heart size={10} fill="#39a900" />
+          {roleName}
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav className="sidebar-nav" style={{ marginTop: "0.5rem" }}>
+        {renderNav()}
+      </nav>
+
+      {/* Footer / User */}
+      <div className="sidebar-footer">
+        <div style={{ marginBottom: "0.5rem", padding: "0 0.25rem" }}>
+          <hr style={{ border: "none", borderTop: "1px solid #1f2937", margin: "0 0 0.5rem" }} />
+          <button
+            onClick={signOut}
+            style={{
+              display: "flex", alignItems: "center", gap: "0.625rem",
+              padding: "0.5rem 0.625rem",
+              borderRadius: 7, border: "none",
+              background: "transparent", color: "#6b7280",
+              cursor: "pointer", fontFamily: "var(--font-sans)",
+              fontSize: "0.8125rem", fontWeight: 500,
+              width: "100%", textAlign: "left",
+              transition: "background 0.12s, color 0.12s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#9ca3af"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#6b7280"; }}
+          >
+            <LogOut size={14} />
+            <span>Cerrar sesión</span>
+          </button>
+        </div>
+
+        <div className="sidebar-user">
+          <div className="sidebar-avatar">{initial}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="sidebar-user-name">{fullName}</div>
+            <div className="sidebar-user-role">{roleName}</div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="app-wrapper">
       <style>{`
@@ -259,70 +333,40 @@ export function Layout({ children }) {
 
       {/* ─── Sidebar desktop ─── */}
       <aside className="sidebar">
+        {sidebarContent}
+      </aside>
 
-        {/* Brand */}
-        <div className="sidebar-brand">
-          <div className="sidebar-brand-logo">
-            <SenaLogo size={26} />
-          </div>
-          <div>
-            <div className="sidebar-brand-name">Bienestar SENA</div>
-            <div className="sidebar-brand-sub">Sistema de citas</div>
-          </div>
+      {/* ─── Topbar mobile ─── */}
+      <header className="mobile-topbar">
+        <button
+          className="mobile-topbar-menu"
+          aria-label="Abrir menú"
+          onClick={() => setDrawerOpen(true)}
+        >
+          <Menu size={22} />
+        </button>
+        <div className="mobile-topbar-brand">
+          <SenaLogo size={22} />
+          <span>Bienestar SENA</span>
         </div>
+        <div className="mobile-topbar-avatar">{initial}</div>
+      </header>
 
-        {/* Rol badge */}
-        <div style={{ padding: "0.625rem 0.75rem 0" }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "0.375rem",
-            padding: "0.25rem 0.625rem",
-            background: "rgba(57,169,0,0.12)",
-            borderRadius: 20,
-            fontSize: "0.6875rem", fontWeight: 700,
-            color: "#39a900",
-          }}>
-            <Heart size={10} fill="#39a900" />
-            {roleName}
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav className="sidebar-nav" style={{ marginTop: "0.5rem" }}>
-          {renderNav()}
-        </nav>
-
-        {/* Footer / User */}
-        <div className="sidebar-footer">
-          <div style={{ marginBottom: "0.5rem", padding: "0 0.25rem" }}>
-            <hr style={{ border: "none", borderTop: "1px solid #1f2937", margin: "0 0 0.5rem" }} />
-            <button
-              onClick={signOut}
-              style={{
-                display: "flex", alignItems: "center", gap: "0.625rem",
-                padding: "0.5rem 0.625rem",
-                borderRadius: 7, border: "none",
-                background: "transparent", color: "#6b7280",
-                cursor: "pointer", fontFamily: "var(--font-sans)",
-                fontSize: "0.8125rem", fontWeight: 500,
-                width: "100%", textAlign: "left",
-                transition: "background 0.12s, color 0.12s",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#9ca3af"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#6b7280"; }}
-            >
-              <LogOut size={14} />
-              <span>Cerrar sesión</span>
-            </button>
-          </div>
-
-          <div className="sidebar-user">
-            <div className="sidebar-avatar">{initial}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="sidebar-user-name">{fullName}</div>
-              <div className="sidebar-user-role">{roleName}</div>
-            </div>
-          </div>
-        </div>
+      {/* ─── Drawer mobile (menú completo + cerrar sesión) ─── */}
+      <div
+        className={`mobile-drawer-backdrop ${drawerOpen ? "open" : ""}`}
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden={!drawerOpen}
+      />
+      <aside className={`mobile-drawer ${drawerOpen ? "open" : ""}`} aria-hidden={!drawerOpen}>
+        <button
+          className="mobile-drawer-close"
+          aria-label="Cerrar menú"
+          onClick={() => setDrawerOpen(false)}
+        >
+          <X size={20} />
+        </button>
+        {sidebarContent}
       </aside>
 
       {/* ─── Main ─── */}
