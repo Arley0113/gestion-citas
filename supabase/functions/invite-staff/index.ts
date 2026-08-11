@@ -56,6 +56,15 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Un ADMINISTRADOR (rol sin permisos de sistema) no puede otorgar SUPERADMIN — solo otro SUPERADMIN puede.
+    // El <select> del formulario ya lo oculta, pero el servidor es el que debe hacerlo cumplir.
+    const { data: targetRole } = await supabaseAdmin.from("roles").select("name").eq("id", role_id).single();
+    if (targetRole?.name === "SUPERADMIN" && callerProfile?.roles?.name !== "SUPERADMIN") {
+      return new Response(JSON.stringify({ error: "Solo un SUPERADMIN puede asignar el rol SUPERADMIN" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Buscar si el usuario ya existe
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const existing = existingUsers?.users?.find(u => u.email === email);
