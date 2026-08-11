@@ -146,7 +146,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Documento */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.875rem", marginBottom: isAprendizRole ? "1.25rem" : "1.5rem" }}>
+          <div className="profile-2col-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.875rem", marginBottom: isAprendizRole ? "1.25rem" : "1.5rem" }}>
             <div>
               <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.5rem" }}>
                 Tipo de documento
@@ -194,7 +194,7 @@ export default function ProfilePage() {
 
           {/* Ficha + Programa — solo para aprendices */}
           {isAprendizRole && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.875rem", marginBottom: "1.5rem" }}>
+            <div className="profile-2col-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.875rem", marginBottom: "1.5rem" }}>
               <div>
                 <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.5rem" }}>
                   <Hash size={13} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
@@ -293,6 +293,13 @@ export default function ProfilePage() {
         </div>
 
       </div>
+
+      <style>{`
+        .profile-2col-grid > * { min-width: 0; }
+        @media (max-width: 480px) {
+          .profile-2col-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }

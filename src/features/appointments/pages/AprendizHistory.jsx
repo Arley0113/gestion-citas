@@ -107,7 +107,7 @@ export default function AprendizHistory() {
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "1.5rem", padding: "2rem 2.5rem", maxWidth: 1200, margin: "0 auto", alignItems: "start" }}>
+      <div className="aprendiz-history-grid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "1.5rem", padding: "2rem 2.5rem", maxWidth: 1200, margin: "0 auto", alignItems: "start" }}>
 
         {/* ─── Panel izquierdo (perfil) ─── */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -325,6 +325,13 @@ export default function AprendizHistory() {
           )}
         </div>
       </div>
+
+      <style>{`
+        .aprendiz-history-grid > * { min-width: 0; }
+        @media (max-width: 768px) {
+          .aprendiz-history-grid { grid-template-columns: 1fr !important; padding: 1.25rem !important; }
+        }
+      `}</style>
     </div>
   );
 }

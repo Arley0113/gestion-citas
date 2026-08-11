@@ -146,6 +146,10 @@ export default function CompleteProfilePage() {
         }
         .cp-btn:hover:not(:disabled) { background: #2d8600; }
         .cp-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .cp-2col-grid > * { min-width: 0; }
+        @media (max-width: 380px) {
+          .cp-2col-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       <div className="cp-root">
@@ -197,7 +201,7 @@ export default function CompleteProfilePage() {
             </div>
 
             {/* Documento */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "0.75rem", marginBottom: "1.5rem" }}>
+            <div className="cp-2col-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "0.75rem", marginBottom: "1.5rem" }}>
               <div>
                 <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>
                   Tipo de doc.
