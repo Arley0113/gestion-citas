@@ -186,8 +186,8 @@ export function useAppointments() {
 
     if (!appointment) return { success: false, error: "Cita no encontrada" };
 
-    if (appointment.status !== "pending") {
-      toast.error("Solo puedes cancelar citas pendientes");
+    if (!["pending", "confirmed"].includes(appointment.status)) {
+      toast.error("Solo puedes cancelar citas pendientes o confirmadas");
       return { success: false };
     }
 
