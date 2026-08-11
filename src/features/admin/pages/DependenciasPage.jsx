@@ -7,6 +7,12 @@ import { DEV_ROLE } from "../../../lib/devMode";
 
 const ICON_MAP = { "🧠": "🧠", "🩺": "🩺", "🤝": "🤝", "📋": "📋", "❤️": "❤️" };
 
+const MOCK_DEPS = [
+  { id: 1, name: "Psicología", icon: "🧠", active: true, staffCount: 3 },
+  { id: 2, name: "Enfermería", icon: "🩺", active: true, staffCount: 2 },
+  { id: 3, name: "Trabajo Social", icon: "🤝", active: true, staffCount: 1 },
+];
+
 export default function DependenciasPage() {
   const navigate = useNavigate();
   const [deps, setDeps] = useState([]);
@@ -17,21 +23,25 @@ export default function DependenciasPage() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
+    if (DEV_ROLE) { setDeps(MOCK_DEPS); setLoading(false); return; }
+    const { data, error } = await supabase
       .from("dependencies")
       .select("*")
       .order("id");
-    if (data) {
-      // count staff per dep
-      const withCount = await Promise.all(data.map(async (d) => {
-        const { count } = await supabase
-          .from("profiles")
-          .select("id", { count: "exact", head: true })
-          .eq("dependency_id", d.id);
-        return { ...d, staffCount: count || 0 };
-      }));
-      setDeps(withCount);
+    if (error) {
+      toast.error("No se pudieron cargar las dependencias");
+      setLoading(false);
+      return;
     }
+    // count staff per dep
+    const withCount = await Promise.all((data || []).map(async (d) => {
+      const { count } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("dependency_id", d.id);
+      return { ...d, staffCount: count || 0 };
+    }));
+    setDeps(withCount);
     setLoading(false);
   };
 
@@ -98,6 +108,8 @@ export default function DependenciasPage() {
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "1.75rem 2rem" }}>
         {loading ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af" }}>Cargando...</div>
+        ) : deps.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af", fontSize: "0.875rem" }}>Sin dependencias</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             {deps.map((dep) => (
