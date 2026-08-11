@@ -103,14 +103,7 @@ export default function ProfessionalDashboard() {
     if (!DEV_ROLE) {
       const { error } = await supabase.from("appointments").update({ status: "confirmed", updated_at: new Date() }).eq("id", apt.id);
       if (error) { toast.error("Error al confirmar la cita"); return; }
-      notifyAppointmentConfirmed({
-        to_email: apt.profiles?.email,
-        user_id: apt.user_id,
-        to_name: apt.profiles?.full_name || "Aprendiz",
-        service_name: depName,
-        scheduled_date: apt.scheduled_date,
-        scheduled_time: apt.scheduled_time,
-      });
+      notifyAppointmentConfirmed(apt.id);
     }
     toast.success("Cita confirmada");
     fetch();
@@ -120,14 +113,7 @@ export default function ProfessionalDashboard() {
     if (!DEV_ROLE) {
       const { error } = await supabase.from("appointments").update({ status: "no_show", updated_at: new Date() }).eq("id", apt.id);
       if (error) { toast.error("Error al actualizar la cita"); return; }
-      notifyAppointmentCancelled({
-        to_email: apt.profiles?.email,
-        user_id: apt.user_id,
-        to_name: apt.profiles?.full_name || "Aprendiz",
-        service_name: depName,
-        scheduled_date: apt.scheduled_date,
-        reason: "El profesional registró que no asististe a la cita.",
-      });
+      notifyAppointmentCancelled(apt.id, "El profesional registró que no asististe a la cita.");
     }
     toast.info("Marcada como no asistió");
     fetch();

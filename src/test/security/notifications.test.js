@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUITE 1 — Sanitización de HTML en emails (notifications.js)
+// SUITE 1 — Sanitización de HTML en emails (supabase/functions/notify-appointment/index.ts)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Misma función esc() usada en notifications.js
+// Misma función esc() usada en notify-appointment (el HTML del correo se reconstruye
+// server-side ahí; notifications.js en el cliente solo dispara el evento)
 function esc(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
@@ -117,5 +118,57 @@ describe("Autenticación de send-reminders", () => {
 
   it("rechaza si CRON_SECRET no está configurado (null) aunque se provea un valor", () => {
     expect(isAuthorized(null, "cualquier-cosa", "", "")).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUITE 4 — Autorización de notify-appointment (cierra el relay de correo abierto:
+// el destinatario/asunto/HTML ya no vienen del cliente, pero cualquier autenticado
+// podía antes disparar el correo de CUALQUIER cita con solo el appointment_id)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("Autorización de notify-appointment", () => {
+  const STAFF_ROLES = ["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL", "COORDINACION", "ADMINISTRADOR", "SUPERADMIN"];
+
+  // Misma lógica que supabase/functions/notify-appointment/index.ts
+  function isAuthorizedToNotify(callerId, appointmentUserId, callerRoleName) {
+    if (callerId === appointmentUserId) return true;
+    return STAFF_ROLES.includes(callerRoleName);
+  }
+
+  it("autoriza al propio dueño de la cita", () => {
+    expect(isAuthorizedToNotify("user-1", "user-1", "APRENDIZ")).toBe(true);
+  });
+
+  it("autoriza a un profesional/staff aunque no sea el dueño de la cita", () => {
+    expect(isAuthorizedToNotify("staff-1", "user-1", "PSICOLOGIA")).toBe(true);
+    expect(isAuthorizedToNotify("admin-1", "user-1", "ADMINISTRADOR")).toBe(true);
+  });
+
+  it("rechaza a un aprendiz que no es dueño de la cita (el bug del relay abierto)", () => {
+    expect(isAuthorizedToNotify("aprendiz-atacante", "user-1", "APRENDIZ")).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUITE 5 — invite-staff no permite escalar a SUPERADMIN
+// ─────────────────────────────────────────────────────────────────────────────
+describe("invite-staff bloquea escalación a SUPERADMIN", () => {
+  // Misma lógica que supabase/functions/invite-staff/index.ts
+  function canAssignRole(targetRoleName, callerRoleName) {
+    if (targetRoleName === "SUPERADMIN" && callerRoleName !== "SUPERADMIN") return false;
+    return true;
+  }
+
+  it("un ADMINISTRADOR no puede asignar SUPERADMIN", () => {
+    expect(canAssignRole("SUPERADMIN", "ADMINISTRADOR")).toBe(false);
+  });
+
+  it("un SUPERADMIN sí puede asignar SUPERADMIN", () => {
+    expect(canAssignRole("SUPERADMIN", "SUPERADMIN")).toBe(true);
+  });
+
+  it("un ADMINISTRADOR puede asignar roles de staff normales", () => {
+    expect(canAssignRole("PSICOLOGIA", "ADMINISTRADOR")).toBe(true);
+    expect(canAssignRole("COORDINACION", "ADMINISTRADOR")).toBe(true);
   });
 });

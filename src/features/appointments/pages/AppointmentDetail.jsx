@@ -117,7 +117,7 @@ export default function AppointmentDetail() {
     if (error) { toast.error("No se pudo confirmar la cita"); return; }
     toast.success("Cita confirmada");
     setApt(a => ({ ...a, status: "confirmed" }));
-    notifyAppointmentConfirmed({ to_email: null, user_id: apt.user_id, to_name: apt.profiles?.full_name || "Aprendiz", service_name: apt.dependencies?.name, scheduled_date: apt.scheduled_date, scheduled_time: apt.scheduled_time }).catch(() => {});
+    notifyAppointmentConfirmed(id).catch(() => {});
   };
 
   const [surveySubmitting, setSurveySubmitting] = useState(false);

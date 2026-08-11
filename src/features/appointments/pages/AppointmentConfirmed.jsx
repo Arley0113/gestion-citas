@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Check, Calendar, Clock, MapPin, Bell, Shield, Printer, Home, ChevronRight, ArrowLeft } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { SenaLogo } from "../../../shared/components/SenaLogo";
+import { supabase } from "../../../lib/supabase";
 
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("preview") : null;
 
@@ -16,6 +18,13 @@ export default function AppointmentConfirmed() {
   const { state } = useLocation();
   const navigate  = useNavigate();
   const apt       = state?.appointment;
+  const [aptLocation, setAptLocation] = useState("Bienestar SENA");
+
+  // Misma fuente de verdad configurable que AppointmentDetail/AppointmentModal (system_settings)
+  useEffect(() => {
+    supabase.from("system_settings").select("value").eq("key", "appointment_location").maybeSingle()
+      .then(({ data }) => { if (data?.value) setAptLocation(data.value); });
+  }, []);
 
   const depName  = apt?.dependencies?.name || "Psicología";
   const dateStr  = apt?.scheduled_date
@@ -99,7 +108,7 @@ export default function AppointmentConfirmed() {
                   { icon: Calendar, label: "Servicio",  value: depName },
                   { icon: Calendar, label: "Fecha",     value: dateStr, cap: true },
                   { icon: Clock,    label: "Hora",      value: `${timeStr} — Duración 60 min` },
-                  { icon: MapPin,   label: "Lugar",     value: "Bienestar — Bloque 1, Sede principal" },
+                  { icon: MapPin,   label: "Lugar",     value: aptLocation },
                 ].map(({ icon: Icon, label, value, cap }, i, arr) => (
                   <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: "1rem", padding: "0.875rem 0", borderBottom: i < arr.length - 1 ? "1px solid #f7fafc" : "none" }}>
                     <div style={{ width: 32, height: 32, borderRadius: "8px", background: "#f7faf0", border: "1px solid #e8f5e0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

@@ -12,7 +12,6 @@ import {
 import { es } from "date-fns/locale";
 import { useAppointments } from "../hooks/useAppointments";
 import { useAppointmentModal } from "../../../providers/AppointmentModalContext";
-import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 import { notifyNewAppointment } from "../../../lib/notifications";
 import { toast } from "sonner";
@@ -164,16 +163,22 @@ export function AppointmentModal() {
   const navigate = useNavigate();
   const { isOpen, closeModal, preselectedService } = useAppointmentModal();
   const { createAppointment, isCreating } = useAppointments();
-  const { user, profile } = useAuth();
 
   const [step, setStep]       = useState(1);
   const [services, setServices] = useState(SERVICES);
   const [form, setForm]       = useState({ serviceKey: null, depId: null, date: null, time: null, reason: "" });
   const [takenSlots, setTakenSlots] = useState([]);
   const [checkingSlots, setCheckingSlots] = useState(false);
+  const [aptLocation, setAptLocation] = useState("Bienestar SENA");
   const overlayRef = useRef(null);
 
   const set = useCallback((k, v) => setForm(f => ({ ...f, [k]: v })), []);
+
+  // Lugar de la cita — misma fuente de verdad configurable que AppointmentDetail (system_settings)
+  useEffect(() => {
+    supabase.from("system_settings").select("value").eq("key", "appointment_location").maybeSingle()
+      .then(({ data }) => { if (data?.value) setAptLocation(data.value); });
+  }, []);
 
   // Cargar dependencias reales
   useEffect(() => {
@@ -274,13 +279,7 @@ export function AppointmentModal() {
       reason: form.reason.trim() || "Sin especificar",
     });
     if (result.success) {
-      notifyNewAppointment({
-        to_email: user?.email,
-        to_name: profile?.full_name || "Aprendiz",
-        service_name: selSvc?.label || "Bienestar",
-        scheduled_date: format(form.date, "yyyy-MM-dd"),
-        scheduled_time: `${form.time}:00`,
-      });
+      notifyNewAppointment(result.data.id);
       closeModal();
       navigate("/cita-confirmada", { state: { appointment: result.data } });
     }
@@ -556,7 +555,7 @@ export function AppointmentModal() {
                     {
                       icon: MapPin,
                       label: "Lugar",
-                      value: "Bloque de Bienestar · Piso 2",
+                      value: aptLocation,
                     },
                   ].map(({ icon: Ic, label, value, color }) => (
                     <div key={label} style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.625rem" }}>
