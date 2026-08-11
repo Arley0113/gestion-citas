@@ -23,6 +23,8 @@ const STAFF_ROLES = [
   { value: "ADMINISTRADOR",  label: "Administrador/a",    dep: false },
 ];
 
+const MOCK_ROLES = STAFF_ROLES.map((r, i) => ({ id: i + 1, name: r.value, label: r.label }));
+
 const STATUS_CFG = {
   pending:   { label: "Pendiente",  color: "#d97706", bg: "#fef3c7", icon: Clock },
   accepted:  { label: "Aceptada",   color: "#16a34a", bg: "#dcfce7", icon: CheckCircle2 },
@@ -47,13 +49,13 @@ export default function StaffInvitePage() {
 
   // Cargar roles y dependencias
   useEffect(() => {
-    if (IS_DEV) { setDeps(MOCK_DEPS); }
+    if (IS_DEV) { setDeps(MOCK_DEPS); setRoles(MOCK_ROLES); return; }
     Promise.all([
       supabase.from("roles").select("id, name, label").in("name", STAFF_ROLES.map(r => r.value)),
-      IS_DEV ? Promise.resolve({ data: [] }) : supabase.from("dependencies").select("id, name"),
+      supabase.from("dependencies").select("id, name"),
     ]).then(([rolesRes, depsRes]) => {
       setRoles(rolesRes.data || []);
-      if (!IS_DEV) setDeps(depsRes.data || []);
+      setDeps(depsRes.data || []);
     });
   }, []);
 
