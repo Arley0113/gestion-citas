@@ -7,7 +7,13 @@ import {
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { normalizeDocNumber } from "../../../lib/normalizeDoc";
+import { DEV_ROLE } from "../../../lib/devMode";
 import { toast } from "sonner";
+
+const MOCK_WHITELIST = [
+  { id: "mock-1", document_number: "1001234567", ficha_number: "2847193", full_name: "Juan Pérez", program: "Desarrollo de Software", uploaded_at: "2026-07-01T10:00:00Z" },
+  { id: "mock-2", document_number: "1009876543", ficha_number: "2851024", full_name: "María García", program: "Contabilidad", uploaded_at: "2026-07-01T10:00:00Z" },
+];
 
 // Normaliza encabezados quitando tildes ("Cédula" → "cedula") para que las
 // regex de detección de columnas no dependan de que el archivo use ASCII puro.
@@ -162,6 +168,8 @@ export default function FichasPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [loadingList, setLoadingList] = useState(true);
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState(null); // null = sin búsqueda activa
+  const [searching, setSearching] = useState(false);
 
   const [preview, setPreview]     = useState(null); // { rows, filename }
   const [importing, setImporting] = useState(false);
@@ -178,6 +186,13 @@ export default function FichasPage() {
   // ─── Load whitelist + setting ────────────────────────────────────────────
   const loadWhitelist = useCallback(async () => {
     setLoadingList(true);
+    if (DEV_ROLE) {
+      setWhitelist(MOCK_WHITELIST);
+      setTotalCount(MOCK_WHITELIST.length);
+      setWlEnabled(true);
+      setLoadingList(false);
+      return;
+    }
     try {
       const [countRes, listRes, settingRes] = await Promise.all([
         supabase.from("aprendiz_whitelist").select("*", { count: "exact", head: true }),
@@ -203,6 +218,12 @@ export default function FichasPage() {
 
   const toggleWhitelistEnabled = async (next) => {
     setTogglingWl(true);
+    if (DEV_ROLE) {
+      setWlEnabled(next);
+      toast.success(next ? "Validación activada (demo)" : "Validación desactivada (demo)");
+      setTogglingWl(false);
+      return;
+    }
     const { error } = await supabase
       .from("system_settings")
       .upsert({ key: "whitelist_enabled", value: next ? "true" : "false" }, { onConflict: "key" });
@@ -218,6 +239,37 @@ export default function FichasPage() {
   };
 
   useEffect(() => { loadWhitelist(); }, [loadWhitelist]);
+
+  // ─── Búsqueda server-side ────────────────────────────────────────────────
+  // `whitelist` solo trae los últimos 200 registros — filtrar la búsqueda
+  // sobre ese array local dejaría fuera cualquier coincidencia más allá de
+  // los primeros 200 (aunque totalCount muestre el número real). Cuando hay
+  // un término de búsqueda se consulta directamente contra la tabla.
+  useEffect(() => {
+    const q = search.trim();
+    if (!q) { setSearchResults(null); return; }
+    if (DEV_ROLE) {
+      const ql = q.toLowerCase();
+      setSearchResults(MOCK_WHITELIST.filter(r =>
+        r.document_number.includes(ql) || r.ficha_number.includes(ql)
+        || (r.full_name || "").toLowerCase().includes(ql)
+        || (r.program   || "").toLowerCase().includes(ql)));
+      return;
+    }
+    setSearching(true);
+    const handle = setTimeout(async () => {
+      const esc = q.replace(/[%,]/g, "");
+      const { data, error } = await supabase
+        .from("aprendiz_whitelist")
+        .select("*")
+        .or(`document_number.ilike.%${esc}%,ficha_number.ilike.%${esc}%,full_name.ilike.%${esc}%,program.ilike.%${esc}%`)
+        .order("uploaded_at", { ascending: false })
+        .limit(200);
+      if (!error) setSearchResults(data ?? []);
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [search]);
 
   // ─── File parsing ────────────────────────────────────────────────────────
   const handleFile = useCallback(async (file) => {
@@ -262,6 +314,13 @@ export default function FichasPage() {
   const handleImport = async () => {
     if (!preview) return;
     setImporting(true);
+    if (DEV_ROLE) {
+      toast.success(`Importación completa (demo): ${preview.rows.length} nuevos`);
+      setPreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setImporting(false);
+      return;
+    }
     try {
       const rawRows = preview.rows.map(r => ({
         ...r,
@@ -322,6 +381,12 @@ export default function FichasPage() {
 
   // ─── Delete one ──────────────────────────────────────────────────────────
   const handleDeleteOne = async (id) => {
+    if (DEV_ROLE) {
+      setWhitelist(prev => prev.filter(r => r.id !== id));
+      setTotalCount(prev => prev - 1);
+      toast.success("Eliminado (demo)");
+      return;
+    }
     const { error } = await supabase.from("aprendiz_whitelist").delete().eq("id", id);
     if (error) { toast.error("Error al eliminar"); return; }
     setWhitelist(prev => prev.filter(r => r.id !== id));
@@ -331,6 +396,14 @@ export default function FichasPage() {
   // ─── Clear all ───────────────────────────────────────────────────────────
   const handleClearAll = async () => {
     setClearing(true);
+    if (DEV_ROLE) {
+      toast.success("Lista borrada (demo).");
+      setWhitelist([]);
+      setTotalCount(0);
+      setConfirmClear(false);
+      setClearing(false);
+      return;
+    }
     const { error } = await supabase.from("aprendiz_whitelist").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     if (error) { toast.error("Error al borrar la lista"); setClearing(false); return; }
     toast.success("Lista borrada. Todos los aprendices pueden registrarse libremente.");
@@ -350,15 +423,10 @@ export default function FichasPage() {
     URL.revokeObjectURL(url);
   };
 
-  // ─── Filtered list ───────────────────────────────────────────────────────
-  const filtered = whitelist.filter(r => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return r.document_number.includes(q)
-      || r.ficha_number.includes(q)
-      || (r.full_name || "").toLowerCase().includes(q)
-      || (r.program   || "").toLowerCase().includes(q);
-  });
+  // ─── Lista a mostrar ─────────────────────────────────────────────────────
+  // Con búsqueda activa se muestran los resultados server-side (searchResults);
+  // sin búsqueda, los últimos 200 registros cargados (whitelist).
+  const filtered = search.trim() ? (searchResults ?? []) : whitelist;
 
   return (
     <>
@@ -640,10 +708,10 @@ export default function FichasPage() {
             </div>
           </div>
 
-          {loadingList ? (
+          {loadingList || searching ? (
             <div style={{ padding: "3rem", textAlign: "center", color: "#9ca3af" }}>
               <RefreshCw size={20} style={{ animation: "spin 0.6s linear infinite", marginBottom: "0.5rem" }} />
-              <p style={{ margin: 0, fontSize: "0.875rem" }}>Cargando lista…</p>
+              <p style={{ margin: 0, fontSize: "0.875rem" }}>{searching ? "Buscando…" : "Cargando lista…"}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: "3rem", textAlign: "center" }}>
@@ -697,7 +765,7 @@ export default function FichasPage() {
                   ))}
                 </tbody>
               </table>
-              {totalCount > 200 && (
+              {!search.trim() && totalCount > 200 && (
                 <p style={{ textAlign: "center", padding: "0.75rem", color: "#9ca3af", fontSize: "0.8125rem", margin: 0, borderTop: "1px solid #f3f4f6" }}>
                   Mostrando los primeros 200 registros. Usa la búsqueda para encontrar registros específicos.
                 </p>
