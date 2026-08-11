@@ -4,10 +4,11 @@ import {
   LayoutDashboard, Calendar, Users, BarChart2,
   LogOut, Plus, Heart, UserCircle, Bell,
   CalendarDays, ClipboardList, FileText, Settings, HelpCircle,
-  CalendarRange, Clock, ShieldCheck, Menu, X,
+  CalendarRange, Clock, ShieldCheck, Menu, X, Download,
 } from "lucide-react";
 import { useAuth } from "../../providers/AuthProvider";
 import { useAppointmentModal } from "../../providers/AppointmentModalContext";
+import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import { SenaLogo } from "./SenaLogo";
 import { AppointmentModal } from "../../features/appointments/components/AppointmentModal";
 import { supabase } from "../../lib/supabase";
@@ -76,6 +77,7 @@ export function Layout({ children }) {
   const location = useLocation();
   const { isProfessional, isCoordination, isAdmin, isAprendiz, profile, user, signOut } = useAuth();
   const { openModal } = useAppointmentModal();
+  const { canInstall, install } = useInstallPrompt();
   const [notifCount, setNotifCount] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // No mostrar badge cuando el usuario ya está viendo las notificaciones
@@ -273,6 +275,27 @@ export function Layout({ children }) {
       <div className="sidebar-footer">
         <div style={{ marginBottom: "0.5rem", padding: "0 0.25rem" }}>
           <hr style={{ border: "none", borderTop: "1px solid #1f2937", margin: "0 0 0.5rem" }} />
+          {canInstall && (
+            <button
+              onClick={install}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.625rem",
+                padding: "0.5rem 0.625rem",
+                borderRadius: 7, border: "none",
+                background: "rgba(57,169,0,0.12)", color: "#39a900",
+                cursor: "pointer", fontFamily: "var(--font-sans)",
+                fontSize: "0.8125rem", fontWeight: 600,
+                width: "100%", textAlign: "left",
+                marginBottom: "0.25rem",
+                transition: "background 0.12s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(57,169,0,0.2)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(57,169,0,0.12)"}
+            >
+              <Download size={14} />
+              <span>Instalar app</span>
+            </button>
+          )}
           <button
             onClick={signOut}
             style={{
