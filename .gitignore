@@ -13,6 +13,10 @@ dist
 dist-ssr
 *.local
 
+# Notas internas/de sesión — solo en local, no al repo remoto (README.md es la excepción)
+CLAUDE.md
+TESTING.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
