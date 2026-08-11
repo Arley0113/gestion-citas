@@ -184,6 +184,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Preferencia del aprendiz (Ajustes → Notificaciones). Sin fila en user_settings
+    // se asume activado (mismo default que ConfiguracionPage.jsx). "new" no tiene
+    // toggle propio — es el recibo de la propia acción del aprendiz, siempre se envía.
+    const PREF_KEY: Record<string, string> = { confirmed: "confirmacion", cancelled: "cancelacion" };
+    if (PREF_KEY[type]) {
+      const { data: settingsRow } = await admin
+        .from("user_settings").select("settings").eq("user_id", apt.user_id).maybeSingle();
+      if (settingsRow?.settings?.notifs?.[PREF_KEY[type]] === false) {
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: "user_opted_out" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) {
       return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_api_key" }), {

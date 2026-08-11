@@ -105,6 +105,15 @@ Deno.serve(async (req) => {
     const email = authUser?.user?.email;
     if (!email) continue;
 
+    // Preferencia del aprendiz (Ajustes → Notificaciones → "Recordatorio 24h antes").
+    // Sin fila en user_settings se asume activado (mismo default que ConfiguracionPage.jsx).
+    const { data: settingsRow } = await admin
+      .from("user_settings").select("settings").eq("user_id", apt.user_id).maybeSingle();
+    if (settingsRow?.settings?.notifs?.reminder24h === false) {
+      await admin.from("appointments").update({ reminder_sent: true }).eq("id", apt.id);
+      continue;
+    }
+
     // nombre desde profiles
     const { data: prof } = await admin
       .from("profiles").select("full_name").eq("id", apt.user_id).maybeSingle();
