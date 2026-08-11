@@ -325,8 +325,22 @@ Segunda pasada, más granular, sobre cada rol (APRENDIZ, profesional en sus 3 de
 
 **No se pudo probar** (requiere datos reales de Supabase o las 3 dependencias del rol profesional con cuentas reales, fuera del alcance de `?preview=`): límite de 2 citas pendientes y slot duplicado en el wizard; subir/borrar documentos reales; encuesta de satisfacción; Enfermería/Trabajo Social con datos propios (`?preview=professional` solo simula Psicología).
 
+## Despliegue de las 3 Edge Functions corregidas + descubrimiento de drift repo↔producción (2026-08-10)
+Se desplegaron directamente desde el Dashboard de Supabase (browser automation, sin credenciales de CLI) los 3 fixes de seguridad de esta sesión: `notify-appointment`, `invite-staff`, `send-reminders`. Los 3 ya están corriendo en producción, confirmado con el timestamp "a few seconds ago" en cada uno tras el deploy.
+
+**Hallazgo importante — `invite-staff` había divergido del repo.** Al ir a desplegar el fix, el código REALMENTE corriendo en producción no coincidía con lo que había en git — alguien lo editó directamente desde el Dashboard en algún momento (probablemente para agregar el flujo de `staff_invitations` con `invitation.id` + rollback si falla `createUser`, que no existe en ningún commit) y nunca se sincronizó de vuelta. La versión que estaba viva **no tenía ningún chequeo de autorización** (ni siquiera `Authorization` header) — más grave que el hueco que se había corregido en la versión del repo. Se parchó la versión real (preservando su lógica de invitaciones) con el mismo bloque de auth + bloqueo de escalación a SUPERADMIN, se desplegó, y se sincronizó de vuelta a git (commit `5130519`).
+
+**`notify-appointment` y `send-reminders` SÍ coincidían con el repo** (confirmado con diff exacto contra el código descargado del Dashboard) — se desplegaron sin sorpresas.
+
+**`delete-user` también divergió del repo** (imports `jsr:` en vez de `esm.sh`, mismo patrón que `invite-staff`) pero, a diferencia de `invite-staff`, SÍ tiene el chequeo de autorización SUPERADMIN correcto — no se le hizo ningún cambio ni se sincronizó de vuelta a git (queda pendiente, ver abajo).
+
+**Lección para sesiones futuras**: el código en `supabase/functions/*/index.ts` en este repo **no es necesariamente lo que está corriendo en producción**. Antes de asumir que un archivo del repo refleja el comportamiento real de una función ya desplegada, descargar el código real desde el Dashboard (`Download → Download as ZIP`, o `Download via CLI` si hay credenciales) y comparar. No asumir que están sincronizados.
+
+**Cómo se desplegó sin CLI**: navegación directa a `https://supabase.com/dashboard/project/hopjfppngueuhwuakzwf/functions/<nombre>/code`, edición del contenido del editor Monaco vía `window.monaco.editor.getEditors()[0].setValue(código)` (JS, no simulación de teclado — **el teclado sí es riesgoso aquí**: una tecla de navegación como Page Down escrita mientras el cursor está enfocado en el editor se interpreta como texto literal en vez de scroll, y en un intento previo la traducción automática de Chrome llegó a corromper identificadores del código pegado — "unknown"→"desconocido", "function"→"función" — antes de desplegar; verificar `document.documentElement.lang === "en"` y ausencia de `iframe.skiptranslate` antes de tocar el editor), luego clic en "Deploy updates" + confirmar en el modal.
+
 ## Pendiente (acciones manuales en Supabase Dashboard)
 - Edge Functions → Secrets: verificar que `CRON_SECRET` y `RESEND_API_KEY` estén configurados (no se puede verificar valor vía MCP, solo presencia se infiere por comportamiento)
 - Programar cron diario que invoque `send-reminders` (requiere habilitar extensión `pg_cron` primero, luego `cron.schedule(...)`, o usar un servicio externo tipo cron-job.org contra la URL de la función) con header `x-cron-secret`
 - Auth → Emails → SMTP Settings: configurar Resend (host: smtp.resend.com, port: 465, user: resend)
 - Auth → Attack Protection: activar "Leaked Password Protection" (sigue pendiente, confirmado por advisor de seguridad)
+- Sincronizar `delete-user` al repo (divergió igual que `invite-staff`, pero SÍ tiene el chequeo de SUPERADMIN correcto — no es urgente, solo para que el repo vuelva a reflejar lo real)
