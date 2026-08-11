@@ -110,17 +110,10 @@ export default function UsuariosPage() {
         setDeleting(false);
         return;
       }
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ user_id: confirmUser.id }),
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { user_id: confirmUser.id },
       });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Error al eliminar");
+      if (error || data?.error) throw new Error(data?.error || "Error al eliminar");
       setUsers(prev => prev.filter(u => u.id !== confirmUser.id));
       toast.success("Usuario eliminado correctamente");
       setConfirmUser(null);

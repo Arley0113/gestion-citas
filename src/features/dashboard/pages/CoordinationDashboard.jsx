@@ -23,6 +23,12 @@ const TREND_DATA = [
 
 const DEP_COLORS = ["#39a900", "#0ea5e9", "#f59e0b", "#8b5cf6", "#ef4444"];
 
+const MOCK_DEP_DATA = [
+  { name: "Psicología",     count: 58, color: DEP_COLORS[0], pct: 48 },
+  { name: "Enfermería",     count: 40, color: DEP_COLORS[1], pct: 33 },
+  { name: "Trabajo Social", count: 22, color: DEP_COLORS[2], pct: 19 },
+];
+
 const MOCK_RECENT = [
   { profiles: { full_name: "Laura Gómez" },    dependencies: { name: "Psicología" },     scheduled_time: "08:00:00", status: "completed" },
   { profiles: { full_name: "Carlos Ruiz" },    dependencies: { name: "Enfermería" },     scheduled_time: "09:30:00", status: "confirmed" },
@@ -54,7 +60,7 @@ function useDashboardData(period) {
   const [loading, setLoading]     = useState(!DEV_ROLE);
   const [todayApts, setTodayApts] = useState(DEV_ROLE ? MOCK_RECENT : []);
   const [loadingToday, setLoadingToday] = useState(!DEV_ROLE);
-  const [depData, setDepData]     = useState([]);
+  const [depData, setDepData]     = useState(DEV_ROLE ? MOCK_DEP_DATA : []);
   const [trendData, setTrendData] = useState(DEV_ROLE ? TREND_DATA : []);
 
   const loadToday = useCallback(async () => {

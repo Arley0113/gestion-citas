@@ -4,6 +4,13 @@ import { Activity, ArrowLeft, Calendar, CheckCircle2, XCircle, Clock, UserPlus, 
 import { supabase } from "../../../lib/supabase";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { DEV_ROLE } from "../../../lib/devMode";
+
+const MOCK_ROWS = [
+  { id: "m1", status: "completed", scheduled_date: "2026-08-05", scheduled_time: "09:00:00", created_at: "2026-08-01T10:00:00Z", cancelled_reason: null, dependency_id: 10, profiles: { full_name: "Juan Pérez", document_number: "1001234567" }, dependencies: { name: "Psicología" } },
+  { id: "m2", status: "pending",   scheduled_date: "2026-08-12", scheduled_time: "10:00:00", created_at: "2026-08-02T11:00:00Z", cancelled_reason: null, dependency_id: 11, profiles: { full_name: "María García", document_number: "1009876543" }, dependencies: { name: "Enfermería" } },
+  { id: "m3", status: "cancelled", scheduled_date: "2026-08-03", scheduled_time: "14:00:00", created_at: "2026-08-01T09:00:00Z", cancelled_reason: "Se le presentó un inconveniente", dependency_id: 12, profiles: { full_name: "Carlos Ruiz", document_number: "1003456789" }, dependencies: { name: "Trabajo Social" } },
+];
 
 const STATUS_META = {
   pending:     { icon: Clock,         color: "#f59e0b", bg: "#fef3c7", label: "Pendiente" },
@@ -25,6 +32,7 @@ export default function ActividadPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      if (DEV_ROLE) { setRows(MOCK_ROWS); setLoading(false); return; }
       const { data } = await supabase
         .from("appointments")
         .select("id, status, scheduled_date, scheduled_time, created_at, cancelled_reason, dependency_id, profiles!user_id(full_name, document_number), dependencies(name)")

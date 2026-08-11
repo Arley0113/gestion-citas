@@ -73,7 +73,7 @@ export default function ProfessionalStatsPage() {
         const total     = rows.length;
         const completed = rows.filter(a => a.status === "completed").length;
         const noShow    = rows.filter(a => a.status === "no_show").length;
-        const days      = Math.max(1, Math.ceil((now - new Date(dateFrom)) / 86400000));
+        const days      = Math.max(1, Math.ceil((now - parseISO(dateFrom)) / 86400000));
         const avgDaily  = (total / days).toFixed(1);
         setStats({ total, completed, noShow, avgDaily });
 
