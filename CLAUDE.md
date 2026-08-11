@@ -285,6 +285,31 @@ Usuario reportó que en móvil "se pierden varias cosas del menú" y "no hay opc
 - ✅ Build limpio (`npm run build`): `dist/sw.js`, `dist/manifest.webmanifest`, `dist/registerSW.js` generados; precache 122 entradas. Probado con `vite preview`: service worker se registra y activa, manifest válido con los 4 iconos (2 `any` + 2 `maskable`), cache de precache poblado — cumple los criterios de instalabilidad de Chrome
 - Nota: el bypass `?preview=<rol>` solo funciona en modo DEV (`import.meta.env.DEV`), no en el build de producción — es el comportamiento esperado, no un bug
 
+## Auditoría general (seguridad + bugs + responsive) y fixes (2026-08-10)
+Usuario pidió una auditoría completa de toda la plataforma. Se corrió en 3 forks paralelos (seguridad, bugs/calidad, responsive) y luego se corrigió todo lo encontrado.
+
+**Seguridad — corregido:**
+- 🔴 **Crítico**: `notify-appointment` era un relay de correo abierto — cualquier autenticado podía invocarlo con `to_email`/`subject`/`html` arbitrarios y el correo salía desde el dominio institucional (`noreply@bienestar-sena.co`). Ahora el payload es solo `{appointment_id, type, reason}`; destinatario y HTML se resuelven/generan 100% server-side desde una cita real, con autorización (dueño de la cita o staff/admin). `src/lib/notifications.js` se simplificó a solo disparar el evento
+- 🟠 **Alto**: `invite-staff` no validaba `role_id` contra el rol del llamante — un ADMINISTRADOR podía asignarse/asignar SUPERADMIN vía request directo (el único freno era el `<select>` del formulario). Ahora el servidor bloquea asignar SUPERADMIN si el llamante no lo es
+- 🟠 **Alto**: `react-router-dom` 7.14.0 caía en un rango con CVEs de severidad alta con fix disponible → bump a 7.18.2 vía `npm audit fix`. `xlsx` sigue con una vulnerabilidad sin fix en npm (ReDoS/prototype pollution) — **sí se usa para parsear archivos subidos por el admin** en `FichasPage.jsx` (import de fichas), no solo para exportar. Sin acción posible sin migrar de librería (SheetJS solo publica el parche en su propio CDN, no en npm) — pendiente decisión del usuario, no se tocó
+- 🟡 **Medio — pendiente, requiere Supabase Dashboard**: el path de `user-documents` (`appointments/${id}/${timestamp}.ext`) no incluye `user_id` — la seguridad depende 100% de policies de Storage que no están versionadas en el repo. **Falta verificar manualmente en Supabase Dashboard → Storage → Policies** que la policy del bucket restrinja por dueño real, no solo por "autenticado"
+
+**Bugs — corregidos:**
+- `/admin/dependencias` quedaba en blanco en modo preview: `load()` sin guard `DEV_ROLE` (a diferencia de `toggleActive`/`saveEdit` en el mismo archivo) + sin manejo de error/vacío. Se agregó mock + toast de error + estado "Sin dependencias"
+- "Lugar de la cita" mostraba 3 textos distintos (`AppointmentModal`, `AppointmentConfirmed` hardcodeados vs. `AppointmentDetail` leyendo `system_settings.appointment_location` real) — las 3 pantallas ahora leen la misma fuente
+- `NewAppointment.jsx` (código muerto, ya reemplazado por el modal global) — eliminado
+
+**Responsive — corregido:**
+- `AprendizHistory.jsx` no tenía ningún `@media` en todo el archivo (grid de página `300px 1fr` fijo) — mismo patrón que ya causó el bug crítico de `Onboarding.jsx`. Se agregó colapso a 1 columna + `min-width:0` bajo 768px
+- `ProfilePage.jsx`/`CompleteProfilePage.jsx`: grids de 2 columnas sin `min-width:0` ni `@media` — riesgo menor (inputs, no texto largo), corregido igual por consistencia
+
+**Verificado sin hallazgos**: build limpio, 147→153 tests pasando (se agregaron 6 tests de regresión para la autorización de `notify-appointment` y el bloqueo de escalación de `invite-staff` en `src/test/security/notifications.test.js`), `delete-user` bien, sin secretos en el repo, sin XSS/`eval`, doble-reserva maneja bien el error 23505, sin memory leaks nuevos, patrón de guards `DEV_ROLE` sin regresiones en el resto del código.
+
+**IMPORTANTE — pendiente de acción manual, no ejecutable desde aquí:**
+- Los cambios en `supabase/functions/notify-appointment/index.ts` e `invite-staff/index.ts` **no se han desplegado** — solo están en el código del repo. Hay que correr `supabase functions deploy notify-appointment` y `supabase functions deploy invite-staff` (o subirlos manualmente desde el Dashboard) para que el fix de seguridad tome efecto en producción. No hay credenciales de deploy disponibles en este entorno
+- Verificar policies del bucket `user-documents` en Supabase Dashboard (ver arriba)
+- Decidir si migrar `xlsx` (import de fichas) a otra librería o al build parcheado de SheetJS
+
 ## Pendiente (acciones manuales en Supabase Dashboard)
 - Edge Functions → Secrets: verificar que `CRON_SECRET` y `RESEND_API_KEY` estén configurados (no se puede verificar valor vía MCP, solo presencia se infiere por comportamiento)
 - Programar cron diario que invoque `send-reminders` (requiere habilitar extensión `pg_cron` primero, luego `cron.schedule(...)`, o usar un servicio externo tipo cron-job.org contra la URL de la función) con header `x-cron-secret`
