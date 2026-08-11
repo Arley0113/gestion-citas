@@ -69,12 +69,13 @@ export default function AprendicesList() {
     toast.success("Aprendiz eliminado correctamente");
   };
 
-  const fetchAprendices = useCallback(async () => {
+  const fetchAprendices = useCallback(async (searchTerm = "") => {
     if (DEV_ROLE) {
       setAprendices(DEV_DATA);
       setLoading(false);
       return;
     }
+    setLoading(true);
     try {
       const { data: roleRow } = await supabase
         .from("roles").select("id").eq("name", "APRENDIZ").single();
@@ -93,12 +94,26 @@ export default function AprendicesList() {
         if (profileIds.length === 0) { setAprendices([]); setLoading(false); return; }
       }
 
+      // Sin búsqueda: se muestran los primeros 200 (orden alfabético) para no
+      // cargar el padrón completo de una institución grande de una sola vez.
+      // Con búsqueda: el filtro se aplica en la propia query (server-side) para
+      // no dejar fuera coincidencias más allá de esos primeros 200 — antes el
+      // buscador filtraba sobre el array ya capado y "perdía" resultados reales.
       let profileQuery = supabase
         .from("profiles")
         .select("id, full_name, document_number, program")
         .eq("role_id", roleRow.id)
-        .order("full_name")
-        .limit(200);
+        .order("full_name");
+
+      const q = searchTerm.trim();
+      if (q) {
+        const esc = q.replace(/[%,]/g, "");
+        profileQuery = profileQuery
+          .or(`full_name.ilike.%${esc}%,document_number.ilike.%${esc}%,program.ilike.%${esc}%`)
+          .limit(500);
+      } else {
+        profileQuery = profileQuery.limit(200);
+      }
 
       if (profileIds) profileQuery = profileQuery.in("id", profileIds);
 
@@ -141,7 +156,11 @@ export default function AprendicesList() {
     }
   }, [profile]);
 
-  useEffect(() => { fetchAprendices(); }, [fetchAprendices]);
+  useEffect(() => {
+    setPage(0);
+    const handle = setTimeout(() => fetchAprendices(search), search ? 300 : 0);
+    return () => clearTimeout(handle);
+  }, [fetchAprendices, search]);
 
   const byFilter = aprendices.filter(a => {
     if (activeFilter === "activos")   return a.total > 0;
@@ -150,7 +169,9 @@ export default function AprendicesList() {
     return true;
   });
 
-  const filtered = byFilter.filter(a => {
+  // En producción la búsqueda ya se aplicó server-side en fetchAprendices();
+  // en modo demo (DEV_ROLE) los datos son un mock fijo, se filtran aquí.
+  const filtered = !DEV_ROLE ? byFilter : byFilter.filter(a => {
     if (!search) return true;
     const q = normalize(search);
     return normalize(a.full_name || "").includes(q)
