@@ -310,6 +310,21 @@ Usuario pidió una auditoría completa de toda la plataforma. Se corrió en 3 fo
 - Verificar policies del bucket `user-documents` en Supabase Dashboard (ver arriba)
 - Decidir si migrar `xlsx` (import de fichas) a otra librería o al build parcheado de SheetJS
 
+## Auditoría profunda página por página, rol por rol (2026-08-10, continuación)
+Segunda pasada, más granular, sobre cada rol (APRENDIZ, profesional en sus 3 dependencias, COORDINACION, ADMINISTRADOR/SUPERADMIN) y cada página — 4 forks paralelos. Todo lo encontrado se corrigió en el código; nada requiere acción manual salvo lo ya listado en "Pendiente" abajo.
+
+**Corregido:**
+- 🔴 **`FichasPage.jsx` (`/admin/fichas`) no tenía NINGÚN guard `DEV_ROLE`** — en modo preview operaba contra la BD real: cargaba PII real de estudiantes y el botón "Borrar todo" (delete sobre toda `aprendiz_whitelist`) era completamente funcional y alcanzable. Se agregó mock + guards en las 5 operaciones (cargar, importar, borrar uno, borrar todo, toggle validación)
+- `AprendicesList.jsx` y `FichasPage.jsx`: la búsqueda filtraba sobre el array ya capado a `.limit(200)` — un registro fuera de los primeros 200 no aparecía en la búsqueda aunque existiera. Ahora, con texto de búsqueda, la query filtra server-side en vez de sobre el array local
+- `useAppointments.js cancelAppointment()`: bloqueaba cancelar cualquier cita que no estuviera "pending", pero el botón de cancelar en `AprendizDashboard` se muestra también para "confirmed" y el RPC `cancel_own_appointment` sí las permite — un aprendiz que cancelaba una cita confirmada desde el Dashboard recibía un error falso
+- `StaffInvitePage.jsx`: el fetch de `roles` no tenía guard `IS_DEV` (a diferencia de `deps`, que sí) → en preview la tabla `roles` requiere sesión real y quedaba vacía → `handleSend` nunca encontraba el rol y "Invitar staff" siempre fallaba con "Rol no encontrado" antes de llegar a la rama demo
+- Los toggles de `/configuracion` (Ajustes → Notificaciones) se guardaban en `user_settings` pero ninguna Edge Function los leía. `notify-appointment` ahora respeta `notifs.confirmacion`/`notifs.cancelacion`; `send-reminders` respeta `notifs.reminder24h`
+- Menores: `ActividadPage.jsx`/`CoordinationDashboard.jsx` sin mock DEV completo (inconsistencia de demo, no afectaba producción); `ProfessionalStatsPage.jsx` con el mismo antipatrón de desfase UTC ya corregido antes en otras páginas (`new Date(string)` → `parseISO`); `UsuariosPage.jsx` normalizado a `supabase.functions.invoke` para `delete-user` (antes `fetch` crudo, funcionaba pero era inconsistente)
+
+**Verificado sin hallazgos**: RBAC ADMINISTRADOR vs SUPERADMIN correcto en todas las pantallas; `delete-user`, `UsuariosPage` (`canDelete`) y el `<select>` de roles en `StaffInvitePage` (nunca ofrece SUPERADMIN) coherentes con el fix de escalación de la sesión anterior; la lógica de profesional/dependencias generaliza bien a Psicología/Enfermería/Trabajo Social sin hardcodes; cadena `appointment_location` (guardar en Admin → leer en 3 pantallas de citas) bien conectada; sin errores de consola en ninguna página visitada; `/admin/fichas` accesible sin guard es intencional para la tabla `aprendiz_whitelist` (RLS de lectura pública, necesaria para validar antes del registro) — no es el mismo problema que el guard de preview, son cosas distintas.
+
+**No se pudo probar** (requiere datos reales de Supabase o las 3 dependencias del rol profesional con cuentas reales, fuera del alcance de `?preview=`): límite de 2 citas pendientes y slot duplicado en el wizard; subir/borrar documentos reales; encuesta de satisfacción; Enfermería/Trabajo Social con datos propios (`?preview=professional` solo simula Psicología).
+
 ## Pendiente (acciones manuales en Supabase Dashboard)
 - Edge Functions → Secrets: verificar que `CRON_SECRET` y `RESEND_API_KEY` estén configurados (no se puede verificar valor vía MCP, solo presencia se infiere por comportamiento)
 - Programar cron diario que invoque `send-reminders` (requiere habilitar extensión `pg_cron` primero, luego `cron.schedule(...)`, o usar un servicio externo tipo cron-job.org contra la URL de la función) con header `x-cron-secret`
