@@ -28,13 +28,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // No cachear peticiones a Supabase (datos en vivo) — solo el shell de la app
-        navigateFallbackDenylist: [/^\/supabase\//],
         runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.origin.includes("supabase.co"),
-            handler: "NetworkOnly",
-          },
           {
             urlPattern: ({ request }) => request.destination === "image",
             handler: "CacheFirst",
