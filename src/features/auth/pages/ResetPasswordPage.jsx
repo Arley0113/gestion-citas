@@ -71,8 +71,8 @@ export default function ResetPasswordPage() {
         .rp-btn:hover:not(:disabled) { background: #2d8600; }
         .rp-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .rp-icon-wrap { position: relative; }
-        .rp-icon { position: absolute; left: 0.875rem; top: 50%; transform: translateY(-50%); color: #8b949e; pointer-events: none; }
-        .rp-eye { position: absolute; right: 0.875rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #8b949e; display: flex; padding: 0; }
+        .rp-icon { position: absolute; left: 0.875rem; top: 50%; transform: translateY(-50%); color: #6b7280; pointer-events: none; }
+        .rp-eye { position: absolute; right: 0.875rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #6b7280; display: flex; padding: 0; }
         .rp-label { display: block; font-size: 0.8125rem; font-weight: 600; color: #24292f; margin-bottom: 0.375rem; }
         .rp-group { margin-bottom: 0.875rem; }
       `}</style>
@@ -87,7 +87,7 @@ export default function ResetPasswordPage() {
             </div>
             <div>
               <div style={{ fontFamily: "'Sora', system-ui", fontWeight: 700, fontSize: "0.9375rem", color: "#0d1117" }}>Bienestar SENA</div>
-              <div style={{ fontSize: "0.75rem", color: "#8b949e" }}>Sistema de citas institucional</div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Sistema de citas institucional</div>
             </div>
           </div>
 

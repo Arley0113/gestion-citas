@@ -80,7 +80,7 @@ export default function AttentionResult() {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "0.5rem", fontFamily: "var(--font-sans)" }}>
         <div style={{ fontSize: "2rem", fontWeight: 800, color: "#e5e7eb" }}>404</div>
-        <div style={{ color: "#9ca3af" }}>Registro no encontrado</div>
+        <div style={{ color: "#6b7280" }}>Registro no encontrado</div>
         <button onClick={() => navigate("/professional")} style={{ marginTop: "1rem", padding: "0.5rem 1.25rem", background: "#39a900", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>
           Volver al panel
         </button>
@@ -160,7 +160,7 @@ export default function AttentionResult() {
           {/* Aprendiz atendido */}
           {apt && (
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1rem" }}>
+              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1rem" }}>
                 Aprendiz atendido
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "1.125rem" }}>
@@ -179,7 +179,7 @@ export default function AttentionResult() {
                     <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#374151", textTransform: "capitalize" }}>
                       {format(parseISO(apt.scheduled_date), "d 'de' MMMM, yyyy", { locale: es })}
                     </div>
-                    <div style={{ fontSize: "0.8125rem", color: "#9ca3af" }}>{durationMin ? `${durationMin} minutos` : "~60 minutos"}</div>
+                    <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>{durationMin ? `${durationMin} minutos` : "~60 minutos"}</div>
                   </div>
                 )}
               </div>
@@ -189,7 +189,7 @@ export default function AttentionResult() {
           {/* Etiquetas */}
           {tags.length > 0 && (
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>
                 <Tag size={13} /> Etiquetas utilizadas
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
@@ -207,7 +207,7 @@ export default function AttentionResult() {
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.375rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               {apt?.reason && (
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
                     <FileText size={13} /> Motivo de consulta
                   </div>
                   <p style={{ fontSize: "0.9375rem", color: "#374151", lineHeight: 1.65, borderLeft: "3px solid #d1fae5", paddingLeft: "1rem", margin: 0 }}>
@@ -217,7 +217,7 @@ export default function AttentionResult() {
               )}
               {notes && (
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
                     <StickyNote size={13} /> Notas de la atención
                   </div>
                   <p style={{ fontSize: "0.9375rem", color: "#374151", lineHeight: 1.7, margin: 0, background: "#fafafa", borderRadius: "10px", padding: "1rem", borderLeft: "3px solid #39a900" }}>
@@ -231,7 +231,7 @@ export default function AttentionResult() {
           {/* Objetivos trabajados */}
           {objectives.length > 0 && (
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>
                 <Target size={13} /> Objetivos trabajados
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -254,7 +254,7 @@ export default function AttentionResult() {
           {/* Resultado observaciones */}
           {obs.length > 0 && (
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1rem" }}>
+              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1rem" }}>
                 Resultado
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -283,7 +283,7 @@ export default function AttentionResult() {
 
           {/* Acciones */}
           <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1rem" }}>
+            <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1rem" }}>
               Acciones
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>

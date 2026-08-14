@@ -28,7 +28,7 @@ export function ProtectedRoute({ children, requiredRoles = null, requiredPermiss
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "var(--surface-base)", fontFamily: "var(--font-sans)" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.65s linear infinite", margin: "0 auto 1rem" }} />
-        <p style={{ fontSize: "0.875rem", color: "#9ca3af" }}>Verificando sesión...</p>
+        <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>Verificando sesión...</p>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

@@ -31,11 +31,11 @@ export default function RolesPage() {
         <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden", overflowX: "auto", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           {/* Header */}
           <div style={{ display: "grid", gridTemplateColumns: `220px repeat(${ALL_ROLES.length}, 1fr)`, borderBottom: "2px solid #f3f4f6", minWidth: 700, background: "#fafafa" }}>
-            <div style={{ padding: "1rem 1.25rem", fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>Permiso</div>
+            <div style={{ padding: "1rem 1.25rem", fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em" }}>Permiso</div>
             {ALL_ROLES.map(role => (
               <div key={role} style={{ padding: "1rem 0.5rem", textAlign: "center", borderLeft: "1px solid #f3f4f6" }}>
                 <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#374151" }}>{ROLE_LABELS[role]}</div>
-                <div style={{ fontSize: "0.5625rem", color: "#9ca3af", marginTop: "0.125rem" }}>{(ROLE_PERMISSIONS[role] || []).length} permisos</div>
+                <div style={{ fontSize: "0.5625rem", color: "#6b7280", marginTop: "0.125rem" }}>{(ROLE_PERMISSIONS[role] || []).length} permisos</div>
               </div>
             ))}
           </div>

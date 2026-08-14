@@ -91,7 +91,7 @@ export default function MisCitasPage() {
         th { text-align: left; background: #f0fce4; color: #166534; padding: 8px 10px; border-bottom: 2px solid #39a900; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
         td { padding: 8px 10px; border-bottom: 1px solid #eef0f2; }
         tr:nth-child(even) td { background: #fafafa; }
-        .footer { margin-top: 24px; font-size: 11px; color: #9ca3af; }
+        .footer { margin-top: 24px; font-size: 11px; color: #6b7280; }
         @media print { body { padding: 0; } }
       </style></head><body>
       <div class="brand">Bienestar SENA</div>
@@ -179,7 +179,7 @@ export default function MisCitasPage() {
             onBlur={e => e.target.style.borderColor="#e5e7eb"}
           />
           {search && (
-            <button onClick={() => setSearch("")} style={{ position:"absolute", right:"0.75rem", top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#9ca3af", padding:0 }}>
+            <button onClick={() => setSearch("")} style={{ position:"absolute", right:"0.75rem", top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#6b7280", padding:0 }}>
               <X size={14} />
             </button>
           )}
@@ -228,7 +228,7 @@ export default function MisCitasPage() {
           <div style={{ textAlign:"center", padding:"4rem 1rem" }}>
             <CalendarDays size={40} color="#e5e7eb" style={{ margin:"0 auto 0.875rem" }} />
             <div style={{ fontWeight:600, fontSize:"1rem", color:"#374151" }}>{EMPTY_MSG[activeTab].title}</div>
-            <p style={{ fontSize:"0.875rem", color:"#9ca3af", marginTop:"0.375rem", maxWidth:260, margin:"0.375rem auto 0" }}>{EMPTY_MSG[activeTab].sub}</p>
+            <p style={{ fontSize:"0.875rem", color:"#6b7280", marginTop:"0.375rem", maxWidth:260, margin:"0.375rem auto 0" }}>{EMPTY_MSG[activeTab].sub}</p>
           </div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:"0.75rem" }}>
@@ -269,7 +269,7 @@ export default function MisCitasPage() {
                       {(cita.professional?.full_name || cita.professional_name) && <span>{cita.professional?.full_name || cita.professional_name}</span>}
                     </div>
                     {cita.reason && (
-                      <div style={{ fontSize:"0.75rem", color:"#9ca3af", marginTop:"0.25rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                      <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:"0.25rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                         {cita.reason}
                       </div>
                     )}

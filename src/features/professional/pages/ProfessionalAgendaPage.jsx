@@ -5,6 +5,7 @@ import { format, addWeeks, subWeeks, startOfWeek, addDays, isToday } from "date-
 import { es } from "date-fns/locale";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
+import { toast } from "sonner";
 
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
   ? new URLSearchParams(window.location.search).get("preview")
@@ -58,7 +59,7 @@ export default function ProfessionalAgendaPage() {
     setLoading(true);
     const from = format(days[0], "yyyy-MM-dd");
     const to   = format(days[6], "yyyy-MM-dd");
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("appointments")
       .select("id, scheduled_date, scheduled_time, status, profiles!user_id(full_name)")
       .eq("dependency_id", profile.dependency_id)
@@ -66,6 +67,7 @@ export default function ProfessionalAgendaPage() {
       .lte("scheduled_date", to)
       .order("scheduled_date")
       .order("scheduled_time");
+    if (error) toast.error("No se pudo cargar la agenda de esta semana");
     setApts(data || []);
     setLoading(false);
   }, [profile, monday.toISOString()]);
@@ -162,7 +164,7 @@ export default function ProfessionalAgendaPage() {
                     {format(day, "EEEE d 'de' MMMM", { locale: es })} {isToday(day) && "· Hoy"}
                   </div>
                   {dayCitas.length === 0
-                    ? <div style={{ fontSize: "0.875rem", color: "#9ca3af", padding: "0.75rem 1rem", background: "white", borderRadius: 10, border: "1px solid #f3f4f6" }}>Sin citas</div>
+                    ? <div style={{ fontSize: "0.875rem", color: "#6b7280", padding: "0.75rem 1rem", background: "white", borderRadius: 10, border: "1px solid #f3f4f6" }}>Sin citas</div>
                     : dayCitas.map(apt => {
                         const cfg = STATUS_CFG[apt.status] || STATUS_CFG.pending;
                         return (
@@ -205,7 +207,7 @@ export default function ProfessionalAgendaPage() {
             {HOURS.map((hour, hi) => (
               <div key={hour} style={{ display: "grid", gridTemplateColumns: "60px repeat(7, 1fr)", borderBottom: hi < HOURS.length - 1 ? "1px solid #f9fafb" : "none", minHeight: 52 }}>
                 <div style={{ padding: "0.375rem 0.5rem", borderRight: "1px solid #f3f4f6", display: "flex", alignItems: "flex-start" }}>
-                  <span style={{ fontSize: "0.6875rem", color: "#9ca3af", fontWeight: 500 }}>{fmtHour(hour)}</span>
+                  <span style={{ fontSize: "0.6875rem", color: "#6b7280", fontWeight: 500 }}>{fmtHour(hour)}</span>
                 </div>
                 {days.map((day, di) => {
                   const citas = getCitasFor(day, hour);

@@ -51,7 +51,7 @@ export default function CompleteProfilePage() {
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f7e6", fontFamily: "var(--font-sans)" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite", margin: "0 auto 0.875rem" }} />
-          <p style={{ fontSize: "0.8125rem", color: "#9ca3af" }}>Cargando tu información...</p>
+          <p style={{ fontSize: "0.8125rem", color: "#6b7280" }}>Cargando tu información...</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function CompleteProfilePage() {
             </div>
             <div>
               <div style={{ fontFamily: "'Sora',system-ui", fontWeight: 700, fontSize: "0.9375rem", color: "#0d1117" }}>Bienestar SENA</div>
-              <div style={{ fontSize: "0.75rem", color: "#8b949e" }}>Completar perfil</div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Completar perfil</div>
             </div>
           </div>
 
@@ -195,7 +195,7 @@ export default function CompleteProfilePage() {
                 Nombre completo
               </label>
               <div style={{ position: "relative" }}>
-                <User size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
+                <User size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
                 <input className="cp-input" type="text" value={form.full_name} onChange={e => set("full_name", e.target.value)} placeholder="Ej. Carolina Ruiz Vargas" required />
               </div>
             </div>
@@ -215,7 +215,7 @@ export default function CompleteProfilePage() {
                   Número
                 </label>
                 <div style={{ position: "relative" }}>
-                  <FileText size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
+                  <FileText size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
                   <input className="cp-input" type="text" value={form.document_number} onChange={e => set("document_number", e.target.value)} placeholder="Ej. 52987654" required />
                 </div>
               </div>

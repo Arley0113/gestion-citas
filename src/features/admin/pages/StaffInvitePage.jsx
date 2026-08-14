@@ -28,7 +28,7 @@ const MOCK_ROLES = STAFF_ROLES.map((r, i) => ({ id: i + 1, name: r.value, label:
 const STATUS_CFG = {
   pending:   { label: "Pendiente",  color: "#d97706", bg: "#fef3c7", icon: Clock },
   accepted:  { label: "Aceptada",   color: "#16a34a", bg: "#dcfce7", icon: CheckCircle2 },
-  expired:   { label: "Expirada",   color: "#9ca3af", bg: "#f3f4f6", icon: XCircle },
+  expired:   { label: "Expirada",   color: "#6b7280", bg: "#f3f4f6", icon: XCircle },
   cancelled: { label: "Cancelada",  color: "#ef4444", bg: "#fee2e2", icon: AlertCircle },
 };
 
@@ -165,7 +165,7 @@ export default function StaffInvitePage() {
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>Crear usuario staff</div>
-              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>Asigna rol y contraseña temporal</div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Asigna rol y contraseña temporal</div>
             </div>
           </div>
 
@@ -245,7 +245,7 @@ export default function StaffInvitePage() {
                   <button
                     type="button"
                     onClick={() => setShowPwd(v => !v)}
-                    style={{ position: "absolute", right: "0.625rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0, display: "flex" }}
+                    style={{ position: "absolute", right: "0.625rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#6b7280", padding: 0, display: "flex" }}
                   >
                     {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -267,7 +267,7 @@ export default function StaffInvitePage() {
                   <Copy size={15} />
                 </button>
               </div>
-              <p style={{ fontSize: "0.6875rem", color: "#9ca3af", marginTop: "0.375rem" }}>
+              <p style={{ fontSize: "0.6875rem", color: "#6b7280", marginTop: "0.375rem" }}>
                 Comparte esta contraseña con el staff. Podrá cambiarla desde su perfil.
               </p>
             </div>
@@ -313,7 +313,7 @@ export default function StaffInvitePage() {
               <div style={{ width: 28, height: 28, border: "2.5px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
             </div>
           ) : invitations.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#9ca3af" }}>
+            <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#6b7280" }}>
               <UserPlus size={32} color="#e5e7eb" style={{ margin: "0 auto 0.75rem" }} />
               <div style={{ fontWeight: 500, fontSize: "0.9375rem" }}>Sin invitaciones aún</div>
               <div style={{ fontSize: "0.8125rem", marginTop: "0.25rem" }}>Envía la primera desde el formulario</div>
@@ -332,7 +332,7 @@ export default function StaffInvitePage() {
                       <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {inv.email}
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                      <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.125rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                         <span>{inv.role_label || inv.role_name}</span>
                         {inv.dependency_name && <><span>·</span><span>{inv.dependency_name}</span></>}
                         <span>· {format(parseISO(inv.created_at), "d MMM yyyy", { locale: es })}</span>

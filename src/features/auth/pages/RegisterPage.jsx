@@ -39,6 +39,7 @@ export default function RegisterPage() {
   const validateStep2 = () => {
     if (!form.first_name.trim() || !form.last_name.trim()) return "Ingresa tu nombre y apellido";
     if (!form.document_number.trim()) return "Ingresa tu número de documento";
+    if (!/^\d+$/.test(normalizeDocNumber(form.document_number))) return "El número de documento debe contener solo números";
     return null;
   };
 
@@ -244,7 +245,7 @@ export default function RegisterPage() {
             </div>
             <div>
               <div style={{ fontFamily: "'Sora',system-ui", fontWeight: 700, fontSize: "0.9375rem", color: "#0d1117" }}>Bienestar SENA</div>
-              <div style={{ fontSize: "0.75rem", color: "#8b949e" }}>Registro de aprendiz</div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Registro de aprendiz</div>
             </div>
           </div>
 
@@ -269,7 +270,7 @@ export default function RegisterPage() {
                 <div style={{ marginBottom: "0.875rem" }}>
                   <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Correo electrónico</label>
                   <div style={{ position: "relative" }}>
-                    <Mail size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
+                    <Mail size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
                     <input className="reg-input" type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="tu@correo.com" autoComplete="email" required />
                   </div>
                 </div>
@@ -278,9 +279,9 @@ export default function RegisterPage() {
                 <div style={{ marginBottom: "0.875rem" }}>
                   <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Contraseña</label>
                   <div style={{ position: "relative" }}>
-                    <Lock size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
+                    <Lock size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
                     <input className="reg-input" type={showPwd ? "text" : "password"} value={form.password} onChange={e => set("password", e.target.value)} placeholder="Mínimo 8 caracteres" style={{ paddingRight: "2.75rem" }} required />
-                    <button type="button" onClick={() => setShowPwd(v => !v)} style={{ position: "absolute", right: "0.875rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#8b949e", display: "flex" }}>
+                    <button type="button" onClick={() => setShowPwd(v => !v)} style={{ position: "absolute", right: "0.875rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#6b7280", display: "flex" }}>
                       {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
                   </div>
@@ -290,7 +291,7 @@ export default function RegisterPage() {
                 <div style={{ marginBottom: "1.25rem" }}>
                   <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Confirmar contraseña</label>
                   <div style={{ position: "relative" }}>
-                    <Lock size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
+                    <Lock size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
                     <input className="reg-input" type={showPwd ? "text" : "password"} value={form.confirm_password} onChange={e => set("confirm_password", e.target.value)} placeholder="Repite la contraseña" required />
                   </div>
                 </div>
@@ -306,14 +307,14 @@ export default function RegisterPage() {
                   <div>
                     <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Nombre(s)</label>
                     <div style={{ position: "relative" }}>
-                      <User size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
+                      <User size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
                       <input className="reg-input" type="text" value={form.first_name} onChange={e => set("first_name", e.target.value)} placeholder="Juan Carlos" required />
                     </div>
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Apellido(s)</label>
                     <div style={{ position: "relative" }}>
-                      <User size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
+                      <User size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
                       <input className="reg-input" type="text" value={form.last_name} onChange={e => set("last_name", e.target.value)} placeholder="Pérez González" required />
                     </div>
                   </div>
@@ -330,7 +331,7 @@ export default function RegisterPage() {
                   <div>
                     <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Número de documento</label>
                     <div style={{ position: "relative" }}>
-                      <FileText size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
+                      <FileText size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
                       <input className="reg-input" type="text" value={form.document_number} onChange={e => set("document_number", e.target.value)} onBlur={lookupWhitelist} placeholder="1001234567" required />
                     </div>
                   </div>
@@ -341,14 +342,14 @@ export default function RegisterPage() {
                   <div>
                     <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Ficha</label>
                     <div style={{ position: "relative" }}>
-                      <Hash size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
+                      <Hash size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
                       <input className="reg-input" type="text" value={form.ficha_number} onChange={e => set("ficha_number", e.target.value)} onBlur={lookupWhitelist} placeholder="2847193" />
                     </div>
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#24292f", marginBottom: "0.375rem" }}>Programa de formación</label>
                     <div style={{ position: "relative" }}>
-                      <BookOpen size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#8b949e", pointerEvents: "none" }} />
+                      <BookOpen size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
                       <input className="reg-input" type="text" value={form.program} onChange={e => set("program", e.target.value)} placeholder="Desarrollo de Software" />
                     </div>
                   </div>
@@ -408,7 +409,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Link a login */}
-          <p style={{ textAlign: "center", fontSize: "0.875rem", color: "#8b949e", marginTop: "1.125rem", marginBottom: 0 }}>
+          <p style={{ textAlign: "center", fontSize: "0.875rem", color: "#6b7280", marginTop: "1.125rem", marginBottom: 0 }}>
             ¿Ya tienes cuenta?{" "}
             <Link to="/login" style={{ color: "#39a900", fontWeight: 600, textDecoration: "none" }}>
               Iniciar sesión

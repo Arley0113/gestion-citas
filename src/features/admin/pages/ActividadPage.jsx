@@ -90,11 +90,11 @@ export default function ActividadPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af" }}>Cargando...</div>
+          <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>Cargando...</div>
         ) : (
           <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             {filtered.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af", fontSize: "0.875rem" }}>Sin registros</div>
+              <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280", fontSize: "0.875rem" }}>Sin registros</div>
             ) : filtered.map((row, i) => {
               const meta = STATUS_META[row.status] || STATUS_META.pending;
               const Icon = meta.icon;
@@ -114,7 +114,7 @@ export default function ActividadPage() {
                     <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#111827" }}>
                       {row.profiles?.full_name || "Aprendiz"} — {row.dependencies?.name || DEP_LABELS[row.dependency_id] || "Dependencia"}
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                    <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.125rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                       <span>{row.scheduled_date} {row.scheduled_time?.slice(0,5)}</span>
                       {row.cancelled_reason && <span style={{ color: "#ef4444" }}>Motivo: {row.cancelled_reason}</span>}
                       {date && <span>{format(date, "d MMM yyyy, HH:mm", { locale: es })}</span>}

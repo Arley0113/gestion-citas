@@ -41,7 +41,8 @@ export default function DocumentosPage() {
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-    if (!error) setDocs(data || []);
+    if (error) toast.error("No se pudieron cargar tus documentos");
+    else setDocs(data || []);
     setLoading(false);
   }, [user]);
 
@@ -170,7 +171,7 @@ export default function DocumentosPage() {
               </>
             )}
           </p>
-          <p style={{ fontSize: "0.8125rem", color: "#9ca3af", margin: 0 }}>
+          <p style={{ fontSize: "0.8125rem", color: "#6b7280", margin: 0 }}>
             PDF, JPG, PNG · Máx. 5 MB
           </p>
         </div>
@@ -184,13 +185,13 @@ export default function DocumentosPage() {
           <div style={{ textAlign: "center", padding: "4rem 1rem" }}>
             <FolderOpen size={48} color="#e5e7eb" style={{ margin: "0 auto 1rem", display: "block" }} />
             <div style={{ fontWeight: 600, fontSize: "1rem", color: "#374151" }}>Aún no has subido documentos</div>
-            <p style={{ fontSize: "0.875rem", color: "#9ca3af", marginTop: "0.375rem" }}>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.375rem" }}>
               Usa el área de arriba para subir tu primer documento
             </p>
           </div>
         ) : (
           <>
-            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
               {docs.length} documento{docs.length !== 1 ? "s" : ""}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1rem" }}>
@@ -241,7 +242,7 @@ function DocCard({ doc, onDelete, onDownload }) {
           <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {doc.name}
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem" }}>
+          <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.125rem" }}>
             {formatSize(doc.file_size)}
           </div>
         </div>
@@ -252,7 +253,7 @@ function DocCard({ doc, onDelete, onDownload }) {
           <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#39a900", background: "#f0fce4", padding: "0.2rem 0.5rem", borderRadius: 20 }}>
             {doc.category}
           </span>
-          <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+          <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
             Subido: {doc.created_at ? format(parseISO(doc.created_at), "d MMM yyyy", { locale: es }) : "—"}
           </span>
         </div>

@@ -70,7 +70,7 @@ export default function ProfessionalNotesPage() {
 
         {/* Search */}
         <div style={{ position: "relative", marginBottom: "1.25rem" }}>
-          <Search size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none" }} />
+          <Search size={15} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
@@ -90,13 +90,13 @@ export default function ProfessionalNotesPage() {
           <div style={{ textAlign: "center", padding: "4rem 1rem" }}>
             <FileText size={44} color="#e5e7eb" style={{ margin: "0 auto 1rem", display: "block" }} />
             <div style={{ fontWeight: 600, fontSize: "1rem", color: "#374151" }}>No has registrado notas clínicas aún</div>
-            <p style={{ fontSize: "0.875rem", color: "#9ca3af", marginTop: "0.375rem" }}>Las notas aparecen al completar una atención</p>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.375rem" }}>Las notas aparecen al completar una atención</p>
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem 1rem" }}>
             <FileText size={44} color="#e5e7eb" style={{ margin: "0 auto 1rem", display: "block" }} />
             <div style={{ fontWeight: 600, fontSize: "1rem", color: "#374151" }}>No se encontraron notas</div>
-            <p style={{ fontSize: "0.875rem", color: "#9ca3af", marginTop: "0.375rem" }}>Intenta con otro nombre de aprendiz</p>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.375rem" }}>Intenta con otro nombre de aprendiz</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
@@ -128,7 +128,7 @@ export default function ProfessionalNotesPage() {
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "0.25rem" }}>
                         <CalendarDays size={12} color="#9ca3af" />
-                        <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                        <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
                           {format(parseISO(note.updated_at), "d 'de' MMMM yyyy · h:mm a", { locale: es })}
                         </span>
                       </div>

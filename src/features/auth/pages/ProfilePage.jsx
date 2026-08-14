@@ -273,7 +273,7 @@ export default function ProfilePage() {
 
         {/* Info de cuenta (solo lectura) */}
         <div style={{ background: "white", borderRadius: 14, border: "1px solid #e5e7eb", padding: "1.25rem 1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
             Información de cuenta
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -284,7 +284,7 @@ export default function ProfilePage() {
               <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0", borderBottom: "1px solid #f9fafb" }}>
                 <div>
                   <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#374151" }}>{label}</div>
-                  <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem" }}>{note}</div>
+                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.125rem" }}>{note}</div>
                 </div>
                 <div style={{ fontSize: "0.875rem", color: "#6b7280", fontWeight: 500 }}>{value}</div>
               </div>

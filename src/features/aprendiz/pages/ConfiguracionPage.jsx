@@ -33,7 +33,7 @@ function ToggleRow({ label, description, value, onChange }) {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.875rem 0", borderBottom: "1px solid #f9fafb" }}>
       <div style={{ flex: 1, marginRight: "1rem" }}>
         <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "#111827" }}>{label}</div>
-        {description && <div style={{ fontSize: "0.8125rem", color: "#9ca3af", marginTop: "0.125rem" }}>{description}</div>}
+        {description && <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "0.125rem" }}>{description}</div>}
       </div>
       <Toggle value={value} onChange={onChange} />
     </div>

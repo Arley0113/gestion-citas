@@ -106,7 +106,7 @@ function MiniCalendar({ selected, onChange }) {
       {/* Días semana */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", padding: "0.625rem 0.5rem 0.25rem", background: "white" }}>
         {WEEK_DAYS.map(d => (
-          <div key={d} style={{ textAlign: "center", fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", padding: "0.25rem 0" }}>
+          <div key={d} style={{ textAlign: "center", fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", padding: "0.25rem 0" }}>
             {d}
           </div>
         ))}
@@ -171,6 +171,7 @@ export function AppointmentModal() {
   const [checkingSlots, setCheckingSlots] = useState(false);
   const [aptLocation, setAptLocation] = useState("Bienestar SENA");
   const overlayRef = useRef(null);
+  const panelRef = useRef(null);
 
   const set = useCallback((k, v) => setForm(f => ({ ...f, [k]: v })), []);
 
@@ -226,10 +227,32 @@ export function AppointmentModal() {
     return () => { cancelled = true; };
   }, [form.serviceKey, form.date, services]);
 
-  // Cerrar con Escape
+  // Cerrar con Escape + atrapar el foco dentro del modal mientras esté abierto
   useEffect(() => {
-    const handler = (e) => { if (e.key === "Escape") closeModal(); };
-    if (isOpen) document.addEventListener("keydown", handler);
+    if (!isOpen) return;
+    // Foco inicial dentro del panel (el panel mismo, no había ningún elemento enfocado por defecto)
+    panelRef.current?.focus();
+
+    const handler = (e) => {
+      if (e.key === "Escape") { closeModal(); return; }
+      if (e.key !== "Tab" || !panelRef.current) return;
+
+      const focusable = panelRef.current.querySelectorAll(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, closeModal]);
 
@@ -304,10 +327,13 @@ export function AppointmentModal() {
       >
         {/* Modal */}
         <div
+          ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-label="Agendar nueva cita"
+          tabIndex={-1}
           style={{
+            outline: "none",
             background: "white",
             borderRadius: 20,
             width: "100%",
@@ -435,7 +461,7 @@ export function AppointmentModal() {
                           <div style={{ fontSize: "0.9375rem", fontWeight: 700, color: sel ? svc.color : "#111827", marginBottom: "0.2rem" }}>
                             {svc.label}
                           </div>
-                          <div style={{ fontSize: "0.8125rem", color: "#9ca3af", lineHeight: 1.4 }}>
+                          <div style={{ fontSize: "0.8125rem", color: "#6b7280", lineHeight: 1.4 }}>
                             {svc.desc}
                           </div>
                         </div>
@@ -482,7 +508,7 @@ export function AppointmentModal() {
                   Selecciona el horario disponible para tu cita.
                 </p>
                 {checkingSlots ? (
-                  <div style={{ textAlign: "center", padding: "2rem 0", color: "#9ca3af", fontSize: "0.875rem" }}>
+                  <div style={{ textAlign: "center", padding: "2rem 0", color: "#6b7280", fontSize: "0.875rem" }}>
                     <div style={{ width: 24, height: 24, border: "2.5px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite", margin: "0 auto 0.75rem" }} />
                     Verificando disponibilidad...
                   </div>
@@ -517,7 +543,7 @@ export function AppointmentModal() {
                             <Clock size={14} color={sel ? "#39a900" : taken ? "#d1d5db" : "#9ca3af"} />
                             {h.label}
                           </span>
-                          {taken && <span style={{ fontSize: "0.6875rem", color: "#d1d5db" }}>Ocupado</span>}
+                          {taken && <span style={{ fontSize: "0.6875rem", color: "#6b7280" }}>Ocupado</span>}
                           {sel && <Check size={14} color="#39a900" />}
                         </button>
                       );
@@ -563,7 +589,7 @@ export function AppointmentModal() {
                         {Ic && <Ic size={14} color="#39a900" />}
                       </div>
                       <div>
-                        <div style={{ fontSize: "0.6875rem", color: "#9ca3af", marginBottom: "0.0625rem" }}>{label}</div>
+                        <div style={{ fontSize: "0.6875rem", color: "#6b7280", marginBottom: "0.0625rem" }}>{label}</div>
                         <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: color || "#111827", textTransform: "capitalize" }}>{value}</div>
                       </div>
                     </div>
@@ -573,7 +599,7 @@ export function AppointmentModal() {
                 {/* Motivo */}
                 <div style={{ marginBottom: "1rem" }}>
                   <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, color: "#374151", marginBottom: "0.5rem" }}>
-                    Motivo de consulta <span style={{ fontWeight: 400, color: "#9ca3af" }}>(opcional)</span>
+                    Motivo de consulta <span style={{ fontWeight: 400, color: "#6b7280" }}>(opcional)</span>
                   </label>
                   <textarea
                     value={form.reason}
@@ -590,7 +616,7 @@ export function AppointmentModal() {
                     onFocus={e => e.target.style.borderColor = "#39a900"}
                     onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                   />
-                  <div style={{ fontSize: "0.6875rem", color: "#9ca3af", textAlign: "right", marginTop: "0.25rem" }}>
+                  <div style={{ fontSize: "0.6875rem", color: "#6b7280", textAlign: "right", marginTop: "0.25rem" }}>
                     {form.reason.length}/250
                   </div>
                 </div>
@@ -618,7 +644,7 @@ export function AppointmentModal() {
             flexShrink: 0,
           }}>
             {/* Confidencialidad */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", color: "#9ca3af" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", color: "#6b7280" }}>
               <Shield size={12} />
               <span style={{ fontSize: "0.6875rem" }}>Información confidencial</span>
             </div>

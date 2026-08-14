@@ -98,13 +98,13 @@ export default function MiExpedientePage() {
               <FileText size={28} color="#d1d5db" />
             </div>
             <div style={{ fontWeight:600, fontSize:"1rem", color:"#374151" }}>No hay notas clínicas registradas aún</div>
-            <p style={{ fontSize:"0.875rem", color:"#9ca3af", maxWidth:280, margin:"0.375rem auto 0" }}>
+            <p style={{ fontSize:"0.875rem", color:"#6b7280", maxWidth:280, margin:"0.375rem auto 0" }}>
               Aquí aparecerán las observaciones de tu equipo de Bienestar tras cada atención.
             </p>
           </div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
-            <div style={{ fontSize:"0.75rem", fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"0.25rem" }}>
+            <div style={{ fontSize:"0.75rem", fontWeight:700, color:"#6b7280", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:"0.25rem" }}>
               {notas.length} {notas.length === 1 ? "registro" : "registros"}
             </div>
 
@@ -129,7 +129,7 @@ export default function MiExpedientePage() {
                       <div style={{ fontWeight:700, fontSize:"0.9375rem", color:"#111827" }}>
                         {profName}
                       </div>
-                      <div style={{ fontSize:"0.75rem", color:"#9ca3af", marginTop:"0.125rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                      <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:"0.125rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
                         <span style={{ color:depColor, fontWeight:600 }}>{depName}</span>
                         <span>·</span>
                         <span style={{ display:"flex", alignItems:"center", gap:"0.25rem" }}>

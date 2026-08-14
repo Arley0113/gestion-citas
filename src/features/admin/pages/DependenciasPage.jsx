@@ -107,9 +107,9 @@ export default function DependenciasPage() {
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "1.75rem 2rem" }}>
         {loading ? (
-          <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af" }}>Cargando...</div>
+          <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>Cargando...</div>
         ) : deps.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af", fontSize: "0.875rem" }}>Sin dependencias</div>
+          <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280", fontSize: "0.875rem" }}>Sin dependencias</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             {deps.map((dep) => (
@@ -125,22 +125,23 @@ export default function DependenciasPage() {
                         onChange={e => setEditName(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter") saveEdit(dep); if (e.key === "Escape") setEditId(null); }}
                         autoFocus
+                        aria-label="Nombre de la dependencia"
                         style={{ flex: 1, padding: "0.375rem 0.625rem", border: "1.5px solid #39a900", borderRadius: 6, fontSize: "0.9375rem", fontWeight: 700, fontFamily: "var(--font-sans)", outline: "none" }}
                       />
-                      <button onClick={() => saveEdit(dep)} disabled={saving === dep.id} style={{ padding: "0.375rem", background: "#f0fce4", border: "1px solid #bbf7d0", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center" }}><Check size={15} color="#39a900" /></button>
-                      <button onClick={() => setEditId(null)} style={{ padding: "0.375rem", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={15} color="#6b7280" /></button>
+                      <button onClick={() => saveEdit(dep)} disabled={saving === dep.id} aria-label="Guardar nombre" style={{ padding: "0.375rem", background: "#f0fce4", border: "1px solid #bbf7d0", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center" }}><Check size={15} color="#39a900" /></button>
+                      <button onClick={() => setEditId(null)} aria-label="Cancelar edición" style={{ padding: "0.375rem", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={15} color="#6b7280" /></button>
                     </div>
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
                       <span style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>{dep.name}</span>
-                      {!dep.active && <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "#9ca3af", background: "#f3f4f6", padding: "0.1rem 0.5rem", borderRadius: 20 }}>Inactiva</span>}
-                      <button onClick={() => { setEditId(dep.id); setEditName(dep.name); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "0.125rem", color: "#d1d5db", display: "flex", alignItems: "center" }}>
+                      {!dep.active && <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "#6b7280", background: "#f3f4f6", padding: "0.1rem 0.5rem", borderRadius: 20 }}>Inactiva</span>}
+                      <button onClick={() => { setEditId(dep.id); setEditName(dep.name); }} aria-label="Editar nombre" style={{ background: "none", border: "none", cursor: "pointer", padding: "0.125rem", color: "#6b7280", display: "flex", alignItems: "center" }}>
                         <Edit2 size={13} />
                       </button>
                     </div>
                   )}
                   <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "0.25rem" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#9ca3af", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#6b7280", display: "flex", alignItems: "center", gap: "0.25rem" }}>
                       <Users size={11} /> {dep.staffCount} profesional{dep.staffCount !== 1 ? "es" : ""}
                     </span>
                   </div>

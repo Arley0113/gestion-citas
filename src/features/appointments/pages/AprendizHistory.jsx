@@ -15,7 +15,7 @@ const STATUS_CLR = { completed: "#166534", pending: "#92400e", confirmed: "#1e40
 const TABS = ["Resumen", "Historial", "Evolución"];
 
 const sectionLabel = {
-  fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af",
+  fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280",
   textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem",
 };
 
@@ -53,12 +53,12 @@ export default function AprendizHistory() {
   }, [id]);
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#9ca3af", fontFamily: "var(--font-sans)" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#6b7280", fontFamily: "var(--font-sans)" }}>
       Cargando historial...
     </div>
   );
   if (!profile) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#9ca3af", fontFamily: "var(--font-sans)" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#6b7280", fontFamily: "var(--font-sans)" }}>
       Aprendiz no encontrado
     </div>
   );
@@ -121,7 +121,7 @@ export default function AprendizHistory() {
               <div style={{ fontWeight: 800, fontSize: "1.0625rem", color: "#111827", marginBottom: "0.25rem" }}>
                 {profile.full_name}
               </div>
-              <div style={{ fontSize: "0.8125rem", color: "#9ca3af" }}>
+              <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>
                 {profile.ficha_number
                   ? `Ficha: ${profile.ficha_number}`
                   : profile.document_number
@@ -142,7 +142,7 @@ export default function AprendizHistory() {
                 { label: lastAptLabel, value: lastAgo || "Sin citas" },
               ].map(({ label, value }) => (
                 <div key={label}>
-                  <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.125rem" }}>{label}</div>
+                  <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.125rem" }}>{label}</div>
                   <div style={{ fontSize: "0.875rem", color: "#374151", fontWeight: 500 }}>{value}</div>
                 </div>
               ))}
@@ -161,7 +161,7 @@ export default function AprendizHistory() {
               ].map(({ value, label }) => (
                 <div key={label} style={{ background: "#fafafa", borderRadius: "8px", padding: "0.875rem", textAlign: "center" }}>
                   <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.03em" }}>{value}</div>
-                  <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem" }}>{label}</div>
+                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.125rem" }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -255,7 +255,7 @@ export default function AprendizHistory() {
                       <div style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS_DOT[apt.status] || "#d1d5db", flexShrink: 0 }} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>{apt.reason || "Sin motivo"}</div>
-                        <div style={{ fontSize: "0.8125rem", color: "#9ca3af", marginTop: "0.125rem" }}>
+                        <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "0.125rem" }}>
                           {apt.dependencies?.name} · {d ? format(d, "d MMM yyyy", { locale: es }) : "—"}
                         </div>
                       </div>
@@ -273,7 +273,7 @@ export default function AprendizHistory() {
           {tab === "Historial" && (
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
               {apts.length === 0 ? (
-                <div style={{ padding: "3rem", textAlign: "center", color: "#9ca3af" }}>No hay citas registradas.</div>
+                <div style={{ padding: "3rem", textAlign: "center", color: "#6b7280" }}>No hay citas registradas.</div>
               ) : apts.map((apt, i) => {
                 const d = apt.scheduled_date ? parseISO(apt.scheduled_date) : null;
                 return (
@@ -285,12 +285,12 @@ export default function AprendizHistory() {
                   >
                     <div style={{ width: 44, textAlign: "center", flexShrink: 0 }}>
                       <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#111827", lineHeight: 1 }}>{d ? format(d, "d") : "—"}</div>
-                      <div style={{ fontSize: "0.625rem", color: "#9ca3af", textTransform: "uppercase" }}>{d ? format(d, "MMM yy", { locale: es }) : ""}</div>
+                      <div style={{ fontSize: "0.625rem", color: "#6b7280", textTransform: "uppercase" }}>{d ? format(d, "MMM yy", { locale: es }) : ""}</div>
                     </div>
                     <div style={{ width: 1, height: 36, background: "#e5e7eb", flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "#111827" }}>{apt.reason || "Sin motivo especificado"}</div>
-                      <div style={{ fontSize: "0.8125rem", color: "#9ca3af", marginTop: "0.125rem" }}>
+                      <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "0.125rem" }}>
                         {apt.dependencies?.name} · {apt.scheduled_time ? apt.scheduled_time.slice(0, 5) : ""}
                       </div>
                     </div>
@@ -308,16 +308,16 @@ export default function AprendizHistory() {
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "1.5rem" }}>
               <div style={sectionLabel}>Citas completadas por mes</div>
               <div style={{ fontSize: "3rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", marginBottom: "0.25rem" }}>{completed}</div>
-              <div style={{ fontSize: "0.875rem", color: "#9ca3af", marginBottom: "2rem" }}>Total completadas · {pct}% de tasa de asistencia</div>
+              <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "2rem" }}>Total completadas · {pct}% de tasa de asistencia</div>
               {chartData.length > 1 ? (
                 <ResponsiveContainer width="100%" height={160}>
                   <LineChart data={chartData}>
                     <Line type="monotone" dataKey="value" stroke="#39a900" strokeWidth={2.5} dot={{ fill: "#39a900", r: 4 }} activeDot={{ r: 6 }} />
-                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <div style={{ textAlign: "center", padding: "2rem", color: "#d1d5db", fontSize: "0.875rem" }}>
+                <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280", fontSize: "0.875rem" }}>
                   Se necesitan más citas completadas para mostrar la evolución.
                 </div>
               )}

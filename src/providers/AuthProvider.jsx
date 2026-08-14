@@ -211,7 +211,7 @@ export function AuthProvider({ children }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f7f9f7" }}>
         <div>
           <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite", margin: "0 auto 0.875rem" }} />
-          <p style={{ fontSize: "0.8125rem", color: "#9ca3af", textAlign: "center", fontFamily: "var(--font-sans)" }}>Iniciando sesión...</p>
+          <p style={{ fontSize: "0.8125rem", color: "#6b7280", textAlign: "center", fontFamily: "var(--font-sans)" }}>Iniciando sesión...</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>

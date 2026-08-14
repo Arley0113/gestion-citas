@@ -222,7 +222,7 @@ export default function Onboarding() {
                 <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#39a900", textTransform: "uppercase", letterSpacing: "0.07em" }}>
                   Paso {step} de {STEPS.length}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.0625rem" }}>
+                <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.0625rem" }}>
                   {STEPS[step - 1].label}
                 </div>
               </div>
@@ -233,7 +233,7 @@ export default function Onboarding() {
                 <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.025em", marginBottom: "0.375rem", fontFamily: "var(--font-display)" }}>
                   Cuéntanos quién eres
                 </h1>
-                <p style={{ fontSize: "0.875rem", color: "#9ca3af", marginBottom: "1.75rem", lineHeight: 1.6 }}>
+                <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1.75rem", lineHeight: 1.6 }}>
                   Ingresa tu nombre completo tal como aparece en tu documento de identidad.
                 </p>
 
@@ -263,7 +263,7 @@ export default function Onboarding() {
                 <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.025em", marginBottom: "0.375rem", fontFamily: "var(--font-display)" }}>
                   Información académica
                 </h1>
-                <p style={{ fontSize: "0.875rem", color: "#9ca3af", marginBottom: "1.75rem", lineHeight: 1.6 }}>
+                <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1.75rem", lineHeight: 1.6 }}>
                   Datos requeridos para identificarte en el sistema SENA.
                 </p>
 
@@ -341,10 +341,10 @@ export default function Onboarding() {
 
         {/* Footer */}
         <div className="onb-footer" style={{ padding: "1rem 2.5rem", borderTop: "1px solid #eaecf0", background: "white", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: "0.6875rem", color: "#9ca3af" }}>
+          <span style={{ fontSize: "0.6875rem", color: "#6b7280" }}>
             © SENA · Servicio Nacional de Aprendizaje · República de Colombia
           </span>
-          <span style={{ fontSize: "0.6875rem", color: "#9ca3af" }}>
+          <span style={{ fontSize: "0.6875rem", color: "#6b7280" }}>
             v1.0 · Bienestar Institucional
           </span>
         </div>

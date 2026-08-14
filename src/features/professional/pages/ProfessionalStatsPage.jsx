@@ -150,7 +150,7 @@ export default function ProfessionalStatsPage() {
             <div style={{ textAlign: "center", padding: "4rem 1rem", background: "white", borderRadius: 14, border: "1px solid #e5e7eb" }}>
               <CalendarDays size={40} color="#e5e7eb" style={{ margin: "0 auto 0.875rem" }} />
               <div style={{ fontWeight: 600, fontSize: "1rem", color: "#374151" }}>Sin citas en este período</div>
-              <p style={{ fontSize: "0.875rem", color: "#9ca3af", marginTop: "0.375rem" }}>Las estadísticas aparecerán cuando tengas citas registradas.</p>
+              <p style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.375rem" }}>Las estadísticas aparecerán cuando tengas citas registradas.</p>
             </div>
           </>
         ) : (
@@ -178,7 +178,7 @@ export default function ProfessionalStatsPage() {
                     </div>
                   </div>
                   <div style={{ fontSize: "1.875rem", fontWeight: 800, color, letterSpacing: "-0.03em", lineHeight: 1, fontFamily: "var(--font-display)" }}>{value}</div>
-                  <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.375rem", fontWeight: 500 }}>{label}</div>
+                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.375rem", fontWeight: 500 }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -195,7 +195,7 @@ export default function ProfessionalStatsPage() {
                       <div key={label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
                         <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#39a900" }}>{value}</span>
                         <div style={{ width: "100%", height: `${Math.max(h, 4)}px`, background: "linear-gradient(to top, #39a900, #5bc700)", borderRadius: "4px 4px 0 0", transition: "height 0.3s" }} />
-                        <span style={{ fontSize: "0.6875rem", color: "#9ca3af", fontWeight: 500 }}>{label}</span>
+                        <span style={{ fontSize: "0.6875rem", color: "#6b7280", fontWeight: 500 }}>{label}</span>
                       </div>
                     );
                   })}
@@ -206,7 +206,7 @@ export default function ProfessionalStatsPage() {
               <div style={{ background: "white", borderRadius: 14, border: "1px solid #e5e7eb", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
                 <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #f3f4f6", fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>Top aprendices atendidos</div>
                 {topAprendices.length === 0 ? (
-                  <div style={{ padding: "2rem", textAlign: "center", color: "#9ca3af", fontSize: "0.875rem" }}>Sin datos</div>
+                  <div style={{ padding: "2rem", textAlign: "center", color: "#6b7280", fontSize: "0.875rem" }}>Sin datos</div>
                 ) : topAprendices.map((a, i) => (
                   <div key={a.name} onMouseEnter={() => setHoveredRow(i)} onMouseLeave={() => setHoveredRow(null)}
                     style={{ display: "flex", alignItems: "center", gap: "0.875rem", padding: "0.75rem 1.5rem", background: hoveredRow === i ? "#f0fce4" : i % 2 === 0 ? "white" : "#fafafa", transition: "background 0.12s", borderBottom: i < topAprendices.length - 1 ? "1px solid #f9fafb" : "none" }}>

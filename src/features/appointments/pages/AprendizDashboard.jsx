@@ -226,7 +226,7 @@ export default function AprendizDashboard() {
                     <div style={{ fontSize: "1.625rem", fontWeight: 800, color: "#111827", lineHeight: 1, letterSpacing: "-0.04em", fontFamily: "var(--font-display)" }}>
                       {s.value}
                     </div>
-                    <div style={{ fontSize: "0.6875rem", color: "#9ca3af", fontWeight: 500, marginTop: "0.1875rem" }}>
+                    <div style={{ fontSize: "0.6875rem", color: "#6b7280", fontWeight: 500, marginTop: "0.1875rem" }}>
                       {s.label}
                     </div>
                   </div>
@@ -254,7 +254,7 @@ export default function AprendizDashboard() {
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>¿Cómo te sientes hoy?</div>
-              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>Registro de bienestar diario</div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Registro de bienestar diario</div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
@@ -372,7 +372,7 @@ export default function AprendizDashboard() {
                     </button>
                   ))}
                 </div>
-                <span style={{ fontSize: "0.8125rem", color: "#d1d5db", paddingRight: "0.25rem" }}>
+                <span style={{ fontSize: "0.8125rem", color: "#6b7280", paddingRight: "0.25rem" }}>
                   {listApts.length} {listApts.length === 1 ? "cita" : "citas"}
                 </span>
               </div>
@@ -386,7 +386,7 @@ export default function AprendizDashboard() {
                   <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#374151", marginBottom: "0.375rem" }}>
                     {tab === "Próximas" ? "Sin citas próximas" : "Sin registros"}
                   </div>
-                  <div style={{ fontSize: "0.875rem", color: "#9ca3af", marginBottom: "1.25rem" }}>
+                  <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1.25rem" }}>
                     {tab === "Próximas" ? "Agenda una cita con nuestros especialistas" : "Aquí aparecerán tus citas cuando las agendes"}
                   </div>
                   {tab === "Próximas" && (
@@ -431,7 +431,7 @@ export default function AprendizDashboard() {
                           <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#111827", lineHeight: 1, fontFamily: "var(--font-display)" }}>
                             {format(d, "d")}
                           </div>
-                          <div style={{ fontSize: "0.5625rem", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "0.0625rem" }}>
+                          <div style={{ fontSize: "0.5625rem", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "0.0625rem" }}>
                             {format(d, "MMM", { locale: es })}
                           </div>
                         </div>
@@ -451,7 +451,7 @@ export default function AprendizDashboard() {
                           <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "#111827" }}>
                             {apt.dependencies?.name}
                           </div>
-                          <div style={{ fontSize: "0.8125rem", color: "#9ca3af", marginTop: "0.125rem", display: "flex", alignItems: "center", gap: "0.375rem", overflow: "hidden" }}>
+                          <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "0.125rem", display: "flex", alignItems: "center", gap: "0.375rem", overflow: "hidden" }}>
                             <Clock size={11} />
                             <span>{timeLabel(apt.scheduled_time)}</span>
                             {apt.reason && (
@@ -534,7 +534,7 @@ export default function AprendizDashboard() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#111827" }}>{label}</div>
-                    <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.0625rem" }}>{desc}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.0625rem" }}>{desc}</div>
                   </div>
                   <ChevronRight size={13} color="#e5e7eb" />
                 </button>
@@ -576,7 +576,7 @@ export default function AprendizDashboard() {
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, marginTop: 4 }} />
                     <div>
                       <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#374151" }}>{name}</div>
-                      <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.0625rem" }}>{hours}</div>
+                      <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.0625rem" }}>{hours}</div>
                     </div>
                   </div>
                 ))}
@@ -608,7 +608,7 @@ export default function AprendizDashboard() {
               Esta acción no se puede deshacer. Si lo deseas, puedes indicar el motivo.
             </p>
             <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.375rem" }}>
-              Motivo <span style={{ fontWeight: 400, color: "#9ca3af" }}>(opcional)</span>
+              Motivo <span style={{ fontWeight: 400, color: "#6b7280" }}>(opcional)</span>
             </label>
             <textarea
               value={cancelModal.reason}
@@ -620,7 +620,7 @@ export default function AprendizDashboard() {
               onFocus={e => e.target.style.borderColor = "#ef4444"}
               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
             />
-            <div style={{ fontSize: "0.75rem", color: "#9ca3af", textAlign: "right", marginBottom: "1rem" }}>{cancelModal.reason.length}/300</div>
+            <div style={{ fontSize: "0.75rem", color: "#6b7280", textAlign: "right", marginBottom: "1rem" }}>{cancelModal.reason.length}/300</div>
             <div style={{ display: "flex", gap: "0.625rem" }}>
               <button
                 onClick={() => setCancelModal({ open: false, aptId: null, reason: "" })}

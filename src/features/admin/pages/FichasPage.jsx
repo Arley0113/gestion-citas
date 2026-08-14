@@ -456,7 +456,7 @@ export default function FichasPage() {
             <h1 style={{ fontFamily: "'Sora', system-ui", fontWeight: 800, fontSize: "1.375rem", color: "#0d1117", margin: 0, letterSpacing: "-0.02em" }}>
               Control de Fichas Activas
             </h1>
-            <p style={{ fontSize: "0.8125rem", color: "#8b949e", margin: 0 }}>
+            <p style={{ fontSize: "0.8125rem", color: "#6b7280", margin: 0 }}>
               Lista de aprendices habilitados para registrarse en la plataforma
             </p>
           </div>
@@ -521,7 +521,7 @@ export default function FichasPage() {
             <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0d1117", letterSpacing: "-0.03em" }}>
               {loadingList ? "—" : totalCount.toLocaleString("es-CO")}
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#8b949e", marginTop: "0.25rem" }}>
+            <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
               {totalCount > 0 ? `${totalCount} registros cargados` : "Lista vacía"}
             </div>
           </div>
@@ -542,7 +542,7 @@ export default function FichasPage() {
                 </span>
               )}
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#8b949e", marginTop: "0.5rem" }}>
+            <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.5rem" }}>
               {wlEnabled ? "Solo aprendices del padrón" : "Sin restricción de acceso"}
             </div>
           </div>
@@ -575,7 +575,7 @@ export default function FichasPage() {
               <p style={{ fontWeight: 600, color: "#24292f", margin: "0 0 0.375rem", fontSize: "0.9375rem" }}>
                 Arrastra tu archivo aquí o haz clic para seleccionar
               </p>
-              <p style={{ color: "#8b949e", fontSize: "0.8125rem", margin: "0 0 0.75rem" }}>
+              <p style={{ color: "#6b7280", fontSize: "0.8125rem", margin: "0 0 0.75rem" }}>
                 Formatos soportados: <strong>.csv</strong> y <strong>.xlsx</strong>
               </p>
               <div style={{ display: "inline-flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center" }}>
@@ -604,7 +604,8 @@ export default function FichasPage() {
                 </div>
                 <button
                   onClick={() => { setPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "#8b949e", display: "flex" }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280", display: "flex" }}
+                  aria-label="Cancelar importación"
                 >
                   <X size={16} />
                 </button>
@@ -626,13 +627,13 @@ export default function FichasPage() {
                       <tr key={i}>
                         <td style={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{r.document_number}</td>
                         <td style={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{r.ficha_number}</td>
-                        <td>{r.full_name || <span style={{ color: "#9ca3af" }}>—</span>}</td>
-                        <td>{r.program || <span style={{ color: "#9ca3af" }}>—</span>}</td>
+                        <td>{r.full_name || <span style={{ color: "#6b7280" }}>—</span>}</td>
+                        <td>{r.program || <span style={{ color: "#6b7280" }}>—</span>}</td>
                       </tr>
                     ))}
                     {preview.rows.length > 20 && (
                       <tr>
-                        <td colSpan={4} style={{ textAlign: "center", color: "#8b949e", fontStyle: "italic", padding: "0.75rem" }}>
+                        <td colSpan={4} style={{ textAlign: "center", color: "#6b7280", fontStyle: "italic", padding: "0.75rem" }}>
                           … y {preview.rows.length - 20} filas más
                         </td>
                       </tr>
@@ -670,7 +671,7 @@ export default function FichasPage() {
             </h2>
             <div style={{ display: "flex", gap: "0.625rem", alignItems: "center" }}>
               <div style={{ position: "relative" }}>
-                <Search size={14} style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+                <Search size={14} style={{ position: "absolute", left: "0.625rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280" }} />
                 <input
                   type="text"
                   placeholder="Buscar cédula, ficha, nombre…"
@@ -709,7 +710,7 @@ export default function FichasPage() {
           </div>
 
           {loadingList || searching ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "#9ca3af" }}>
+            <div style={{ padding: "3rem", textAlign: "center", color: "#6b7280" }}>
               <RefreshCw size={20} style={{ animation: "spin 0.6s linear infinite", marginBottom: "0.5rem" }} />
               <p style={{ margin: 0, fontSize: "0.875rem" }}>{searching ? "Buscando…" : "Cargando lista…"}</p>
             </div>
@@ -719,7 +720,7 @@ export default function FichasPage() {
               <p style={{ fontWeight: 600, color: "#6e7681", margin: "0 0 0.25rem" }}>
                 {totalCount === 0 ? "La lista está vacía" : "Sin resultados"}
               </p>
-              <p style={{ fontSize: "0.8125rem", color: "#9ca3af", margin: 0 }}>
+              <p style={{ fontSize: "0.8125rem", color: "#6b7280", margin: 0 }}>
                 {totalCount === 0
                   ? "Sube un archivo CSV o Excel para habilitar la validación de registro"
                   : "Prueba con otro término de búsqueda"}
@@ -743,9 +744,9 @@ export default function FichasPage() {
                     <tr key={r.id}>
                       <td style={{ fontFamily: "monospace", fontSize: "0.8125rem", fontWeight: 600, color: "#0d1117" }}>{r.document_number}</td>
                       <td style={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{r.ficha_number}</td>
-                      <td>{r.full_name || <span style={{ color: "#9ca3af" }}>—</span>}</td>
+                      <td>{r.full_name || <span style={{ color: "#6b7280" }}>—</span>}</td>
                       <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {r.program || <span style={{ color: "#9ca3af" }}>—</span>}
+                        {r.program || <span style={{ color: "#6b7280" }}>—</span>}
                       </td>
                       <td style={{ color: "#6e7681", fontSize: "0.8rem" }}>
                         {new Date(r.uploaded_at).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
@@ -757,6 +758,7 @@ export default function FichasPage() {
                           onMouseOver={e => e.currentTarget.style.color = "#dc2626"}
                           onMouseOut={e => e.currentTarget.style.color = "#e5e7eb"}
                           title="Eliminar"
+                          aria-label={`Eliminar ${r.full_name || r.document_number}`}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -766,7 +768,7 @@ export default function FichasPage() {
                 </tbody>
               </table>
               {!search.trim() && totalCount > 200 && (
-                <p style={{ textAlign: "center", padding: "0.75rem", color: "#9ca3af", fontSize: "0.8125rem", margin: 0, borderTop: "1px solid #f3f4f6" }}>
+                <p style={{ textAlign: "center", padding: "0.75rem", color: "#6b7280", fontSize: "0.8125rem", margin: 0, borderTop: "1px solid #f3f4f6" }}>
                   Mostrando los primeros 200 registros. Usa la búsqueda para encontrar registros específicos.
                 </p>
               )}

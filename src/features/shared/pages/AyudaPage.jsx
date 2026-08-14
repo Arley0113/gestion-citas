@@ -90,7 +90,7 @@ export default function AyudaPage() {
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "1.5rem 2rem" }}>
         {/* Search */}
         <div style={{ position: "relative", marginBottom: "1.5rem" }}>
-          <Search size={16} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none" }} />
+          <Search size={16} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#6b7280", pointerEvents: "none" }} />
           <input
             type="text"
             value={search}
@@ -104,7 +104,7 @@ export default function AyudaPage() {
 
         {/* FAQ categories */}
         {filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#9ca3af" }}>
+          <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#6b7280" }}>
             <Search size={40} color="#e5e7eb" style={{ margin: "0 auto 0.75rem", display: "block" }} />
             <div style={{ fontWeight: 600, fontSize: "1rem", color: "#374151" }}>Sin resultados</div>
             <p style={{ fontSize: "0.875rem", marginTop: "0.375rem" }}>Intenta con otra búsqueda</p>

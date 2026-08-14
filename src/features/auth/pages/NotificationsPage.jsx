@@ -45,7 +45,7 @@ export default function NotificationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const today  = new Date().toISOString().slice(0, 10);
+  const today  = format(new Date(), "yyyy-MM-dd");
   const apts   = IS_DEV ? MOCK : (appointments || []);
   const active = apts
     .filter(a => ["pending", "confirmed"].includes(a.status) && a.scheduled_date >= today)
@@ -87,7 +87,7 @@ export default function NotificationsPage() {
         {/* Citas próximas como recordatorios */}
         {active.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>
               Recordatorios de citas
             </div>
             {active.map(apt => {
@@ -142,7 +142,7 @@ export default function NotificationsPage() {
             <div style={{ fontSize: "1rem", fontWeight: 600, color: "#374151", marginBottom: "0.375rem" }}>
               Sin notificaciones pendientes
             </div>
-            <p style={{ fontSize: "0.875rem", color: "#9ca3af", maxWidth: 280, margin: "0 auto" }}>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", maxWidth: 280, margin: "0 auto" }}>
               Cuando agendes una cita aparecerá aquí como recordatorio.
             </p>
           </div>

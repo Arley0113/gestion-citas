@@ -189,7 +189,7 @@ export default function ProfessionalDashboard() {
                     <div style={{ fontSize: "1.625rem", fontWeight: 800, color: "#111827", lineHeight: 1, letterSpacing: "-0.04em", fontFamily: "var(--font-display)" }}>
                       {s.value}
                     </div>
-                    <div style={{ fontSize: "0.6875rem", color: "#9ca3af", fontWeight: 500, marginTop: "0.125rem" }}>{s.label}</div>
+                    <div style={{ fontSize: "0.6875rem", color: "#6b7280", fontWeight: 500, marginTop: "0.125rem" }}>{s.label}</div>
                   </div>
                 </div>
               );
@@ -209,7 +209,7 @@ export default function ProfessionalDashboard() {
                 <Calendar size={14} color="#39a900" />
                 {format(today, "d 'de' MMMM, yyyy", { locale: es })}
               </button>
-              <span style={{ fontSize: "0.8125rem", color: "#9ca3af" }}>
+              <span style={{ fontSize: "0.8125rem", color: "#6b7280" }}>
                 {apts.length} {apts.length === 1 ? "cita" : "citas"} programadas
               </span>
             </div>
@@ -230,14 +230,14 @@ export default function ProfessionalDashboard() {
               </div>
 
               {loading ? (
-                <div style={{ padding: "3rem 0", textAlign: "center", color: "#9ca3af" }}>
+                <div style={{ padding: "3rem 0", textAlign: "center", color: "#6b7280" }}>
                   <div style={{ width: 28, height: 28, border: "2.5px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto 1rem" }} />
                   Cargando agenda...
                 </div>
               ) : filtered.length === 0 ? (
                 <div style={{ padding: "3.5rem 0", textAlign: "center" }}>
                   <Calendar size={36} color="#e5e7eb" style={{ marginBottom: "0.875rem" }} />
-                  <p style={{ fontSize: "0.875rem", color: "#9ca3af" }}>
+                  <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
                     No hay citas {TABS.find(t => t.key === tab)?.label.toLowerCase()} para hoy
                   </p>
                 </div>
@@ -262,7 +262,7 @@ export default function ProfessionalDashboard() {
                             <div style={{ fontSize: "1.375rem", fontWeight: 800, color: "#111827", lineHeight: 1, fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}>
                               {time}
                             </div>
-                            <div style={{ fontSize: "0.625rem", color: "#9ca3af", fontWeight: 600, marginTop: 2 }}>{ampm}</div>
+                            <div style={{ fontSize: "0.625rem", color: "#6b7280", fontWeight: 600, marginTop: 2 }}>{ampm}</div>
                           </div>
 
                           <div style={{ width: 1, height: 40, background: "#f3f4f6", flexShrink: 0 }} />
@@ -278,7 +278,7 @@ export default function ProfessionalDashboard() {
                               {aptName}
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                              <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>CC: {apt.profiles?.document_number}</span>
+                              <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>CC: {apt.profiles?.document_number}</span>
                               {apt.reason && (
                                 <span style={{ fontSize: "0.75rem", color: "#6b7280", background: "#f3f4f6", padding: "0.125rem 0.5rem", borderRadius: 20, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", display: "inline-block" }}>
                                   {apt.reason}
@@ -313,7 +313,7 @@ export default function ProfessionalDashboard() {
                             )}
                             {can(P.APPOINTMENTS_NO_SHOW) && (
                               <button onClick={() => noShow(apt)}
-                                style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1rem", background: "white", color: "#9ca3af", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                                style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1rem", background: "white", color: "#6b7280", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                                 <X size={14} /> No asistió
                               </button>
                             )}
@@ -333,7 +333,7 @@ export default function ProfessionalDashboard() {
             {/* Resumen del día */}
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #f3f4f6" }}>
-                <h3 style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
+                <h3 style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
                   Resumen del día
                 </h3>
               </div>
@@ -341,7 +341,7 @@ export default function ProfessionalDashboard() {
                 {[
                   { label: "Pendientes de confirmar",  value: counts.pending,   color: "#f59e0b" },
                   { label: "Confirmadas para atender", value: counts.confirmed, color: "#39a900" },
-                  { label: "Completadas",              value: counts.completed, color: "#9ca3af" },
+                  { label: "Completadas",              value: counts.completed, color: "#6b7280" },
                 ].map(s => (
                   <div key={s.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -371,7 +371,7 @@ export default function ProfessionalDashboard() {
             {/* Accesos rápidos — como cards */}
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #f3f4f6" }}>
-                <h3 style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
+                <h3 style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
                   Accesos rápidos
                 </h3>
               </div>
@@ -390,7 +390,7 @@ export default function ProfessionalDashboard() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "#374151" }}>{label}</div>
-                    <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{sub}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>{sub}</div>
                   </div>
                   <ChevronRight size={13} color="#d1d5db" />
                 </div>

@@ -117,7 +117,7 @@ export default function AdminDashboard() {
               { label: "Tiempo de actividad", value: stats.uptime,    color: "#16a34a", bg: "#f0fce4" },
             ].map(({ label, value, color, bg }) => (
               <div key={label} style={{ background: "white", borderRadius: "12px", padding: "1rem 1.25rem", border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <div style={{ fontSize: "0.6875rem", color: "#9ca3af", fontWeight: 500, marginBottom: "0.5rem" }}>{label}</div>
+                <div style={{ fontSize: "0.6875rem", color: "#6b7280", fontWeight: 500, marginBottom: "0.5rem" }}>{label}</div>
                 <div style={{ fontSize: "1.875rem", fontWeight: 800, color, lineHeight: 1, letterSpacing: "-0.03em", fontFamily: "var(--font-display)" }}>
                   {value === null ? (
                     <div style={{ width: 32, height: 32, border: "2px solid #e5e7eb", borderTopColor: color, borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
@@ -133,14 +133,14 @@ export default function AdminDashboard() {
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "1.75rem 2rem 0" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
           <div>
-            <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.25rem" }}>
+            <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.25rem" }}>
               Control de Acceso
             </div>
             <h2 style={{ fontSize: "1.125rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.02em", lineHeight: 1.2, fontFamily: "var(--font-display)" }}>
               Matriz de permisos por rol
             </h2>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.75rem", color: "#9ca3af" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.75rem", color: "#6b7280" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
               <div style={{ width: 16, height: 16, borderRadius: "4px", background: "#f0fce4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Check size={10} color="#39a900" />
@@ -159,13 +159,13 @@ export default function AdminDashboard() {
         <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", overflow: "hidden", overflowX: "auto", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", marginBottom: "1.75rem" }}>
           {/* Cabecera de roles */}
           <div style={{ display: "grid", gridTemplateColumns: `220px repeat(${ALL_ROLES.length}, 1fr)`, borderBottom: "2px solid #f3f4f6", minWidth: 700 }}>
-            <div style={{ padding: "0.875rem 1.25rem", fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <div style={{ padding: "0.875rem 1.25rem", fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Permiso
             </div>
             {ALL_ROLES.map(role => (
               <div key={role} style={{ padding: "0.875rem 0.5rem", textAlign: "center", borderLeft: "1px solid #f3f4f6" }}>
                 <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#374151" }}>{ROLE_LABELS[role]}</div>
-                <div style={{ fontSize: "0.5625rem", color: "#9ca3af", marginTop: "0.125rem" }}>
+                <div style={{ fontSize: "0.5625rem", color: "#6b7280", marginTop: "0.125rem" }}>
                   {(ROLE_PERMISSIONS[role] || []).length} permisos
                 </div>
               </div>
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
                   <div style={{ padding: "0.625rem 1.25rem", fontSize: "0.6875rem", fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                     <Lock size={10} color="#39a900" />
                     {group.label}
-                    <span style={{ fontSize: "0.5625rem", color: "#9ca3af", fontWeight: 500, marginLeft: "0.25rem" }}>({group.permissions.length} permisos)</span>
+                    <span style={{ fontSize: "0.5625rem", color: "#6b7280", fontWeight: 500, marginLeft: "0.25rem" }}>({group.permissions.length} permisos)</span>
                     <ChevronDown
                       size={13}
                       color="#9ca3af"
@@ -228,7 +228,7 @@ export default function AdminDashboard() {
 
       {/* ─── Módulos (todos visibles) ─── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2rem 1.75rem" }}>
-        <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1.25rem" }}>
+        <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1.25rem" }}>
           Módulos del sistema
         </div>
 
@@ -261,12 +261,12 @@ export default function AdminDashboard() {
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
                     <span style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>{title}</span>
                     {!hasAccess && (
-                      <span style={{ fontSize: "0.6875rem", background: "#f3f4f6", color: "#9ca3af", padding: "0.125rem 0.5rem", borderRadius: 20, fontWeight: 600 }}>
+                      <span style={{ fontSize: "0.6875rem", background: "#f3f4f6", color: "#6b7280", padding: "0.125rem 0.5rem", borderRadius: 20, fontWeight: 600 }}>
                         Próximamente
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: "0.8125rem", color: "#9ca3af" }}>{desc}</div>
+                  <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>{desc}</div>
                 </div>
                 {hasAccess
                   ? <ChevronRight size={16} color="#d1d5db" style={{ marginTop: "0.25rem", flexShrink: 0 }} />
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
       {/* ─── Actividad reciente ─── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2rem 1.75rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-          <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Actividad reciente
           </div>
           <button onClick={() => navigate("/admin/actividad")} style={{ fontSize: "0.75rem", color: "#39a900", fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
@@ -315,7 +315,7 @@ export default function AdminDashboard() {
                   <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     Cita {meta.label.toLowerCase()} — {row.dependencies?.name}
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem" }}>{row.profiles?.full_name} · {timeStr}</div>
+                  <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.125rem" }}>{row.profiles?.full_name} · {timeStr}</div>
                 </div>
               </div>
             );
@@ -331,7 +331,7 @@ export default function AdminDashboard() {
             <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#111827" }}>Sistema operativo · </span>
             <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>Bienestar SENA v1.0 — Todos los servicios en línea</span>
           </div>
-          <div style={{ fontSize: "0.8125rem", color: "#9ca3af" }}>
+          <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>
             {now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>

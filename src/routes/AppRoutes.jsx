@@ -52,7 +52,7 @@ const Fallback = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "#f5f7fa", fontFamily: "var(--font-sans)" }}>
     <div style={{ textAlign: "center" }}>
       <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite", margin: "0 auto 0.875rem" }} />
-      <p style={{ fontSize: "0.8125rem", color: "#9ca3af", margin: 0 }}>Cargando...</p>
+      <p style={{ fontSize: "0.8125rem", color: "#6b7280", margin: 0 }}>Cargando...</p>
     </div>
     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
   </div>
@@ -268,7 +268,7 @@ export function AppRoutes() {
         <Route path="*" element={
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "var(--font-sans)", gap: "0.5rem" }}>
             <div style={{ fontSize: "3rem", fontWeight: 800, color: "#e5e7eb" }}>404</div>
-            <div style={{ fontSize: "1rem", color: "#9ca3af" }}>Página no encontrada</div>
+            <div style={{ fontSize: "1rem", color: "#6b7280" }}>Página no encontrada</div>
           </div>
         } />
       </Routes>

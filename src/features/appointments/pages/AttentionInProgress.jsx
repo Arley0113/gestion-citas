@@ -96,6 +96,11 @@ export default function AttentionInProgress() {
   const toggleObs = o => setObs(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o]);
 
   const finish = async () => {
+    const hasRecord = notes.trim() || selectedTags.length || checkedObjs.length || selectedObs.length;
+    if (!hasRecord) {
+      toast.error("Registra al menos una nota, etiqueta, objetivo u observación antes de finalizar");
+      return;
+    }
     setSaving(true);
     if (DEV_ROLE) {
       toast.success("Atención finalizada (demo)");
@@ -121,7 +126,7 @@ export default function AttentionInProgress() {
   };
 
   if (!apt) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#9ca3af", fontFamily: "var(--font-sans)" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#6b7280", fontFamily: "var(--font-sans)" }}>
       Cargando...
     </div>
   );
@@ -194,7 +199,7 @@ export default function AttentionInProgress() {
               </div>
               <div style={{ fontSize: "0.8125rem", color: "#6b7280", display: "flex", gap: "1.25rem" }}>
                 {apt.profiles?.document_number && <span>Doc: {apt.profiles.document_number}</span>}
-                {apt.profiles?.program && <span style={{ color: "#9ca3af" }}>{apt.profiles.program}</span>}
+                {apt.profiles?.program && <span style={{ color: "#6b7280" }}>{apt.profiles.program}</span>}
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem" }}>
@@ -202,7 +207,7 @@ export default function AttentionInProgress() {
                 <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#39a900" }} />
                 <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#166534" }}>En atención</span>
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
                 {timeLabel(apt.scheduled_time)} · {apt.scheduled_date ? format(parseISO(apt.scheduled_date), "d MMM yyyy", { locale: es }) : ""}
               </div>
             </div>
@@ -211,10 +216,10 @@ export default function AttentionInProgress() {
           {/* Notas */}
           <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 Notas de la atención
               </div>
-              <span style={{ fontSize: "0.6875rem", color: "#d1d5db" }}>{notes.length}/2000</span>
+              <span style={{ fontSize: "0.6875rem", color: "#6b7280" }}>{notes.length}/2000</span>
             </div>
             <textarea
               value={notes}
@@ -228,7 +233,7 @@ export default function AttentionInProgress() {
 
             {/* Tags */}
             <div style={{ marginTop: "0.875rem" }}>
-              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
+              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
                 Etiquetas temáticas
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
@@ -258,7 +263,7 @@ export default function AttentionInProgress() {
                 <Target size={15} color="#39a900" />
               </div>
               <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "#111827" }}>Objetivos de la sesión</span>
-              <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#9ca3af" }}>
+              <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#6b7280" }}>
                 {checkedObjs.length} de {OBJECTIVES.length} completados
               </span>
             </div>
@@ -287,7 +292,7 @@ export default function AttentionInProgress() {
           {/* Motivo */}
           {apt.reason && (
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.375rem 1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
+              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
                 Motivo de consulta
               </div>
               <p style={{ fontSize: "0.9375rem", color: "#374151", lineHeight: 1.65, borderLeft: "3px solid #39a900", paddingLeft: "0.875rem", margin: 0 }}>
@@ -298,14 +303,14 @@ export default function AttentionInProgress() {
 
           {/* Duración */}
           <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.375rem 1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
+            <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
               Tiempo de sesión
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "0.25rem" }}>
               <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1 }}>60</div>
-              <div style={{ fontSize: "1rem", fontWeight: 600, color: "#9ca3af" }}>min</div>
+              <div style={{ fontSize: "1rem", fontWeight: 600, color: "#6b7280" }}>min</div>
             </div>
-            <div style={{ fontSize: "0.8125rem", color: "#9ca3af", marginTop: "0.375rem" }}>
+            <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "0.375rem" }}>
               Inicio: {timeLabel(apt.scheduled_time)}
             </div>
             <div style={{ marginTop: "0.875rem", height: 4, background: "#f3f4f6", borderRadius: "99px" }}>

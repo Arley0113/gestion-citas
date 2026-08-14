@@ -6,8 +6,8 @@ import { supabase } from "../../../lib/supabase";
 import { DEV_ROLE } from "../../../lib/devMode";
 
 const SETTINGS = [
-  { key: "max_appointments_per_day", label: "Máx. citas por día (por profesional)", type: "number",  default: 8 },
-  { key: "appointment_duration_min", label: "Duración de cita (minutos)",            type: "number",  default: 30 },
+  { key: "max_appointments_per_day", label: "Máx. citas por día (por profesional)", type: "number",  default: 8,  min: 1, max: 50 },
+  { key: "appointment_duration_min", label: "Duración de cita (minutos)",            type: "number",  default: 30, min: 5, max: 240 },
   { key: "allow_same_day_booking",   label: "Permitir citas en el mismo día",         type: "boolean", default: true },
   { key: "require_cancel_reason",    label: "Requerir motivo al cancelar",            type: "boolean", default: false },
   { key: "notification_emails",      label: "Notificaciones por email",               type: "boolean", default: true },
@@ -45,11 +45,11 @@ export default function ConfiguracionAdminPage() {
   const save = async () => {
     if (DEV_ROLE) { toast.success("Configuración guardada (demo)"); return; }
     setSaving(true);
-    const rows = SETTINGS.map(s => ({
-      key: s.key,
-      value: String(values[s.key]),
-      updated_at: new Date().toISOString(),
-    }));
+    const rows = SETTINGS.map(s => {
+      let value = values[s.key];
+      if (s.type === "number") value = Math.min(s.max, Math.max(s.min, Number(value) || s.default));
+      return { key: s.key, value: String(value), updated_at: new Date().toISOString() };
+    });
     const { error } = await supabase
       .from("system_settings")
       .upsert(rows, { onConflict: "key" });
@@ -112,11 +112,17 @@ export default function ConfiguracionAdminPage() {
               ) : (
                 <input
                   type="number"
+                  min={s.min}
+                  max={s.max}
                   value={values[s.key]}
                   onChange={e => setValues(v => ({ ...v, [s.key]: Number(e.target.value) }))}
+                  onBlur={e => {
+                    const clamped = Math.min(s.max, Math.max(s.min, Number(e.target.value) || s.default));
+                    setValues(v => ({ ...v, [s.key]: clamped }));
+                    e.target.style.borderColor = "#e5e7eb";
+                  }}
                   style={{ width: 80, padding: "0.375rem 0.625rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", fontFamily: "var(--font-sans)", textAlign: "center", outline: "none" }}
                   onFocus={e => e.target.style.borderColor = "#39a900"}
-                  onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                 />
               )}
             </div>

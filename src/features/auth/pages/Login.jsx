@@ -199,7 +199,7 @@ export default function Login() {
           left: 0.875rem;
           top: 50%;
           transform: translateY(-50%);
-          color: #8b949e;
+          color: #6b7280;
           pointer-events: none;
         }
 
@@ -230,7 +230,7 @@ export default function Login() {
           background: none;
           border: none;
           cursor: pointer;
-          color: #8b949e;
+          color: #6b7280;
           display: flex;
           padding: 0;
         }
@@ -300,7 +300,7 @@ export default function Login() {
 
         .login-footer-links a {
           font-size: 0.8125rem;
-          color: #8b949e;
+          color: #6b7280;
           text-decoration: none;
           transition: color 0.12s;
         }
@@ -312,7 +312,7 @@ export default function Login() {
           z-index: 1;
           margin-top: 1.5rem;
           font-size: 0.8125rem;
-          color: #8b949e;
+          color: #6b7280;
           text-align: center;
         }
 
@@ -334,7 +334,7 @@ export default function Login() {
               <div style={{ fontFamily: "'Sora', system-ui", fontWeight: 700, fontSize: "0.9375rem", color: "#0d1117", letterSpacing: "-0.01em" }}>
                 Bienestar SENA
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#8b949e", fontWeight: 400 }}>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", fontWeight: 400 }}>
                 Sistema de citas institucional
               </div>
             </div>
@@ -354,10 +354,12 @@ export default function Login() {
           {/* Formulario email */}
           <form onSubmit={handleEmail}>
             <div className="input-group">
-              <label className="input-label">Correo electrónico</label>
+              <label className="input-label" htmlFor="login-email">Correo electrónico</label>
               <div className="input-wrap">
                 <Mail size={15} className="input-icon" />
                 <input
+                  id="login-email"
+                  name="email"
                   className="text-input"
                   type="email"
                   value={email}
@@ -371,7 +373,7 @@ export default function Login() {
 
             <div className="input-group">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.375rem" }}>
-                <label className="input-label" style={{ marginBottom: 0 }}>Contraseña</label>
+                <label className="input-label" htmlFor="login-password" style={{ marginBottom: 0 }}>Contraseña</label>
                 <button
                   type="button"
                   onClick={() => { setForgotOpen(true); setForgotEmail(email); }}
@@ -383,6 +385,8 @@ export default function Login() {
               <div className="input-wrap">
                 <Lock size={15} className="input-icon" />
                 <input
+                  id="login-password"
+                  name="password"
                   className="text-input"
                   type={showPwd ? "text" : "password"}
                   value={password}
@@ -391,7 +395,12 @@ export default function Login() {
                   autoComplete="current-password"
                   style={{ paddingRight: "2.75rem" }}
                 />
-                <button type="button" className="pwd-toggle" onClick={() => setShowPwd(v => !v)}>
+                <button
+                  type="button"
+                  className="pwd-toggle"
+                  onClick={() => setShowPwd(v => !v)}
+                  aria-label={showPwd ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
                   {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
@@ -426,7 +435,7 @@ export default function Login() {
           {forgotOpen && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
               <div style={{ background: "white", borderRadius: 20, padding: "2rem", width: "100%", maxWidth: 400, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", position: "relative", animation: "slideUp 0.3s cubic-bezier(0.16,1,0.3,1) both" }}>
-                <button onClick={() => setForgotOpen(false)} style={{ position: "absolute", top: "1rem", right: "1rem", background: "none", border: "none", cursor: "pointer", color: "#8b949e", display: "flex" }}>
+                <button onClick={() => setForgotOpen(false)} style={{ position: "absolute", top: "1rem", right: "1rem", background: "none", border: "none", cursor: "pointer", color: "#6b7280", display: "flex" }}>
                   <X size={18} />
                 </button>
                 <div style={{ fontFamily: "'Sora', system-ui", fontWeight: 800, fontSize: "1.25rem", color: "#0d1117", marginBottom: "0.375rem" }}>Restablecer contraseña</div>
@@ -435,10 +444,12 @@ export default function Login() {
                 </p>
                 <form onSubmit={handleForgot}>
                   <div className="input-group">
-                    <label className="input-label">Correo electrónico</label>
+                    <label className="input-label" htmlFor="forgot-email">Correo electrónico</label>
                     <div className="input-wrap">
                       <Mail size={15} className="input-icon" />
                       <input
+                        id="forgot-email"
+                        name="email"
                         className="text-input"
                         type="email"
                         value={forgotEmail}

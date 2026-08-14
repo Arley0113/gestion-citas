@@ -17,7 +17,7 @@ const STATUS_CONFIG = {
   in_progress: { label: "En atención",   color: "#8b5cf6", bg: "#f5f3ff" },
   completed:   { label: "Completada",    color: "#39a900", bg: "#dcfce7" },
   cancelled:   { label: "Cancelada",     color: "#ef4444", bg: "#fee2e2" },
-  no_show:     { label: "No asistió",    color: "#9ca3af", bg: "#f3f4f6" },
+  no_show:     { label: "No asistió",    color: "#6b7280", bg: "#f3f4f6" },
 };
 
 const DEV_STATS = {
@@ -247,12 +247,12 @@ export default function ReportsDashboard() {
                 { label: "Total citas",       value: data.total,                                                                                                                             icon: Calendar,     color: "#3b82f6", bg: "#eff6ff" },
                 { label: "Completadas",        value: data.byStatus.find(s => s.status === "completed")?.count ?? 0,                                                                          icon: CheckCircle,  color: "#39a900", bg: "#f0fce4" },
                 { label: "Pendientes",         value: (data.byStatus.find(s => s.status === "pending")?.count ?? 0) + (data.byStatus.find(s => s.status === "confirmed")?.count ?? 0),       icon: Clock,        color: "#f59e0b", bg: "#fffbeb" },
-                { label: "No asistieron",      value: data.byStatus.find(s => s.status === "no_show")?.count ?? 0,                                                                            icon: AlertTriangle,color: "#9ca3af", bg: "#f9fafb" },
+                { label: "No asistieron",      value: data.byStatus.find(s => s.status === "no_show")?.count ?? 0,                                                                            icon: AlertTriangle,color: "#6b7280", bg: "#f9fafb" },
                 { label: "Tasa de asistencia", value: `${attendanceRate}%`,                                                                                                                   icon: TrendingUp,   color: "#39a900", bg: "#f0fce4", isRate: true },
               ].map(({ label, value, icon: Icon, color, bg, isRate }) => (
                 <div key={label} style={{ background: "white", borderRadius: "12px", padding: "1.125rem 1.25rem", border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#9ca3af", fontWeight: 500 }}>{label}</span>
+                    <span style={{ fontSize: "0.75rem", color: "#6b7280", fontWeight: 500 }}>{label}</span>
                     <div style={{ width: 30, height: 30, borderRadius: "8px", background: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Icon size={15} color={color} />
                     </div>
@@ -273,13 +273,13 @@ export default function ReportsDashboard() {
             <div className="chart-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.25rem" }}>
 
               <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>Distribución</div>
+                <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>Distribución</div>
                 <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", margin: "0 0 1.25rem", fontFamily: "var(--font-display)" }}>Citas por dependencia</h2>
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={data.byDep} barSize={36}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                     <Tooltip formatter={(v) => [v, "Citas"]} contentStyle={{ border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "0.8125rem" }} />
                     <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                       {data.byDep.map((d, i) => <Cell key={i} fill={d.color} />)}
@@ -289,13 +289,13 @@ export default function ReportsDashboard() {
               </div>
 
               <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>Tendencia</div>
+                <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>Tendencia</div>
                 <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", margin: "0 0 1.25rem", fontFamily: "var(--font-display)" }}>Citas por mes</h2>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={data.monthly}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                     <Tooltip formatter={(v) => [v, "Citas"]} contentStyle={{ border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "0.8125rem" }} />
                     <Line type="monotone" dataKey="total" stroke="#39a900" strokeWidth={2.5} dot={{ fill: "#39a900", r: 4 }} activeDot={{ r: 6 }} />
                   </LineChart>
@@ -305,11 +305,11 @@ export default function ReportsDashboard() {
 
             {/* ─── Por estado ─── */}
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", marginBottom: "1.25rem" }}>
-              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>Desglose</div>
+              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>Desglose</div>
               <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", margin: "0 0 1.25rem", fontFamily: "var(--font-display)" }}>Citas por estado</h2>
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 {data.byStatus.map(({ status, count }) => {
-                  const cfg = STATUS_CONFIG[status] || { label: status, color: "#9ca3af", bg: "#f9fafb" };
+                  const cfg = STATUS_CONFIG[status] || { label: status, color: "#6b7280", bg: "#f9fafb" };
                   const pct = data.total > 0 ? Math.round((count / data.total) * 100) : 0;
                   return (
                     <div key={status} style={{ flex: "1 1 140px", background: cfg.bg, border: `1px solid ${cfg.color}20`, borderRadius: "10px", padding: "0.875rem 1rem" }}>
@@ -318,7 +318,7 @@ export default function ReportsDashboard() {
                         <span style={{ fontSize: "0.8125rem", color: "#6b7280", fontWeight: 500 }}>{cfg.label}</span>
                       </div>
                       <div style={{ fontSize: "1.625rem", fontWeight: 800, color: cfg.color, lineHeight: 1, fontFamily: "var(--font-display)" }}>{count}</div>
-                      <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem" }}>{pct}% del total</div>
+                      <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.125rem" }}>{pct}% del total</div>
                     </div>
                   );
                 })}
@@ -328,13 +328,13 @@ export default function ReportsDashboard() {
             {/* ─── Top 5 programas ─── */}
             <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div style={{ padding: "1.5rem 1.5rem 1rem" }}>
-                <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>Programas</div>
+                <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>Programas</div>
                 <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", margin: 0, fontFamily: "var(--font-display)" }}>Top 5 programas con más citas</h2>
               </div>
               {/* Tabla header */}
               <div className="top-programs-row" style={{ display: "grid", gridTemplateColumns: "1fr 80px 120px 60px", padding: "0.5rem 1.5rem", background: "#fafafa", borderTop: "1px solid #f3f4f6", borderBottom: "1px solid #f3f4f6" }}>
                 {["Programa de formación", "Citas", "Distribución", "%"].map(h => (
-                  <div key={h} style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
+                  <div key={h} style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
                 ))}
               </div>
               {(data.byProgram?.length ? data.byProgram : TOP_PROGRAMS).map(({ name, count, pct }, i) => {
@@ -360,7 +360,7 @@ export default function ReportsDashboard() {
             </div>
           </>
         ) : (
-          <div style={{ textAlign: "center", padding: "4rem 0", color: "#9ca3af" }}>
+          <div style={{ textAlign: "center", padding: "4rem 0", color: "#6b7280" }}>
             <BarChart2 size={40} color="#e5e7eb" style={{ margin: "0 auto 0.75rem" }} />
             <p style={{ margin: 0, fontWeight: 500 }}>No se pudieron cargar los reportes</p>
           </div>

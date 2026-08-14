@@ -66,7 +66,7 @@ function useDashboardData(period) {
   const loadToday = useCallback(async () => {
     if (DEV_ROLE) return;
     setLoadingToday(true);
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = format(new Date(), "yyyy-MM-dd");
     const { data: rows } = await supabase
       .from("appointments")
       .select("id, status, scheduled_time, profiles!user_id(full_name), dependencies(name)")
@@ -210,7 +210,7 @@ export default function CoordinationDashboard() {
               return (
                 <div key={k.label} className="kpi-card-desktop">
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#9ca3af", fontWeight: 500 }}>{k.label}</span>
+                    <span style={{ fontSize: "0.75rem", color: "#6b7280", fontWeight: 500 }}>{k.label}</span>
                     <Ic size={14} color={k.color} />
                   </div>
                   <div style={{ fontSize: "2.25rem", fontWeight: 800, color: k.color, lineHeight: 1, fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}>
@@ -220,7 +220,7 @@ export default function CoordinationDashboard() {
                     <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: k.up ? "#16a34a" : "#dc2626" }}>
                       {k.up ? "↑" : "↓"} {k.trend}
                     </span>
-                    <span style={{ fontSize: "0.6875rem", color: "#9ca3af" }}>vs sem. ant.</span>
+                    <span style={{ fontSize: "0.6875rem", color: "#6b7280" }}>vs sem. ant.</span>
                   </div>
                 </div>
               );
@@ -234,14 +234,14 @@ export default function CoordinationDashboard() {
                 <h3>Tendencia semanal de citas</h3>
                 <p>Comparación con meta del período</p>
               </div>
-              <button style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", color: "#9ca3af", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+              <button style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", color: "#6b7280", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                 <RefreshCw size={12} /> Actualizar
               </button>
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={trendData} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
-                <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} formatter={v => [`${v} citas`]} />
                 <Line type="monotone" dataKey="citas" stroke="#39a900" strokeWidth={2.5} dot={{ fill: "#39a900", r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} name="Citas" />
                 <Line type="monotone" dataKey="meta" stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Meta" />
@@ -260,7 +260,7 @@ export default function CoordinationDashboard() {
             {depData.length === 0 && !loading ? (
               <div style={{ padding: "2rem 0", textAlign: "center" }}>
                 <BarChart2 size={28} color="#e5e7eb" style={{ margin: "0 auto 0.5rem" }} />
-                <p style={{ fontSize: "0.8125rem", color: "#9ca3af", margin: 0 }}>Sin datos para el período seleccionado</p>
+                <p style={{ fontSize: "0.8125rem", color: "#6b7280", margin: 0 }}>Sin datos para el período seleccionado</p>
               </div>
             ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", alignItems: "center" }}>
@@ -282,7 +282,7 @@ export default function CoordinationDashboard() {
               </div>
               <ResponsiveContainer width="100%" height={150}>
                 <BarChart data={depData} barSize={36}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                   <YAxis hide />
                   <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }} formatter={v => [`${v} citas`]} />
                   <Bar dataKey="count" radius={[4,4,0,0]}>
@@ -304,7 +304,7 @@ export default function CoordinationDashboard() {
                 <p>Actividad en tiempo real · {todayApts.length} registros</p>
               </div>
               <button onClick={loadToday}
-                style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", color: "#9ca3af", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", color: "#6b7280", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                 <RefreshCw size={12} /> Actualizar
               </button>
             </div>
@@ -312,19 +312,19 @@ export default function CoordinationDashboard() {
             {loadingToday ? (
               <div style={{ padding: "2rem 0", textAlign: "center" }}>
                 <div style={{ width: 24, height: 24, border: "2px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto 0.625rem" }} />
-                <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>Cargando...</span>
+                <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>Cargando...</span>
               </div>
             ) : todayApts.length === 0 ? (
               <div style={{ padding: "2.5rem 0", textAlign: "center" }}>
                 <Calendar size={32} color="#e5e7eb" style={{ margin: "0 auto 0.625rem" }} />
-                <p style={{ fontSize: "0.875rem", color: "#9ca3af", margin: 0 }}>Sin citas programadas para hoy</p>
+                <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: 0 }}>Sin citas programadas para hoy</p>
               </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
                 {/* Cabecera de tabla */}
                 <div style={{ minWidth: 520, display: "grid", gridTemplateColumns: "1fr 160px 100px 120px", gap: "1rem", padding: "0.625rem 0.75rem", background: "#f9fafb", borderRadius: 8, marginBottom: "0.375rem" }}>
                   {["Aprendiz", "Área", "Hora", "Estado"].map(h => (
-                    <span key={h} style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>
+                    <span key={h} style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>
                   ))}
                 </div>
                 {todayApts.map((apt, i) => {
@@ -419,7 +419,7 @@ export default function CoordinationDashboard() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#111827" }}>{label}</div>
-                  <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{sub}</div>
+                  <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>{sub}</div>
                 </div>
                 <ChevronRight size={14} color="#d1d5db" />
               </div>
@@ -490,7 +490,7 @@ export default function CoordinationDashboard() {
         }
         .coord-card-header p {
           font-size: 0.75rem;
-          color: #9ca3af;
+          color: #6b7280;
           margin: 0;
         }
         @media (max-width: 1100px) {

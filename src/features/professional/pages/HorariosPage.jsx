@@ -48,6 +48,7 @@ export default function HorariosPage() {
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
   const [duration, setDuration] = useState(30);
   const [saving, setSaving] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     if (!user || DEV_ROLE) return;
@@ -56,7 +57,15 @@ export default function HorariosPage() {
       .select("*")
       .eq("professional_id", user.id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          // No mostramos el horario por defecto sin avisar: si el profesional ya
+          // tenía uno guardado, "Guardar" ahora mismo lo sobrescribiría con el
+          // default sin que se dé cuenta de que la carga falló.
+          setLoadFailed(true);
+          toast.error("No se pudo cargar tu horario guardado. Recarga la página antes de guardar cambios.");
+          return;
+        }
         if (data) {
           setSchedule(data.schedule ?? DEFAULT_SCHEDULE);
           setDuration(data.duration_minutes ?? 30);
@@ -80,6 +89,10 @@ export default function HorariosPage() {
 
   const handleSave = async () => {
     if (!user) return;
+    if (loadFailed) {
+      toast.error("No se pudo confirmar tu horario guardado. Recarga la página antes de guardar.");
+      return;
+    }
     for (const { key } of DAYS) {
       const d = schedule[key];
       if (!d.active) continue;
@@ -237,7 +250,7 @@ export default function HorariosPage() {
                     >
                       {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
                     </select>
-                    <span style={{ color: "#9ca3af", fontSize: "0.875rem" }}>hasta</span>
+                    <span style={{ color: "#6b7280", fontSize: "0.875rem" }}>hasta</span>
                     <select
                       value={d.end}
                       onChange={e => setField(key, "end", e.target.value)}
@@ -247,7 +260,7 @@ export default function HorariosPage() {
                     </select>
                   </div>
                 ) : (
-                  <div style={{ flex: 1, fontSize: "0.875rem", color: "#9ca3af", fontStyle: "italic" }}>No disponible</div>
+                  <div style={{ flex: 1, fontSize: "0.875rem", color: "#6b7280", fontStyle: "italic" }}>No disponible</div>
                 )}
 
                 {/* Slots */}

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import {
   LayoutDashboard, Calendar, Users, BarChart2,
   LogOut, Plus, Heart, UserCircle, Bell,
@@ -98,7 +99,7 @@ export function Layout({ children }) {
   useEffect(() => {
     if (IS_DEV || !user || !isAprendiz?.()) return;
     let cancelled = false;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = format(new Date(), "yyyy-MM-dd");
     supabase
       .from("appointments")
       .select("id", { count: "exact", head: true })

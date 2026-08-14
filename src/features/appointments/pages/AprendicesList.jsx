@@ -257,7 +257,7 @@ export default function AprendicesList() {
             <div style={{ fontWeight: 600, fontSize: "1rem", color: "#374151" }}>
               No se encontraron aprendices
             </div>
-            <p style={{ fontSize: "0.875rem", color: "#9ca3af", marginTop: "0.375rem" }}>
+            <p style={{ fontSize: "0.875rem", color: "#6b7280", marginTop: "0.375rem" }}>
               Intenta con otro término de búsqueda o filtro
             </p>
           </div>
@@ -349,7 +349,7 @@ function AprendizCard({ aprendiz, onClick, canDelete, onDelete }) {
           <div style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {aprendiz.full_name}
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.125rem" }}>
+          <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.125rem" }}>
             CC · {aprendiz.document_number || "—"}
           </div>
         </div>
@@ -382,7 +382,7 @@ function AprendizCard({ aprendiz, onClick, canDelete, onDelete }) {
           <span><strong style={{ color: "#111827" }}>{aprendiz.total}</strong> {aprendiz.total === 1 ? "cita" : "citas"}</span>
         </div>
         {aprendiz.last_date && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", color: "#9ca3af", fontSize: "0.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", color: "#6b7280", fontSize: "0.75rem" }}>
             <Clock size={12} />
             <span>Última: {format(parseISO(aprendiz.last_date), "d MMM", { locale: es })}</span>
           </div>
@@ -403,7 +403,8 @@ function AprendizCard({ aprendiz, onClick, canDelete, onDelete }) {
             <button
               onClick={e => { e.stopPropagation(); setConfirming(true); }}
               title="Eliminar aprendiz"
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#d1d5db", display: "flex", borderRadius: 6, padding: "0.25rem", transition: "color 0.15s" }}
+              aria-label="Eliminar aprendiz"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280", display: "flex", borderRadius: 6, padding: "0.25rem", transition: "color 0.15s" }}
               onMouseOver={e => e.currentTarget.style.color = "#dc2626"}
               onMouseOut={e => e.currentTarget.style.color = "#d1d5db"}
             >

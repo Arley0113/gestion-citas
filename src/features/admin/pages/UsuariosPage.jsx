@@ -152,7 +152,7 @@ export default function UsuariosPage() {
         {/* Filtros */}
         <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
           <div style={{ position: "relative", flex: 1, minWidth: 220 }}>
-            <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+            <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#6b7280" }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -162,7 +162,7 @@ export default function UsuariosPage() {
               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
             />
             {search && (
-              <button onClick={() => setSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9ca3af", display: "flex" }}>
+              <button onClick={() => setSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#6b7280", display: "flex" }}>
                 <X size={14} />
               </button>
             )}
@@ -176,13 +176,13 @@ export default function UsuariosPage() {
         {/* Lista */}
         <div style={{ background: "white", borderRadius: 14, border: "1px solid #e5e7eb", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           {loading ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "#9ca3af", fontSize: "0.875rem" }}>
+            <div style={{ padding: "3rem", textAlign: "center", color: "#6b7280", fontSize: "0.875rem" }}>
               <div style={{ width: 28, height: 28, border: "2.5px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite", margin: "0 auto 0.75rem" }} />
               Cargando usuarios...
               <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
             </div>
           ) : filtered.length === 0 ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "#9ca3af", fontSize: "0.875rem" }}>
+            <div style={{ padding: "3rem", textAlign: "center", color: "#6b7280", fontSize: "0.875rem" }}>
               <User size={32} style={{ margin: "0 auto 0.75rem", opacity: 0.3 }} />
               No se encontraron usuarios
             </div>
@@ -212,7 +212,7 @@ export default function UsuariosPage() {
                         <ShieldCheck size={11} /> {ROLE_LABELS[roleName] || roleName}
                       </span>
                       {u.dependencies?.name && <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{u.dependencies.name}</span>}
-                      {u.document_number && <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>CC {u.document_number}</span>}
+                      {u.document_number && <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>CC {u.document_number}</span>}
                       {!u.onboarding_completed && <span style={{ fontSize: "0.6875rem", color: "#d97706", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 4, padding: "0.125rem 0.375rem" }}>Sin completar perfil</span>}
                     </div>
                   </div>
@@ -235,7 +235,7 @@ export default function UsuariosPage() {
         </div>
 
         {!isSuperAdmin && (
-          <p style={{ fontSize: "0.8125rem", color: "#9ca3af", textAlign: "center", marginTop: "1.25rem" }}>
+          <p style={{ fontSize: "0.8125rem", color: "#6b7280", textAlign: "center", marginTop: "1.25rem" }}>
             Solo SUPERADMIN puede eliminar usuarios.
           </p>
         )}
