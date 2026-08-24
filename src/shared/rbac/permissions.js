@@ -24,6 +24,8 @@ export const P = {
   // Dependencias
   DEPS_READ:                "dependencies.read",
   DEPS_MANAGE:              "dependencies.manage",
+  // Convocatorias
+  CONVOCATORIAS_MANAGE:     "convocatorias.manage",
   // Reportes
   REPORTS_READ:             "reports.read",
   REPORTS_EXPORT:           "reports.export",
@@ -62,6 +64,10 @@ export const PERMISSION_GROUPS = [
     label: "Sistema",
     permissions: [P.SYSTEM_CONFIG, P.SYSTEM_AUDIT, P.SYSTEM_DB, P.DEPS_MANAGE],
   },
+  {
+    label: "Convocatorias",
+    permissions: [P.CONVOCATORIAS_MANAGE],
+  },
 ];
 
 export const PERMISSION_LABELS = {
@@ -84,6 +90,7 @@ export const PERMISSION_LABELS = {
   [P.USERS_MANAGE_ROLES]:       "Gestionar roles",
   [P.DEPS_READ]:                "Ver dependencias",
   [P.DEPS_MANAGE]:              "Gestionar dependencias",
+  [P.CONVOCATORIAS_MANAGE]:     "Gestionar convocatorias",
   [P.REPORTS_READ]:             "Ver reportes",
   [P.REPORTS_EXPORT]:           "Exportar reportes",
   [P.HISTORY_READ]:             "Ver historial de dependencia",
@@ -144,6 +151,7 @@ export const ROLE_PERMISSIONS = {
     P.USERS_MANAGE_ROLES,
     P.DEPS_READ,
     P.DEPS_MANAGE,
+    P.CONVOCATORIAS_MANAGE,
     P.REPORTS_READ,
     P.REPORTS_EXPORT,
     P.HISTORY_READ,

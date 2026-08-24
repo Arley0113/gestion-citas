@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Plus, ChevronRight, Brain, Heart, Users, Calendar,
   X, Clock, CheckCircle2, AlertCircle, TrendingUp,
-  Sparkles, Shield, ChevronDown, Smile,
+  Sparkles, Shield, ChevronDown, Smile, Megaphone, Link as LinkIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -14,6 +14,10 @@ import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 
 const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
+
+const MOCK_CONVOCATORIAS = [
+  { id: "1", titulo: "Convocatoria de apoyo de sostenimiento", descripcion: "Abierta la convocatoria trimestral de apoyo de sostenimiento para aprendices en formación titulada.", link_externo: "https://www.sena.edu.co" },
+];
 
 const MOCK_APTS = [
   { id: "1", status: "pending",   scheduled_date: "2026-06-30", scheduled_time: "09:00:00", reason: "Ansiedad y estrés por carga académica del trimestre", dependencies: { name: "Psicología" } },
@@ -72,10 +76,21 @@ export default function AprendizDashboard() {
   const [showAllServices, setShowAllServices] = useState(false);
   const [mood, setMood]           = useState(null);
   const [cancelModal, setCancelModal] = useState({ open: false, aptId: null, reason: "" });
+  const [convocatorias, setConvocatorias] = useState([]);
 
   useEffect(() => {
     if (!IS_DEV) fetchAppointments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (IS_DEV) { setConvocatorias(MOCK_CONVOCATORIAS); return; }
+    supabase
+      .from("convocatorias")
+      .select("id, titulo, descripcion, link_externo")
+      .eq("activa", true)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => { if (!error) setConvocatorias(data || []); });
   }, []);
 
   // Cargar estado de ánimo guardado
@@ -560,6 +575,29 @@ export default function AprendizDashboard() {
                 </button>
               </div>
             </div>
+
+            {/* Convocatorias */}
+            {convocatorias.length > 0 && (
+              <div style={{ background: "white", borderRadius: 16, border: "1px solid #e5e7eb", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
+                <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Megaphone size={14} color="#d97706" />
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    Convocatorias
+                  </div>
+                </div>
+                {convocatorias.map((c) => (
+                  <div key={c.id} style={{ padding: "0.875rem 1.25rem", borderBottom: "1px solid #f9fafb" }}>
+                    <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#111827" }}>{c.titulo}</div>
+                    {c.descripcion && <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem", lineHeight: 1.5 }}>{c.descripcion}</div>}
+                    {c.link_externo && (
+                      <a href={c.link_externo} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.75rem", color: "#39a900", marginTop: "0.5rem", fontWeight: 600, textDecoration: "none" }}>
+                        <LinkIcon size={11} /> Más información
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Horarios */}
             <div style={{ background: "white", borderRadius: 16, border: "1px solid #e5e7eb", padding: "1.125rem 1.25rem", boxShadow: "var(--shadow-sm)" }}>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Settings, Building2, ChevronRight, Shield, Activity, Database, Check, Minus, Lock, ChevronDown, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Users, Settings, Building2, ChevronRight, Shield, Activity, Database, Check, Minus, Lock, ChevronDown, Calendar, AlertCircle, CheckCircle2, Megaphone } from "lucide-react";
 import { useAuth } from "../../../providers/AuthProvider";
 import { usePermissions } from "../../../shared/rbac/usePermissions";
 import { supabase } from "../../../lib/supabase";
@@ -14,6 +14,7 @@ const MODULES = [
   { icon: Users,     title: "Invitar staff",         desc: "Crear cuentas de profesionales",  accent: "#3b82f6", bg: "#eff6ff", permission: P.USERS_MANAGE_ROLES,    path: "/admin/invitar" },
   { icon: Users,     title: "Usuarios registrados",  desc: "Ver y eliminar usuarios",         accent: "#dc2626", bg: "#fef2f2", permission: P.USERS_READ,            path: "/admin/usuarios" },
   { icon: Building2, title: "Dependencias",          desc: "Administrar áreas de bienestar",  accent: "#8b5cf6", bg: "#f5f3ff", permission: P.DEPS_MANAGE,           path: "/admin/dependencias" },
+  { icon: Megaphone, title: "Convocatorias",         desc: "Publicar avisos para aprendices", accent: "#d97706", bg: "#fef3c7", permission: P.CONVOCATORIAS_MANAGE,  path: "/admin/convocatorias" },
   { icon: Shield,    title: "Roles y permisos",      desc: "Ver matriz de acceso del sistema", accent: "#39a900", bg: "#f0fce4", permission: P.USERS_READ,            path: "/admin/roles" },
   { icon: Activity,  title: "Registro de actividad", desc: "Logs y auditoría del sistema",    accent: "#f59e0b", bg: "#fffbeb", permission: P.APPOINTMENTS_READ_ALL, path: "/admin/actividad" },
   { icon: Database,  title: "Exportar datos",        desc: "Reportes y exportación de datos", accent: "#ef4444", bg: "#fef2f2", permission: P.REPORTS_EXPORT,        path: "/reportes" },

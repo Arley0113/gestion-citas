@@ -5,10 +5,10 @@ import { P, ROLE_PERMISSIONS, ALL_ROLES, ROLE_LABELS } from "../../shared/rbac/p
 // SUITE 1 — Estructura de constantes
 // ─────────────────────────────────────────────────────────────────────────────
 describe("P — constantes de permisos", () => {
-  it("define exactamente 26 permisos únicos", () => {
+  it("define exactamente 27 permisos únicos", () => {
     const values = Object.values(P);
-    expect(values.length).toBe(26);
-    expect(new Set(values).size).toBe(26); // no hay duplicados
+    expect(values.length).toBe(27);
+    expect(new Set(values).size).toBe(27); // no hay duplicados
   });
 
   it("todos los valores son strings no vacíos con formato 'dominio.accion'", () => {

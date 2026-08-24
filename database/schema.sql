@@ -332,6 +332,55 @@ CREATE INDEX IF NOT EXISTS idx_apts_user_id           ON public.appointments(use
 CREATE INDEX IF NOT EXISTS idx_apts_professional_id   ON public.appointments(professional_id);
 CREATE INDEX IF NOT EXISTS idx_apts_dependency_id     ON public.appointments(dependency_id);
 CREATE INDEX IF NOT EXISTS idx_apts_scheduled_date    ON public.appointments(scheduled_date);
+
+-- ────────────────────────────────────────────────────────────
+-- 8. CONVOCATORIAS
+--    Anuncios publicados por Administrador/SuperAdmin, visibles
+--    para todos los aprendices en su Dashboard (ej. convocatoria
+--    de apoyo de sostenimiento).
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.convocatorias (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  titulo       TEXT NOT NULL,
+  descripcion  TEXT,
+  link_externo TEXT,
+  activa       BOOLEAN NOT NULL DEFAULT true,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.convocatorias ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE TRIGGER trg_convocatorias_updated_at
+  BEFORE UPDATE ON public.convocatorias
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- SELECT: cualquier autenticado (aprendiz incluido) ve todas las convocatorias.
+DROP POLICY IF EXISTS "convocatorias_select_authenticated" ON public.convocatorias;
+CREATE POLICY "convocatorias_select_authenticated"
+  ON public.convocatorias FOR SELECT
+  TO authenticated
+  USING (true);
+
+DROP POLICY IF EXISTS "convocatorias_insert_admin" ON public.convocatorias;
+CREATE POLICY "convocatorias_insert_admin"
+  ON public.convocatorias FOR INSERT
+  TO authenticated
+  WITH CHECK (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR'));
+
+DROP POLICY IF EXISTS "convocatorias_update_admin" ON public.convocatorias;
+CREATE POLICY "convocatorias_update_admin"
+  ON public.convocatorias FOR UPDATE
+  TO authenticated
+  USING (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR'));
+
+DROP POLICY IF EXISTS "convocatorias_delete_admin" ON public.convocatorias;
+CREATE POLICY "convocatorias_delete_admin"
+  ON public.convocatorias FOR DELETE
+  TO authenticated
+  USING (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR'));
+
+CREATE INDEX IF NOT EXISTS idx_convocatorias_activa ON public.convocatorias(activa);
 CREATE INDEX IF NOT EXISTS idx_apts_status            ON public.appointments(status);
 -- Consulta más común: citas de una dependencia en un rango de fechas
 CREATE INDEX IF NOT EXISTS idx_apts_dep_date

@@ -26,6 +26,7 @@ const ResetPasswordPage     = lazy(() => import("../features/auth/pages/ResetPas
 const CompleteProfilePage   = lazy(() => import("../features/auth/pages/CompleteProfilePage"));
 const StaffInvitePage          = lazy(() => import("../features/admin/pages/StaffInvitePage"));
 const DependenciasPage         = lazy(() => import("../features/admin/pages/DependenciasPage"));
+const ConvocatoriasPage        = lazy(() => import("../features/admin/pages/ConvocatoriasPage"));
 const ActividadPage            = lazy(() => import("../features/admin/pages/ActividadPage"));
 const RolesPage                = lazy(() => import("../features/admin/pages/RolesPage"));
 const ConfiguracionAdminPage   = lazy(() => import("../features/admin/pages/ConfiguracionAdminPage"));
@@ -225,6 +226,11 @@ export function AppRoutes() {
         <Route path="/admin/dependencias" element={
           <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
             <Layout><DependenciasPage /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/convocatorias" element={
+          <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
+            <Layout><ConvocatoriasPage /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/admin/actividad" element={
