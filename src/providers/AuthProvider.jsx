@@ -53,19 +53,18 @@ export function AuthProvider({ children }) {
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error("Error cargando perfil:", err);
-      const isTimeout = err.message === "timeout";
       const isMissing = err.message?.includes("Perfil no encontrado");
 
-      if (isTimeout) {
-        // Red lenta — no cerrar sesión, solo avisar. El perfil existe pero tardó.
+      if (!isMissing) {
+        // Timeout o cualquier otro error transitorio (red, hipo del servidor, etc.)
+        // — el perfil puede existir igual, no cerramos sesión por esto.
         toast.error("Conexión lenta. Si ves problemas, recarga la página.", { duration: 6000 });
         return "timeout"; // señal: no hacer signOut
       }
 
+      // Perfil confirmadamente inexistente (la consulta respondió sin error y sin fila).
       setProfile(null);
-      const message = isMissing
-        ? "No se encontró tu perfil en Bienestar SENA. Contacta al administrador."
-        : "No se pudo cargar tu perfil. Intenta de nuevo.";
+      const message = "No se encontró tu perfil en Bienestar SENA. Contacta al administrador.";
       setError(message);
       toast.error(message, { duration: 5000 });
       return null; // señal: perfil inexistente → sí hacer signOut
