@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { email, role_id, dependency_id, password } = await req.json();
+    const { email, role_id, dependency_id, sede_id, password } = await req.json();
 
     if (!email || !role_id) {
       return new Response(
@@ -142,10 +142,10 @@ Deno.serve(async (req: Request) => {
               { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
-          // Actualizar rol y dependencia en el perfil
+          // Actualizar rol, dependencia y sede en el perfil
           await supabaseAdmin
             .from("profiles")
-            .update({ role_id, dependency_id: dependency_id || null })
+            .update({ role_id, dependency_id: dependency_id || null, sede_id: sede_id || null })
             .eq("id", existingUser.id);
           // Marcar invitación como aceptada
           await supabaseAdmin
@@ -160,6 +160,13 @@ Deno.serve(async (req: Request) => {
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+    } else if (sede_id && newUser?.user?.id) {
+      // Usuario nuevo: el trigger handle_new_user ya creó el perfil (sin sede,
+      // que no forma parte de su lógica) — se asigna aquí directamente.
+      await supabaseAdmin
+        .from("profiles")
+        .update({ sede_id })
+        .eq("id", newUser.user.id);
     }
 
     return new Response(

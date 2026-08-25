@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Upload, FileSpreadsheet, Trash2, Search, ChevronLeft,
-  Users, CheckCircle2, AlertCircle, X, RefreshCw, Download,
+  Users, CheckCircle2, AlertCircle, X, RefreshCw, Download, MapPin, Plus,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
@@ -13,6 +13,15 @@ import { toast } from "sonner";
 const MOCK_WHITELIST = [
   { id: "mock-1", document_number: "1001234567", ficha_number: "2847193", full_name: "Juan Pérez", program: "Desarrollo de Software", uploaded_at: "2026-07-01T10:00:00Z" },
   { id: "mock-2", document_number: "1009876543", ficha_number: "2851024", full_name: "María García", program: "Contabilidad", uploaded_at: "2026-07-01T10:00:00Z" },
+];
+
+const MOCK_SEDES = [
+  { id: 1, name: "Maicao" },
+  { id: 2, name: "Comercio y Servicios" },
+  { id: 3, name: "Industrial" },
+];
+const MOCK_FICHAS_SEDE = [
+  { ficha_number: "2847193", sede_id: 1, sedes: { name: "Maicao" } },
 ];
 
 // Normaliza encabezados quitando tildes ("Cédula" → "cedula") para que las
@@ -181,7 +190,64 @@ export default function FichasPage() {
   const [wlEnabled, setWlEnabled]       = useState(false);
   const [togglingWl, setTogglingWl]     = useState(false);
 
+  const [sedes, setSedes]               = useState([]);
+  const [fichaSedes, setFichaSedes]     = useState([]);
+  const [loadingFichaSedes, setLoadingFichaSedes] = useState(true);
+  const [newFicha, setNewFicha]         = useState({ ficha_number: "", sede_id: "" });
+  const [savingFichaSede, setSavingFichaSede] = useState(null); // ficha_number en guardado, o "new"
+
   const fileInputRef = useRef(null);
+
+  // ─── Sedes por ficha ─────────────────────────────────────────────────────
+  const loadFichaSedes = useCallback(async () => {
+    setLoadingFichaSedes(true);
+    if (DEV_ROLE) {
+      setSedes(MOCK_SEDES);
+      setFichaSedes(MOCK_FICHAS_SEDE);
+      setLoadingFichaSedes(false);
+      return;
+    }
+    const [sedesRes, fichasRes] = await Promise.all([
+      supabase.from("sedes").select("id, name").eq("active", true).order("name"),
+      supabase.from("fichas").select("ficha_number, sede_id, sedes(name)").order("ficha_number"),
+    ]);
+    setSedes(sedesRes.data || []);
+    setFichaSedes(fichasRes.data || []);
+    setLoadingFichaSedes(false);
+  }, []);
+
+  useEffect(() => { loadFichaSedes(); }, [loadFichaSedes]);
+
+  const saveFichaSede = async (ficha_number, sede_id) => {
+    if (!ficha_number.trim() || !sede_id) { toast.error("Ficha y sede son obligatorias"); return; }
+    setSavingFichaSede(ficha_number);
+    if (DEV_ROLE) {
+      toast.success("Sede asignada (demo)");
+      setNewFicha({ ficha_number: "", sede_id: "" });
+      setSavingFichaSede(null);
+      return;
+    }
+    const { error } = await supabase
+      .from("fichas")
+      .upsert({ ficha_number: ficha_number.trim(), sede_id: parseInt(sede_id) }, { onConflict: "ficha_number" });
+    if (error) { toast.error("No se pudo asignar la sede"); }
+    else { toast.success("Sede asignada"); setNewFicha({ ficha_number: "", sede_id: "" }); await loadFichaSedes(); }
+    setSavingFichaSede(null);
+  };
+
+  const removeFichaSede = async (ficha_number) => {
+    setSavingFichaSede(ficha_number);
+    if (DEV_ROLE) {
+      setFichaSedes(prev => prev.filter(f => f.ficha_number !== ficha_number));
+      toast.success("Eliminado (demo)");
+      setSavingFichaSede(null);
+      return;
+    }
+    const { error } = await supabase.from("fichas").delete().eq("ficha_number", ficha_number);
+    if (error) { toast.error("No se pudo eliminar"); }
+    else { toast.success("Eliminado"); await loadFichaSedes(); }
+    setSavingFichaSede(null);
+  };
 
   // ─── Load whitelist + setting ────────────────────────────────────────────
   const loadWhitelist = useCallback(async () => {
@@ -510,6 +576,85 @@ export default function FichasPage() {
             </div>
           )}
         </div>}
+
+        {/* Sedes por ficha */}
+        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, padding: "1.5rem", marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "1rem" }}>
+            <MapPin size={16} color="#0ea5e9" />
+            <h2 style={{ fontFamily: "'Sora', system-ui", fontWeight: 700, fontSize: "1rem", color: "#0d1117", margin: 0 }}>
+              Sede por ficha
+            </h2>
+          </div>
+          <p style={{ fontSize: "0.8125rem", color: "#6b7280", margin: "0 0 1rem" }}>
+            Cada aprendiz hereda automáticamente la sede de su ficha al registrarse. Asigna la sede de cada ficha aquí.
+          </p>
+
+          {/* Agregar / asignar */}
+          <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+            <input
+              type="text"
+              placeholder="Número de ficha"
+              value={newFicha.ficha_number}
+              onChange={e => setNewFicha(f => ({ ...f, ficha_number: e.target.value }))}
+              style={{ flex: "1 1 160px", padding: "0.5rem 0.75rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", fontFamily: "monospace", outline: "none" }}
+            />
+            <select
+              value={newFicha.sede_id}
+              onChange={e => setNewFicha(f => ({ ...f, sede_id: e.target.value }))}
+              style={{ flex: "1 1 180px", padding: "0.5rem 0.75rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", color: newFicha.sede_id ? "#0d1117" : "#9ca3af", background: "white", outline: "none" }}
+            >
+              <option value="">Seleccionar sede…</option>
+              {sedes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <button
+              onClick={() => saveFichaSede(newFicha.ficha_number, newFicha.sede_id)}
+              disabled={savingFichaSede === newFicha.ficha_number}
+              style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", background: "#39a900", color: "white", border: "none", borderRadius: 8, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }}
+            >
+              <Plus size={14} /> Asignar
+            </button>
+          </div>
+
+          {/* Lista de fichas asignadas */}
+          {loadingFichaSedes ? (
+            <div style={{ textAlign: "center", padding: "1.5rem", color: "#6b7280", fontSize: "0.875rem" }}>Cargando…</div>
+          ) : fichaSedes.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "1.5rem", color: "#6b7280", fontSize: "0.875rem" }}>Ninguna ficha tiene sede asignada todavía</div>
+          ) : (
+            <div style={{ border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden" }}>
+              <table className="wl-table">
+                <thead>
+                  <tr>
+                    <th>Ficha</th>
+                    <th>Sede</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fichaSedes.map(f => (
+                    <tr key={f.ficha_number}>
+                      <td style={{ fontFamily: "monospace", fontWeight: 600 }}>{f.ficha_number}</td>
+                      <td>{f.sedes?.name || <span style={{ color: "#6b7280" }}>—</span>}</td>
+                      <td style={{ textAlign: "right" }}>
+                        <button
+                          onClick={() => removeFichaSede(f.ficha_number)}
+                          disabled={savingFichaSede === f.ficha_number}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#e5e7eb", padding: "0.25rem", display: "inline-flex", borderRadius: 6 }}
+                          onMouseOver={e => e.currentTarget.style.color = "#dc2626"}
+                          onMouseOut={e => e.currentTarget.style.color = "#e5e7eb"}
+                          title="Quitar asignación"
+                          aria-label={`Quitar sede de la ficha ${f.ficha_number}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.875rem", marginBottom: "1.75rem" }}>

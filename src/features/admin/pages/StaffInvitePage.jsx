@@ -14,6 +14,11 @@ const MOCK_DEPS = [
   { id: 11, name: "Enfermería" },
   { id: 12, name: "Trabajo Social" },
 ];
+const MOCK_SEDES = [
+  { id: 1, name: "Maicao" },
+  { id: 2, name: "Comercio y Servicios" },
+  { id: 3, name: "Industrial" },
+];
 
 const STAFF_ROLES = [
   { value: "PSICOLOGIA",     label: "Psicólogo/a",       dep: true  },
@@ -33,10 +38,11 @@ const STATUS_CFG = {
 };
 
 export default function StaffInvitePage() {
-  const [form, setForm]         = useState({ email: "", role_name: "", dependency_id: "", password: generatePassword() });
+  const [form, setForm]         = useState({ email: "", role_name: "", dependency_id: "", sede_id: "", password: generatePassword() });
   const [showPwd, setShowPwd]   = useState(false);
   const [roles, setRoles]       = useState([]);
   const [deps, setDeps]         = useState([]);
+  const [sedes, setSedes]       = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [sending, setSending]   = useState(false);
   const [loadingInv, setLoadingInv] = useState(true);
@@ -49,13 +55,15 @@ export default function StaffInvitePage() {
 
   // Cargar roles y dependencias
   useEffect(() => {
-    if (IS_DEV) { setDeps(MOCK_DEPS); setRoles(MOCK_ROLES); return; }
+    if (IS_DEV) { setDeps(MOCK_DEPS); setRoles(MOCK_ROLES); setSedes(MOCK_SEDES); return; }
     Promise.all([
       supabase.from("roles").select("id, name, label").in("name", STAFF_ROLES.map(r => r.value)),
       supabase.from("dependencies").select("id, name"),
-    ]).then(([rolesRes, depsRes]) => {
+      supabase.from("sedes").select("id, name").eq("active", true).order("name"),
+    ]).then(([rolesRes, depsRes, sedesRes]) => {
       setRoles(rolesRes.data || []);
       setDeps(depsRes.data || []);
+      setSedes(sedesRes.data || []);
     });
   }, []);
 
@@ -83,6 +91,7 @@ export default function StaffInvitePage() {
     if (!form.email)      { toast.error("Ingresa el correo del staff"); return; }
     if (!form.role_name)  { toast.error("Selecciona el rol"); return; }
     if (requiresDep && !form.dependency_id) { toast.error("Selecciona la dependencia"); return; }
+    if (requiresDep && !form.sede_id)       { toast.error("Selecciona la sede"); return; }
 
     const roleRow = roles.find(r => r.name === form.role_name);
     if (!roleRow) { toast.error("Rol no encontrado"); return; }
@@ -94,7 +103,7 @@ export default function StaffInvitePage() {
 
     if (IS_DEV) {
       toast.success(`Usuario creado: ${form.email} (demo)`);
-      setForm({ email: "", role_name: "", dependency_id: "", password: generatePassword() });
+      setForm({ email: "", role_name: "", dependency_id: "", sede_id: "", password: generatePassword() });
       return;
     }
 
@@ -105,6 +114,7 @@ export default function StaffInvitePage() {
           email:         form.email.trim().toLowerCase(),
           role_id:       roleRow.id,
           dependency_id: form.dependency_id ? parseInt(form.dependency_id) : null,
+          sede_id:       form.sede_id ? parseInt(form.sede_id) : null,
           password:      form.password,
         },
       });
@@ -115,7 +125,7 @@ export default function StaffInvitePage() {
       }
 
       toast.success(`Usuario creado: ${form.email}`);
-      setForm({ email: "", role_name: "", dependency_id: "", password: generatePassword() });
+      setForm({ email: "", role_name: "", dependency_id: "", sede_id: "", password: generatePassword() });
       fetchInvitations();
     } catch {
       toast.error("Error de conexión al enviar la invitación");
@@ -194,7 +204,7 @@ export default function StaffInvitePage() {
               </label>
               <select
                 value={form.role_name}
-                onChange={e => { set("role_name", e.target.value); set("dependency_id", ""); }}
+                onChange={e => { set("role_name", e.target.value); set("dependency_id", ""); set("sede_id", ""); }}
                 required
                 style={{ width: "100%", padding: "0.65rem 0.875rem", border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.9375rem", color: form.role_name ? "#111827" : "#9ca3af", background: "white", outline: "none", cursor: "pointer", fontFamily: "var(--font-sans)", transition: "border-color 0.15s" }}
                 onFocus={e => e.target.style.borderColor = "#39a900"}
@@ -221,6 +231,26 @@ export default function StaffInvitePage() {
                 >
                   <option value="">Seleccionar dependencia…</option>
                   {deps.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Sede (solo para profesionales) */}
+            {requiresDep && (
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.375rem" }}>
+                  Sede
+                </label>
+                <select
+                  value={form.sede_id}
+                  onChange={e => set("sede_id", e.target.value)}
+                  required={requiresDep}
+                  style={{ width: "100%", padding: "0.65rem 0.875rem", border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.9375rem", color: form.sede_id ? "#111827" : "#9ca3af", background: "white", outline: "none", cursor: "pointer", fontFamily: "var(--font-sans)", transition: "border-color 0.15s" }}
+                  onFocus={e => e.target.style.borderColor = "#39a900"}
+                  onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                >
+                  <option value="">Seleccionar sede…</option>
+                  {sedes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
             )}

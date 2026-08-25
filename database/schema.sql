@@ -382,6 +382,126 @@ CREATE POLICY "convocatorias_delete_admin"
 
 CREATE INDEX IF NOT EXISTS idx_convocatorias_activa ON public.convocatorias(activa);
 CREATE INDEX IF NOT EXISTS idx_apts_status            ON public.appointments(status);
+
+-- ────────────────────────────────────────────────────────────
+-- 9. SEDES
+--    El centro maneja varias sedes físicas. Cada profesional
+--    pertenece a una, y cada aprendiz hereda la suya de su ficha
+--    (ver tabla `fichas` y el trigger set_sede_from_ficha).
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.sedes (
+  id          SERIAL PRIMARY KEY,
+  name        TEXT NOT NULL UNIQUE,
+  active      BOOLEAN NOT NULL DEFAULT true,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.sedes ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE TRIGGER trg_sedes_updated_at
+  BEFORE UPDATE ON public.sedes
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+INSERT INTO public.sedes (name) VALUES
+  ('Maicao'),
+  ('Comercio y Servicios'),
+  ('Industrial')
+ON CONFLICT (name) DO NOTHING;
+
+DROP POLICY IF EXISTS "sedes_select_authenticated" ON public.sedes;
+CREATE POLICY "sedes_select_authenticated"
+  ON public.sedes FOR SELECT
+  TO authenticated
+  USING (true);
+
+DROP POLICY IF EXISTS "sedes_insert_admin" ON public.sedes;
+CREATE POLICY "sedes_insert_admin"
+  ON public.sedes FOR INSERT
+  TO authenticated
+  WITH CHECK (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR'));
+
+DROP POLICY IF EXISTS "sedes_update_admin" ON public.sedes;
+CREATE POLICY "sedes_update_admin"
+  ON public.sedes FOR UPDATE
+  TO authenticated
+  USING (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR'));
+
+DROP POLICY IF EXISTS "sedes_delete_superadmin" ON public.sedes;
+CREATE POLICY "sedes_delete_superadmin"
+  ON public.sedes FOR DELETE
+  TO authenticated
+  USING (public.auth_role_name() = 'SUPERADMIN');
+
+-- ────────────────────────────────────────────────────────────
+-- 10. FICHAS → SEDE
+--    Mapea cada número de ficha a su sede física. Gestionada por
+--    Coordinación/Administrador desde "Fichas activas". No confundir
+--    con `aprendiz_whitelist` (tabla separada, creada fuera de este
+--    archivo, que valida quién puede registrarse).
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.fichas (
+  ficha_number TEXT PRIMARY KEY,
+  sede_id      INTEGER REFERENCES public.sedes(id),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.fichas ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE TRIGGER trg_fichas_updated_at
+  BEFORE UPDATE ON public.fichas
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+DROP POLICY IF EXISTS "fichas_select_staff" ON public.fichas;
+CREATE POLICY "fichas_select_staff"
+  ON public.fichas FOR SELECT
+  TO authenticated
+  USING (public.auth_role_name() IN ('COORDINACION','ADMINISTRADOR','SUPERADMIN'));
+
+DROP POLICY IF EXISTS "fichas_insert_staff" ON public.fichas;
+CREATE POLICY "fichas_insert_staff"
+  ON public.fichas FOR INSERT
+  TO authenticated
+  WITH CHECK (public.auth_role_name() IN ('COORDINACION','ADMINISTRADOR','SUPERADMIN'));
+
+DROP POLICY IF EXISTS "fichas_update_staff" ON public.fichas;
+CREATE POLICY "fichas_update_staff"
+  ON public.fichas FOR UPDATE
+  TO authenticated
+  USING (public.auth_role_name() IN ('COORDINACION','ADMINISTRADOR','SUPERADMIN'));
+
+DROP POLICY IF EXISTS "fichas_delete_admin" ON public.fichas;
+CREATE POLICY "fichas_delete_admin"
+  ON public.fichas FOR DELETE
+  TO authenticated
+  USING (public.auth_role_name() IN ('ADMINISTRADOR','SUPERADMIN'));
+
+-- ────────────────────────────────────────────────────────────
+-- 11. profiles.sede_id + asignación automática por ficha
+--    Cuando se inserta/actualiza el ficha_number de un perfil
+--    (aprendiz), se copia la sede desde `fichas` automáticamente.
+--    Para staff, la sede la asigna directamente invite-staff.
+-- ────────────────────────────────────────────────────────────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS sede_id INTEGER REFERENCES public.sedes(id);
+
+CREATE OR REPLACE FUNCTION public.set_sede_from_ficha()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.ficha_number IS NOT NULL THEN
+    SELECT sede_id INTO NEW.sede_id
+    FROM public.fichas
+    WHERE ficha_number = NEW.ficha_number;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_profiles_set_sede ON public.profiles;
+CREATE TRIGGER trg_profiles_set_sede
+  BEFORE INSERT OR UPDATE OF ficha_number ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.set_sede_from_ficha();
 -- Consulta más común: citas de una dependencia en un rango de fechas
 CREATE INDEX IF NOT EXISTS idx_apts_dep_date
   ON public.appointments(dependency_id, scheduled_date);
