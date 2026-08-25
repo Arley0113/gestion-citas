@@ -183,6 +183,7 @@ export default function FichasPage() {
   const [preview, setPreview]     = useState(null); // { rows, filename }
   const [importing, setImporting] = useState(false);
   const [dragging, setDragging]   = useState(false);
+  const [importSede, setImportSede] = useState("");
 
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing]         = useState(false);
@@ -379,10 +380,12 @@ export default function FichasPage() {
   // ─── Import ──────────────────────────────────────────────────────────────
   const handleImport = async () => {
     if (!preview) return;
+    if (!importSede) { toast.error("Selecciona a qué sede pertenecen las fichas de este archivo"); return; }
     setImporting(true);
     if (DEV_ROLE) {
       toast.success(`Importación completa (demo): ${preview.rows.length} nuevos`);
       setPreview(null);
+      setImportSede("");
       if (fileInputRef.current) fileInputRef.current.value = "";
       setImporting(false);
       return;
@@ -427,17 +430,28 @@ export default function FichasPage() {
         if (error) throw error;
       }
 
+      // Asignar la sede elegida a todas las fichas distintas de este archivo
+      const fichaNumbers = [...new Set(rows.map(r => r.ficha_number))];
+      const fichaRows = fichaNumbers.map(ficha_number => ({ ficha_number, sede_id: parseInt(importSede) }));
+      for (let i = 0; i < fichaRows.length; i += 500) {
+        const batch = fichaRows.slice(i, i + 500);
+        const { error: fichaErr } = await supabase.from("fichas").upsert(batch, { onConflict: "ficha_number" });
+        if (fichaErr) throw fichaErr;
+      }
+
       const dupes = rawRows.length - rows.length;
       const parts = [];
       if (newCount > 0)     parts.push(`${newCount} nuevos`);
       if (updatedCount > 0) parts.push(`${updatedCount} actualizados`);
       toast.success(
-        `Importación completa: ${parts.join(", ")}` +
+        `Importación completa: ${parts.join(", ")}, ${fichaNumbers.length} ficha${fichaNumbers.length !== 1 ? "s" : ""} asignada${fichaNumbers.length !== 1 ? "s" : ""} a su sede` +
         (dupes > 0 ? ` (${dupes} duplicados en el archivo ignorados)` : "")
       );
       setPreview(null);
+      setImportSede("");
       if (fileInputRef.current) fileInputRef.current.value = "";
       await loadWhitelist();
+      await loadFichaSedes();
     } catch (err) {
       toast.error("Error al importar: " + (err.message || "intenta de nuevo"));
     } finally {
@@ -586,7 +600,9 @@ export default function FichasPage() {
             </h2>
           </div>
           <p style={{ fontSize: "0.8125rem", color: "#6b7280", margin: "0 0 1rem" }}>
-            Cada aprendiz hereda automáticamente la sede de su ficha al registrarse. Asigna la sede de cada ficha aquí.
+            Cada aprendiz hereda automáticamente la sede de su ficha al registrarse. Normalmente esto se asigna solo
+            al <strong>subir el archivo</strong> más abajo (eliges la sede una vez para todas las fichas del documento).
+            Usa esto solo para corregir o agregar una ficha suelta.
           </p>
 
           {/* Agregar / asignar */}
@@ -705,6 +721,24 @@ export default function FichasPage() {
             >
               <Download size={13} /> Plantilla CSV
             </button>
+          </div>
+
+          {/* Sede del archivo — se aplica a todas las fichas que traiga */}
+          <div style={{ marginBottom: "1rem" }}>
+            <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.375rem" }}>
+              Sede de este archivo
+            </label>
+            <select
+              value={importSede}
+              onChange={e => setImportSede(e.target.value)}
+              style={{ width: "100%", padding: "0.6rem 0.875rem", border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.875rem", color: importSede ? "#0d1117" : "#9ca3af", background: "white", outline: "none", boxSizing: "border-box" }}
+            >
+              <option value="">Seleccionar sede…</option>
+              {sedes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: "0.375rem 0 0" }}>
+              Todas las fichas de este archivo quedarán asignadas a esta sede.
+            </p>
           </div>
 
           {/* Drop zone */}
