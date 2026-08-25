@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(!isDev);
   const [error,   setError]   = useState(null);
 
-  const fetchProfile = useCallback(async (userId) => {
+  const fetchProfile = useCallback(async (userId, isRetry = false) => {
     if (isDev) return devProfile;
     try {
       const { data, error } = await Promise.race([
@@ -57,7 +57,13 @@ export function AuthProvider({ children }) {
 
       if (!isMissing) {
         // Timeout o cualquier otro error transitorio (red, hipo del servidor, etc.)
-        // — el perfil puede existir igual, no cerramos sesión por esto.
+        // — reintentamos una vez antes de rendirnos. Sin esto, `profile` se quedaba
+        // en null y el timer de "atascado" en ProtectedRoute terminaba cerrando la
+        // sesión igual a los 7s, aunque aquí ya no forcemos el signOut directamente.
+        if (!isRetry) {
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          return fetchProfile(userId, true);
+        }
         toast.error("Conexión lenta. Si ves problemas, recarga la página.", { duration: 6000 });
         return "timeout"; // señal: no hacer signOut
       }

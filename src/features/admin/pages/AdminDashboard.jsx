@@ -84,6 +84,7 @@ export default function AdminDashboard() {
   const recentActivity = useRecentActivity();
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const toggleGroup = (label) => setCollapsedGroups(p => ({ ...p, [label]: !p[label] }));
+  const [matrixOpen, setMatrixOpen] = useState(false);
 
   return (
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
@@ -132,31 +133,44 @@ export default function AdminDashboard() {
 
       {/* ─── Matriz RBAC colapsable ─── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "1.75rem 2rem 0" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-          <div>
-            <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.25rem" }}>
-              Control de Acceso
-            </div>
-            <h2 style={{ fontSize: "1.125rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.02em", lineHeight: 1.2, fontFamily: "var(--font-display)" }}>
-              Matriz de permisos por rol
-            </h2>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.75rem", color: "#6b7280" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-              <div style={{ width: 16, height: 16, borderRadius: "4px", background: "#f0fce4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Check size={10} color="#39a900" />
+        <div
+          onClick={() => setMatrixOpen(o => !o)}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: matrixOpen ? "1rem" : 0, cursor: "pointer", userSelect: "none" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+            <ChevronDown
+              size={16}
+              color="#9ca3af"
+              style={{ transform: matrixOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s", flexShrink: 0 }}
+            />
+            <div>
+              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.25rem" }}>
+                Control de Acceso
               </div>
-              Permitido
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-              <div style={{ width: 16, height: 16, borderRadius: "4px", background: "#f9fafb", border: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Minus size={10} color="#d1d5db" />
-              </div>
-              Denegado
+              <h2 style={{ fontSize: "1.125rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.02em", lineHeight: 1.2, fontFamily: "var(--font-display)" }}>
+                Matriz de permisos por rol
+              </h2>
             </div>
           </div>
+          {matrixOpen && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.75rem", color: "#6b7280" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                <div style={{ width: 16, height: 16, borderRadius: "4px", background: "#f0fce4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Check size={10} color="#39a900" />
+                </div>
+                Permitido
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                <div style={{ width: 16, height: 16, borderRadius: "4px", background: "#f9fafb", border: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Minus size={10} color="#d1d5db" />
+                </div>
+                Denegado
+              </div>
+            </div>
+          )}
         </div>
 
+        {matrixOpen && (
         <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "14px", overflow: "hidden", overflowX: "auto", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", marginBottom: "1.75rem" }}>
           {/* Cabecera de roles */}
           <div style={{ display: "grid", gridTemplateColumns: `220px repeat(${ALL_ROLES.length}, 1fr)`, borderBottom: "2px solid #f3f4f6", minWidth: 700 }}>
@@ -225,6 +239,7 @@ export default function AdminDashboard() {
             );
           })}
         </div>
+        )}
       </div>
 
       {/* ─── Módulos (todos visibles) ─── */}

@@ -17,7 +17,10 @@ export function ProtectedRoute({ children, requiredRoles = null, requiredPermiss
   const [profileStuck, setProfileStuck] = useState(false);
   useEffect(() => {
     if (!user || profile) { setProfileStuck(false); return; }
-    const t = setTimeout(() => setProfileStuck(true), 7000);
+    // 12s del intento inicial + 1.2s de espera + otros 12s del reintento en
+    // fetchProfile (AuthProvider) en el peor caso — este timer es el último
+    // recurso para sesiones genuinamente atascadas, no para errores pasajeros.
+    const t = setTimeout(() => setProfileStuck(true), 16000);
     return () => clearTimeout(t);
   }, [user, profile]);
 
