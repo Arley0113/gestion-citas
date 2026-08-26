@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS public.appointments (
   user_id            UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   professional_id    UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   dependency_id      INTEGER NOT NULL REFERENCES public.dependencies(id) ON DELETE CASCADE,
+  sede_id            INTEGER REFERENCES public.sedes(id),
   scheduled_date     DATE NOT NULL,
   scheduled_time     TIME NOT NULL,
   status             TEXT NOT NULL DEFAULT 'pending'
@@ -262,8 +263,10 @@ CREATE POLICY "profiles_delete_superadmin"
 
 -- SELECT:
 --   · Aprendiz: sus propias citas
---   · Profesional: citas de su dependencia
---   · Coordinación / Admin: todas las citas
+--   · Profesional: citas de su dependencia Y de su misma sede
+--     (fallback: si a la cita o al profesional aún no se le asignó sede,
+--     se comporta como antes — visible — para no ocultar datos incompletos)
+--   · Coordinación / Admin: todas las citas, de cualquier sede
 DROP POLICY IF EXISTS "apts_select" ON public.appointments;
 CREATE POLICY "apts_select"
   ON public.appointments FOR SELECT
@@ -271,11 +274,16 @@ CREATE POLICY "apts_select"
   USING (
     -- Coordinación y admin: ven todo
     public.auth_role_name() IN ('COORDINACION','ADMINISTRADOR','SUPERADMIN')
-    -- Profesional: citas de su dependencia
+    -- Profesional: citas de su dependencia y su sede
     OR (
       public.auth_role_name() IN ('PSICOLOGIA','ENFERMERIA','TRABAJO_SOCIAL')
       AND dependency_id = (
         SELECT dependency_id FROM public.profiles WHERE id = auth.uid()
+      )
+      AND (
+        sede_id IS NULL
+        OR (SELECT sede_id FROM public.profiles WHERE id = auth.uid()) IS NULL
+        OR sede_id = (SELECT sede_id FROM public.profiles WHERE id = auth.uid())
       )
     )
     -- Aprendiz: solo sus citas
@@ -283,6 +291,7 @@ CREATE POLICY "apts_select"
   );
 
 -- INSERT: solo aprendiz puede agendar (para sí mismo).
+-- sede_id no se envía desde el cliente — lo asigna trg_appointments_set_sede.
 DROP POLICY IF EXISTS "apts_insert_aprendiz" ON public.appointments;
 CREATE POLICY "apts_insert_aprendiz"
   ON public.appointments FOR INSERT
@@ -294,7 +303,8 @@ CREATE POLICY "apts_insert_aprendiz"
 
 -- UPDATE:
 --   · Aprendiz: puede cancelar su propia cita pendiente
---   · Profesional: puede confirmar / iniciar / completar / no_show en su dependencia
+--   · Profesional: puede confirmar / iniciar / completar / no_show en su
+--     dependencia Y su misma sede (mismo fallback que en SELECT)
 --   · Coordinación / Admin: puede cancelar cualquier cita activa
 DROP POLICY IF EXISTS "apts_update" ON public.appointments;
 CREATE POLICY "apts_update"
@@ -303,16 +313,28 @@ CREATE POLICY "apts_update"
   USING (
     -- Coordinación / Admin cancelan cualquier cita
     public.auth_role_name() IN ('COORDINACION','ADMINISTRADOR','SUPERADMIN')
-    -- Profesional: actualiza citas de su dependencia
+    -- Profesional: actualiza citas de su dependencia y su sede
     OR (
       public.auth_role_name() IN ('PSICOLOGIA','ENFERMERIA','TRABAJO_SOCIAL')
       AND dependency_id = (
         SELECT dependency_id FROM public.profiles WHERE id = auth.uid()
       )
+      AND (
+        sede_id IS NULL
+        OR (SELECT sede_id FROM public.profiles WHERE id = auth.uid()) IS NULL
+        OR sede_id = (SELECT sede_id FROM public.profiles WHERE id = auth.uid())
+      )
     )
     -- Aprendiz: solo cancela la suya
     OR (user_id = auth.uid() AND public.auth_role_name() = 'APRENDIZ')
   );
+
+-- NOTA: hasta agosto 2026 existieron 4 políticas legacy adicionales sobre esta
+-- tabla ("Users can create appointments", "Users can view own appointments",
+-- "Professionals can view/update their dependency appointments") que no
+-- filtraban por sede. Se eliminaron al aplicar el filtro de sede de arriba,
+-- porque las políticas RLS del mismo comando se combinan con OR — dejarlas
+-- habría anulado el filtro nuevo.
 
 -- DELETE: prohibido para todos (se usa status = 'cancelled').
 DROP POLICY IF EXISTS "apts_delete_none" ON public.appointments;
@@ -502,6 +524,30 @@ DROP TRIGGER IF EXISTS trg_profiles_set_sede ON public.profiles;
 CREATE TRIGGER trg_profiles_set_sede
   BEFORE INSERT OR UPDATE OF ficha_number ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.set_sede_from_ficha();
+
+-- ────────────────────────────────────────────────────────────
+-- 12. appointments.sede_id + asignación automática al agendar
+--    Al crear una cita se copia la sede del aprendiz (user_id) para que
+--    profesionales de otras sedes no la vean/atiendan (ver apts_select /
+--    apts_update más arriba). El cliente nunca envía sede_id.
+-- ────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.set_appointment_sede()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.sede_id IS NULL THEN
+    SELECT sede_id INTO NEW.sede_id FROM public.profiles WHERE id = NEW.user_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_appointments_set_sede ON public.appointments;
+CREATE TRIGGER trg_appointments_set_sede
+  BEFORE INSERT ON public.appointments
+  FOR EACH ROW EXECUTE FUNCTION public.set_appointment_sede();
+
+CREATE INDEX IF NOT EXISTS idx_apts_sede_id ON public.appointments(sede_id);
+
 -- Consulta más común: citas de una dependencia en un rango de fechas
 CREATE INDEX IF NOT EXISTS idx_apts_dep_date
   ON public.appointments(dependency_id, scheduled_date);

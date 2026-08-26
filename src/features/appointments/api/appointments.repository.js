@@ -67,7 +67,9 @@ export class AppointmentRepository {
   }
 
   // CHECK AVAILABILITY: Verificar si horario está libre
-  static async checkAvailability(dependencyId, date, time, excludeId = null) {
+  // sedeId: si se conoce la sede del aprendiz, el choque de horario se revisa
+  // solo contra citas de esa misma sede (sedes distintas = profesionales distintos).
+  static async checkAvailability(dependencyId, date, time, sedeId = null, excludeId = null) {
     let query = supabase
       .from("appointments")
       .select("id")
@@ -76,6 +78,7 @@ export class AppointmentRepository {
       .eq("scheduled_time", time)
       .in("status", ["pending", "confirmed"]);
 
+    if (sedeId) query = query.eq("sede_id", sedeId);
     if (excludeId) query = query.neq("id", excludeId);
 
     const { data, error } = await query;

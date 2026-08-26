@@ -115,6 +115,7 @@ export function useAppointments() {
         formData.dependency_id,
         formData.scheduled_date,
         formData.scheduled_time,
+        profile?.sede_id,
       );
 
       if (!isAvailable) {

@@ -12,6 +12,7 @@ import {
 import { es } from "date-fns/locale";
 import { useAppointments } from "../hooks/useAppointments";
 import { useAppointmentModal } from "../../../providers/AppointmentModalContext";
+import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 import { notifyNewAppointment } from "../../../lib/notifications";
 import { toast } from "sonner";
@@ -163,6 +164,7 @@ export function AppointmentModal() {
   const navigate = useNavigate();
   const { isOpen, closeModal, preselectedService } = useAppointmentModal();
   const { createAppointment, isCreating } = useAppointments();
+  const { profile } = useAuth();
 
   const [step, setStep]       = useState(1);
   const [services, setServices] = useState(SERVICES);
@@ -213,19 +215,22 @@ export function AppointmentModal() {
     let cancelled = false;
     setCheckingSlots(true);
     const dateStr = format(form.date, "yyyy-MM-dd");
-    supabase
+    let query = supabase
       .from("appointments")
       .select("scheduled_time")
       .eq("dependency_id", svc.id)
       .eq("scheduled_date", dateStr)
-      .in("status", ["pending", "confirmed"])
-      .then(({ data }) => {
-        if (cancelled) return;
-        setTakenSlots((data || []).map(a => a.scheduled_time.slice(0, 5)));
-        setCheckingSlots(false);
-      });
+      .in("status", ["pending", "confirmed"]);
+    // Solo se cruza con citas de la misma sede — sedes distintas tienen
+    // profesionales distintos, así que el mismo horario no choca entre ellas.
+    if (profile?.sede_id) query = query.eq("sede_id", profile.sede_id);
+    query.then(({ data }) => {
+      if (cancelled) return;
+      setTakenSlots((data || []).map(a => a.scheduled_time.slice(0, 5)));
+      setCheckingSlots(false);
+    });
     return () => { cancelled = true; };
-  }, [form.serviceKey, form.date, services]);
+  }, [form.serviceKey, form.date, services, profile?.sede_id]);
 
   // Cerrar con Escape + atrapar el foco dentro del modal mientras esté abierto
   useEffect(() => {
