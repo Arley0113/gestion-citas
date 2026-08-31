@@ -188,7 +188,8 @@ export default function FichasPage() {
 
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing]         = useState(false);
-  const [importConflicts, setImportConflicts] = useState(null); // { rows, rawRowsLength, fichaNumbers, conflicts }
+  const [importConflicts, setImportConflicts] = useState(null); // { rows, rawRowsLength, fichaNumbers, conflicts, graduatedFichas, graduatedCount }
+  const [replaceMode, setReplaceMode] = useState(false);
 
   const [wlEnabled, setWlEnabled]       = useState(false);
   const [togglingWl, setTogglingWl]     = useState(false);
@@ -427,20 +428,46 @@ export default function FichasPage() {
         .filter(f => f.sede_id && f.sede_id !== parseInt(importSede))
         .map(f => ({ ficha_number: f.ficha_number, sedeName: f.sedes?.name || "otra sede" }));
 
-      if (conflicts.length > 0) {
-        setImportConflicts({ rows, rawRowsLength: rawRows.length, fichaNumbers, conflicts });
+      // Modo reemplazar: este archivo es el padrón completo y actualizado de
+      // la sede — cualquier ficha que hoy pertenezca a esta sede pero no
+      // venga en el archivo nuevo se considera "ya salió" y se saca del
+      // padrón (no se toca la cuenta si ya se había registrado, solo pierde
+      // acceso para futuros inicios de sesión).
+      let graduatedFichas = [];
+      let graduatedCount = 0;
+      if (replaceMode) {
+        const { data: sedeFichas, error: sedeFichasErr } = await supabase
+          .from("fichas")
+          .select("ficha_number")
+          .eq("sede_id", parseInt(importSede));
+        if (sedeFichasErr) throw sedeFichasErr;
+        graduatedFichas = (sedeFichas || [])
+          .map(f => f.ficha_number)
+          .filter(fn => !fichaNumbers.includes(fn));
+        if (graduatedFichas.length > 0) {
+          const { count, error: cntErr } = await supabase
+            .from("aprendiz_whitelist")
+            .select("*", { count: "exact", head: true })
+            .in("ficha_number", graduatedFichas);
+          if (cntErr) throw cntErr;
+          graduatedCount = count ?? 0;
+        }
+      }
+
+      if (conflicts.length > 0 || graduatedFichas.length > 0) {
+        setImportConflicts({ rows, rawRowsLength: rawRows.length, fichaNumbers, conflicts, graduatedFichas, graduatedCount });
         setImporting(false);
         return;
       }
 
-      await commitImport(rows, rawRows.length, fichaNumbers);
+      await commitImport(rows, rawRows.length, fichaNumbers, graduatedFichas);
     } catch (err) {
       toast.error("Error al importar: " + (err.message || "intenta de nuevo"));
       setImporting(false);
     }
   };
 
-  const commitImport = async (rows, rawRowsLength, fichaNumbers) => {
+  const commitImport = async (rows, rawRowsLength, fichaNumbers, graduatedFichas = []) => {
     setImporting(true);
     try {
       // Verificar cuáles document_number+ficha_number ya existían, para poder
@@ -480,16 +507,29 @@ export default function FichasPage() {
         if (fichaErr) throw fichaErr;
       }
 
+      // Modo reemplazar: sacar del padrón a quienes ya no están en el archivo
+      let removedCount = 0;
+      if (graduatedFichas.length > 0) {
+        const { error: gradErr, count } = await supabase
+          .from("aprendiz_whitelist")
+          .delete({ count: "exact" })
+          .in("ficha_number", graduatedFichas);
+        if (gradErr) throw gradErr;
+        removedCount = count ?? 0;
+      }
+
       const dupes = rawRowsLength - rows.length;
       const parts = [];
       if (newCount > 0)     parts.push(`${newCount} nuevos`);
       if (updatedCount > 0) parts.push(`${updatedCount} actualizados`);
       toast.success(
         `Importación completa: ${parts.join(", ")}, ${fichaNumbers.length} ficha${fichaNumbers.length !== 1 ? "s" : ""} asignada${fichaNumbers.length !== 1 ? "s" : ""} a su sede` +
-        (dupes > 0 ? ` (${dupes} duplicados en el archivo ignorados)` : "")
+        (dupes > 0 ? ` (${dupes} duplicados en el archivo ignorados)` : "") +
+        (removedCount > 0 ? ` — ${removedCount} aprendices de ${graduatedFichas.length} ficha${graduatedFichas.length !== 1 ? "s" : ""} que ya no está${graduatedFichas.length !== 1 ? "n" : ""} activa${graduatedFichas.length !== 1 ? "s" : ""} se quitaron del padrón` : "")
       );
       setPreview(null);
       setImportSede("");
+      setReplaceMode(false);
       setImportConflicts(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       await loadWhitelist();
@@ -781,6 +821,20 @@ export default function FichasPage() {
             <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: "0.375rem 0 0" }}>
               Todas las fichas de este archivo quedarán asignadas a esta sede.
             </p>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginTop: "0.75rem", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={replaceMode}
+                onChange={e => setReplaceMode(e.target.checked)}
+                style={{ marginTop: 2 }}
+              />
+              <span style={{ fontSize: "0.8125rem", color: "#374151" }}>
+                Este archivo es el padrón <strong>completo y actualizado</strong> de esta sede
+                <span style={{ display: "block", fontSize: "0.75rem", color: "#6b7280", marginTop: "0.125rem" }}>
+                  Las fichas de esta sede que no aparezcan aquí se sacan del padrón (aprendices que ya salieron).
+                </span>
+              </span>
+            </label>
           </div>
 
           {/* Drop zone */}
@@ -867,22 +921,37 @@ export default function FichasPage() {
                 <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 10, padding: "0.875rem 1rem", marginBottom: "1rem" }}>
                   <AlertCircle size={15} color="#b45309" style={{ flexShrink: 0, marginTop: 1 }} />
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: "0.8125rem", color: "#92400e", margin: "0 0 0.5rem", lineHeight: 1.5 }}>
-                      <strong>{importConflicts.conflicts.length} ficha{importConflicts.conflicts.length !== 1 ? "s" : ""}</strong> de este archivo ya tenía{importConflicts.conflicts.length !== 1 ? "n" : ""} otra sede asignada — al continuar se sobrescribe:
-                    </p>
-                    <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.25rem", fontSize: "0.8125rem", color: "#92400e" }}>
-                      {importConflicts.conflicts.slice(0, 8).map(c => (
-                        <li key={c.ficha_number}>Ficha <strong>{c.ficha_number}</strong>: {c.sedeName} → nueva sede elegida</li>
-                      ))}
-                      {importConflicts.conflicts.length > 8 && <li>… y {importConflicts.conflicts.length - 8} más</li>}
-                    </ul>
+                    {importConflicts.conflicts.length > 0 && (
+                      <>
+                        <p style={{ fontSize: "0.8125rem", color: "#92400e", margin: "0 0 0.5rem", lineHeight: 1.5 }}>
+                          <strong>{importConflicts.conflicts.length} ficha{importConflicts.conflicts.length !== 1 ? "s" : ""}</strong> de este archivo ya tenía{importConflicts.conflicts.length !== 1 ? "n" : ""} otra sede asignada — al continuar se sobrescribe:
+                        </p>
+                        <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.25rem", fontSize: "0.8125rem", color: "#92400e" }}>
+                          {importConflicts.conflicts.slice(0, 8).map(c => (
+                            <li key={c.ficha_number}>Ficha <strong>{c.ficha_number}</strong>: {c.sedeName} → nueva sede elegida</li>
+                          ))}
+                          {importConflicts.conflicts.length > 8 && <li>… y {importConflicts.conflicts.length - 8} más</li>}
+                        </ul>
+                      </>
+                    )}
+                    {importConflicts.graduatedFichas?.length > 0 && (
+                      <>
+                        <p style={{ fontSize: "0.8125rem", color: "#92400e", margin: "0 0 0.5rem", lineHeight: 1.5 }}>
+                          <strong>{importConflicts.graduatedFichas.length} ficha{importConflicts.graduatedFichas.length !== 1 ? "s" : ""}</strong> de esta sede ya no aparece{importConflicts.graduatedFichas.length !== 1 ? "n" : ""} en este archivo — se van a quitar del padrón <strong>{importConflicts.graduatedCount} aprendiz{importConflicts.graduatedCount !== 1 ? "ces" : ""}</strong>:
+                        </p>
+                        <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.25rem", fontSize: "0.8125rem", color: "#92400e" }}>
+                          {importConflicts.graduatedFichas.slice(0, 8).map(fn => <li key={fn}>Ficha <strong>{fn}</strong></li>)}
+                          {importConflicts.graduatedFichas.length > 8 && <li>… y {importConflicts.graduatedFichas.length - 8} más</li>}
+                        </ul>
+                      </>
+                    )}
                     <div style={{ display: "flex", gap: "0.625rem" }}>
                       <button
-                        onClick={() => commitImport(importConflicts.rows, importConflicts.rawRowsLength, importConflicts.fichaNumbers)}
+                        onClick={() => commitImport(importConflicts.rows, importConflicts.rawRowsLength, importConflicts.fichaNumbers, importConflicts.graduatedFichas)}
                         disabled={importing}
                         style={{ padding: "0.5rem 0.875rem", background: "#b45309", color: "white", border: "none", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 700, cursor: importing ? "not-allowed" : "pointer" }}
                       >
-                        {importing ? "Importando…" : "Sí, sobrescribir y continuar"}
+                        {importing ? "Importando…" : "Sí, continuar"}
                       </button>
                       <button
                         onClick={() => setImportConflicts(null)}
