@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Upload, FileSpreadsheet, Trash2, Search, ChevronLeft,
@@ -177,7 +177,8 @@ export default function FichasPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [loadingList, setLoadingList] = useState(true);
   const [search, setSearch] = useState("");
-  const [searchResults, setSearchResults] = useState(null); // null = sin búsqueda activa
+  const [sedeFilter, setSedeFilter] = useState("");
+  const [searchResults, setSearchResults] = useState(null); // null = sin filtro activo
   const [searchTotal, setSearchTotal] = useState(0);
   const [searching, setSearching] = useState(false);
 
@@ -199,6 +200,15 @@ export default function FichasPage() {
   const [loadingFichaSedes, setLoadingFichaSedes] = useState(true);
   const [newFicha, setNewFicha]         = useState({ ficha_number: "", sede_id: "" });
   const [savingFichaSede, setSavingFichaSede] = useState(null); // ficha_number en guardado, o "new"
+  const [fichaNotInWhitelist, setFichaNotInWhitelist] = useState(false);
+
+  // Mapa ficha_number -> nombre de sede, para mostrar/filtrar "Lista actual"
+  // sin tener que hacer un join en la consulta (aprendiz_whitelist no tiene
+  // FK hacia `fichas`, se cruza en el cliente con lo que ya carga loadFichaSedes)
+  const fichaSedeMap = useMemo(
+    () => Object.fromEntries(fichaSedes.map(f => [f.ficha_number, f.sedes?.name || null])),
+    [fichaSedes]
+  );
 
   const fileInputRef = useRef(null);
 
@@ -222,15 +232,33 @@ export default function FichasPage() {
 
   useEffect(() => { loadFichaSedes(); }, [loadFichaSedes]);
 
-  const saveFichaSede = async (ficha_number, sede_id) => {
+  const saveFichaSede = async (ficha_number, sede_id, force = false) => {
     if (!ficha_number.trim() || !sede_id) { toast.error("Ficha y sede son obligatorias"); return; }
     setSavingFichaSede(ficha_number);
     if (DEV_ROLE) {
       toast.success("Sede asignada (demo)");
       setNewFicha({ ficha_number: "", sede_id: "" });
+      setFichaNotInWhitelist(false);
       setSavingFichaSede(null);
       return;
     }
+
+    // Avisar (no bloquear — "agregar una ficha suelta" antes de subir su
+    // archivo es un uso legítimo) si la ficha no tiene ningún aprendiz en
+    // el padrón — suele ser un número mal escrito.
+    if (!force) {
+      const { count, error: cntErr } = await supabase
+        .from("aprendiz_whitelist")
+        .select("*", { count: "exact", head: true })
+        .eq("ficha_number", ficha_number.trim());
+      if (!cntErr && (count ?? 0) === 0) {
+        setFichaNotInWhitelist(true);
+        setSavingFichaSede(null);
+        return;
+      }
+    }
+    setFichaNotInWhitelist(false);
+
     // set_fichas_sede también actualiza profiles.sede_id de aprendices que ya
     // estén registrados con esa ficha (si solo hiciéramos upsert en `fichas`,
     // alguien que se registró antes de esta asignación se quedaría sin sede
@@ -317,36 +345,47 @@ export default function FichasPage() {
 
   useEffect(() => { loadWhitelist(); }, [loadWhitelist]);
 
-  // ─── Búsqueda server-side ────────────────────────────────────────────────
-  // `whitelist` solo trae los últimos 200 registros — filtrar la búsqueda
-  // sobre ese array local dejaría fuera cualquier coincidencia más allá de
-  // los primeros 200 (aunque totalCount muestre el número real). Cuando hay
-  // un término de búsqueda se consulta directamente contra la tabla.
+  // ─── Búsqueda + filtro por sede (server-side) ───────────────────────────
+  // `whitelist` solo trae los últimos 200 registros — filtrar sobre ese
+  // array local dejaría fuera cualquier coincidencia más allá de los
+  // primeros 200 (aunque totalCount muestre el número real). Con búsqueda
+  // y/o filtro de sede activos se consulta directamente contra la tabla.
+  // aprendiz_whitelist no tiene sede propia — el filtro de sede se resuelve
+  // primero a la lista de fichas de esa sede (via fichaSedes) y se filtra
+  // por `ficha_number IN (...)`.
   useEffect(() => {
     const q = search.trim();
-    if (!q) { setSearchResults(null); return; }
+    if (!q && !sedeFilter) { setSearchResults(null); return; }
     if (DEV_ROLE) {
       const ql = q.toLowerCase();
-      setSearchResults(MOCK_WHITELIST.filter(r =>
-        r.document_number.includes(ql) || r.ficha_number.includes(ql)
-        || (r.full_name || "").toLowerCase().includes(ql)
-        || (r.program   || "").toLowerCase().includes(ql)));
+      setSearchResults(MOCK_WHITELIST.filter(r => {
+        const matchQ = !q || r.document_number.includes(ql) || r.ficha_number.includes(ql)
+          || (r.full_name || "").toLowerCase().includes(ql)
+          || (r.program   || "").toLowerCase().includes(ql);
+        const matchSede = !sedeFilter || MOCK_FICHAS_SEDE.some(f => f.ficha_number === r.ficha_number && f.sede_id === parseInt(sedeFilter));
+        return matchQ && matchSede;
+      }));
       return;
     }
     setSearching(true);
     const handle = setTimeout(async () => {
-      const esc = q.replace(/[%,]/g, "");
-      const { data, count, error } = await supabase
-        .from("aprendiz_whitelist")
-        .select("*", { count: "exact" })
-        .or(`document_number.ilike.%${esc}%,ficha_number.ilike.%${esc}%,full_name.ilike.%${esc}%,program.ilike.%${esc}%`)
-        .order("uploaded_at", { ascending: false })
-        .limit(200);
+      let fichaNumbersForSede = null;
+      if (sedeFilter) {
+        fichaNumbersForSede = fichaSedes.filter(f => f.sede_id === parseInt(sedeFilter)).map(f => f.ficha_number);
+        if (fichaNumbersForSede.length === 0) { setSearchResults([]); setSearchTotal(0); setSearching(false); return; }
+      }
+      let query = supabase.from("aprendiz_whitelist").select("*", { count: "exact" });
+      if (q) {
+        const esc = q.replace(/[%,]/g, "");
+        query = query.or(`document_number.ilike.%${esc}%,ficha_number.ilike.%${esc}%,full_name.ilike.%${esc}%,program.ilike.%${esc}%`);
+      }
+      if (fichaNumbersForSede) query = query.in("ficha_number", fichaNumbersForSede);
+      const { data, count, error } = await query.order("uploaded_at", { ascending: false }).limit(200);
       if (!error) { setSearchResults(data ?? []); setSearchTotal(count ?? (data?.length ?? 0)); }
       setSearching(false);
     }, 300);
     return () => clearTimeout(handle);
-  }, [search]);
+  }, [search, sedeFilter, fichaSedes]);
 
   // ─── File parsing ────────────────────────────────────────────────────────
   const handleFile = useCallback(async (file) => {
@@ -588,7 +627,8 @@ export default function FichasPage() {
   // ─── Lista a mostrar ─────────────────────────────────────────────────────
   // Con búsqueda activa se muestran los resultados server-side (searchResults);
   // sin búsqueda, los últimos 200 registros cargados (whitelist).
-  const filtered = search.trim() ? (searchResults ?? []) : whitelist;
+  const hasActiveFilter = !!(search.trim() || sedeFilter);
+  const filtered = hasActiveFilter ? (searchResults ?? []) : whitelist;
 
   return (
     <>
@@ -688,12 +728,12 @@ export default function FichasPage() {
           </p>
 
           {/* Agregar / asignar */}
-          <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "0.625rem", marginBottom: fichaNotInWhitelist ? "0.625rem" : "1.25rem", flexWrap: "wrap" }}>
             <input
               type="text"
               placeholder="Número de ficha"
               value={newFicha.ficha_number}
-              onChange={e => setNewFicha(f => ({ ...f, ficha_number: e.target.value }))}
+              onChange={e => { setNewFicha(f => ({ ...f, ficha_number: e.target.value })); setFichaNotInWhitelist(false); }}
               style={{ flex: "1 1 160px", padding: "0.5rem 0.75rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", fontFamily: "monospace", outline: "none" }}
             />
             <select
@@ -712,6 +752,24 @@ export default function FichasPage() {
               <Plus size={14} /> Asignar
             </button>
           </div>
+
+          {fichaNotInWhitelist && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 10, padding: "0.75rem 1rem", marginBottom: "1.25rem" }}>
+              <AlertCircle size={15} color="#b45309" style={{ flexShrink: 0, marginTop: 1 }} />
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: "0.8125rem", color: "#92400e", margin: "0 0 0.625rem", lineHeight: 1.5 }}>
+                  La ficha <strong>{newFicha.ficha_number.trim()}</strong> no tiene ningún aprendiz en el padrón todavía — revisa que no sea un error de digitación.
+                </p>
+                <button
+                  onClick={() => saveFichaSede(newFicha.ficha_number, newFicha.sede_id, true)}
+                  disabled={savingFichaSede === newFicha.ficha_number}
+                  style={{ padding: "0.4rem 0.75rem", background: "#b45309", color: "white", border: "none", borderRadius: 7, fontSize: "0.8125rem", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Asignar de todas formas
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Lista de fichas asignadas */}
           {loadingFichaSedes ? (
@@ -1003,6 +1061,14 @@ export default function FichasPage() {
                   style={{ paddingLeft: "2rem", paddingRight: "0.75rem", paddingTop: "0.5rem", paddingBottom: "0.5rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.8125rem", outline: "none", width: 220, fontFamily: "inherit" }}
                 />
               </div>
+              <select
+                value={sedeFilter}
+                onChange={e => setSedeFilter(e.target.value)}
+                style={{ padding: "0.5rem 0.75rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.8125rem", color: sedeFilter ? "#0d1117" : "#6b7280", background: "white", outline: "none", cursor: "pointer", fontFamily: "inherit" }}
+              >
+                <option value="">Todas las sedes</option>
+                {sedes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
               {totalCount > 0 && !confirmClear && (
                 <button
                   onClick={() => setConfirmClear(true)}
@@ -1046,7 +1112,7 @@ export default function FichasPage() {
               <p style={{ fontSize: "0.8125rem", color: "#6b7280", margin: 0 }}>
                 {totalCount === 0
                   ? "Sube un archivo CSV o Excel para habilitar la validación de registro"
-                  : "Prueba con otro término de búsqueda"}
+                  : "Prueba con otro término o filtro"}
               </p>
             </div>
           ) : (
@@ -1056,6 +1122,7 @@ export default function FichasPage() {
                   <tr>
                     <th>Cédula</th>
                     <th>Ficha</th>
+                    <th>Sede</th>
                     <th>Nombre</th>
                     <th>Programa</th>
                     <th>Importado</th>
@@ -1067,6 +1134,9 @@ export default function FichasPage() {
                     <tr key={r.id}>
                       <td style={{ fontFamily: "monospace", fontSize: "0.8125rem", fontWeight: 600, color: "#0d1117" }}>{r.document_number}</td>
                       <td style={{ fontFamily: "monospace", fontSize: "0.8125rem" }}>{r.ficha_number}</td>
+                      <td style={{ fontSize: "0.8125rem", color: fichaSedeMap[r.ficha_number] ? "#0ea5e9" : "#9ca3af" }}>
+                        {fichaSedeMap[r.ficha_number] || "Sin sede"}
+                      </td>
                       <td>{r.full_name || <span style={{ color: "#6b7280" }}>—</span>}</td>
                       <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.program || <span style={{ color: "#6b7280" }}>—</span>}
@@ -1090,14 +1160,14 @@ export default function FichasPage() {
                   ))}
                 </tbody>
               </table>
-              {!search.trim() && totalCount > 200 && (
+              {!hasActiveFilter && totalCount > 200 && (
                 <p style={{ textAlign: "center", padding: "0.75rem", color: "#6b7280", fontSize: "0.8125rem", margin: 0, borderTop: "1px solid #f3f4f6" }}>
-                  Mostrando los primeros 200 registros. Usa la búsqueda para encontrar registros específicos.
+                  Mostrando los primeros 200 registros. Usa la búsqueda o el filtro de sede para encontrar registros específicos.
                 </p>
               )}
-              {search.trim() && searchTotal > 200 && (
+              {hasActiveFilter && searchTotal > 200 && (
                 <p style={{ textAlign: "center", padding: "0.75rem", color: "#6b7280", fontSize: "0.8125rem", margin: 0, borderTop: "1px solid #f3f4f6" }}>
-                  {searchTotal.toLocaleString("es-CO")} coincidencias — mostrando las primeras 200. Afina la búsqueda para ver el resto.
+                  {searchTotal.toLocaleString("es-CO")} coincidencias — mostrando las primeras 200. Afina la búsqueda o el filtro para ver el resto.
                 </p>
               )}
             </div>
