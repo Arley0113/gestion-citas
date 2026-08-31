@@ -114,7 +114,7 @@ export default function StaffInvitePage() {
           email:         form.email.trim().toLowerCase(),
           role_id:       roleRow.id,
           dependency_id: form.dependency_id ? parseInt(form.dependency_id) : null,
-          sede_id:       form.sede_id ? parseInt(form.sede_id) : null,
+          sede_id:       form.sede_id && form.sede_id !== "all" ? parseInt(form.sede_id) : null,
           password:      form.password,
         },
       });
@@ -251,7 +251,13 @@ export default function StaffInvitePage() {
                 >
                   <option value="">Seleccionar sede…</option>
                   {sedes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  <option value="all">Todas las sedes (atiende en cualquiera)</option>
                 </select>
+                {form.sede_id === "all" && (
+                  <p style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.375rem" }}>
+                    Podrá ver y atender citas de cualquier sede.
+                  </p>
+                )}
               </div>
             )}
 

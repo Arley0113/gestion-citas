@@ -503,15 +503,39 @@ CREATE POLICY "fichas_delete_admin"
 -- 11. profiles.sede_id + asignación automática por ficha
 --    Cuando se inserta/actualiza el ficha_number de un perfil
 --    (aprendiz), se copia la sede desde `fichas` automáticamente.
---    Para staff, la sede la asigna directamente invite-staff.
+--    Para staff, la sede la asigna directamente invite-staff, o queda en
+--    NULL a propósito para "atiende en cualquier sede" (ver invite-staff /
+--    StaffInvitePage.jsx, opción "Todas las sedes" — coincide con el
+--    fallback ya usado en apts_select/apts_update).
 -- ────────────────────────────────────────────────────────────
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS sede_id INTEGER REFERENCES public.sedes(id);
 
+-- También valida contra `aprendiz_whitelist` (auditoría 2026-08-31): hasta
+-- entonces el padrón solo se verificaba en el navegador (RegisterPage/Login),
+-- así que llamar signUp()/update() directo por la API se lo saltaba entero.
+-- Se agrega aquí (no en handle_new_user, que ya es frágil y no se toca) para
+-- que corra en los 3 caminos que escriben ficha_number: registro, Onboarding
+-- y "Mi perfil".
 CREATE OR REPLACE FUNCTION public.set_sede_from_ficha()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_role_name TEXT;
+  v_wl_enabled TEXT;
 BEGIN
   IF NEW.ficha_number IS NOT NULL THEN
+    SELECT r.name INTO v_role_name FROM public.roles r WHERE r.id = NEW.role_id;
+
+    IF v_role_name = 'APRENDIZ' THEN
+      SELECT value INTO v_wl_enabled FROM public.system_settings WHERE key = 'whitelist_enabled';
+      IF v_wl_enabled = 'true' AND NOT EXISTS (
+        SELECT 1 FROM public.aprendiz_whitelist
+        WHERE document_number = NEW.document_number AND ficha_number = NEW.ficha_number
+      ) THEN
+        RAISE EXCEPTION 'Cédula o número de ficha no encontrados en el padrón de aprendices activos';
+      END IF;
+    END IF;
+
     SELECT sede_id INTO NEW.sede_id
     FROM public.fichas
     WHERE ficha_number = NEW.ficha_number;
@@ -547,6 +571,68 @@ CREATE TRIGGER trg_appointments_set_sede
   FOR EACH ROW EXECUTE FUNCTION public.set_appointment_sede();
 
 CREATE INDEX IF NOT EXISTS idx_apts_sede_id ON public.appointments(sede_id);
+
+-- ────────────────────────────────────────────────────────────
+-- 13. aprendiz_whitelist — lookup seguro + helpers de sede por ficha
+--    (auditoría 2026-08-31). `aprendiz_whitelist` en sí se creó fuera de
+--    este archivo (ver nota en sección 10) y NO se documenta su schema
+--    completo aquí, pero sí los cambios de seguridad aplicados sobre ella.
+--
+--    Hasta esta fecha existía una política "whitelist_read_public" con
+--    USING (true) — cualquiera, con o sin sesión, podía leer la tabla
+--    completa (cédulas + nombres + programas de todo el padrón) llamando
+--    la API directamente. Se eliminó y se reemplazó por esta función:
+-- ────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "whitelist_read_public" ON public.aprendiz_whitelist;
+
+CREATE OR REPLACE FUNCTION public.lookup_whitelist(p_document_number TEXT, p_ficha_number TEXT)
+RETURNS TABLE(full_name TEXT, program TEXT) AS $$
+  SELECT full_name, program
+  FROM public.aprendiz_whitelist
+  WHERE document_number = p_document_number
+    AND ficha_number = p_ficha_number
+  LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+GRANT EXECUTE ON FUNCTION public.lookup_whitelist(TEXT, TEXT) TO anon, authenticated;
+
+-- Asignar sede a una o varias fichas + backfill de profiles.sede_id de
+-- aprendices YA registrados con esas fichas — sin esto, alguien que se
+-- registró antes de que su ficha tuviera sede asignada se quedaba sin sede
+-- para siempre (trg_profiles_set_sede solo corre al crear/cambiar
+-- ficha_number, no cuando se asigna la sede después). SECURITY DEFINER
+-- porque COORDINACION no tiene UPDATE sobre profiles ajenos (profiles_update_own).
+CREATE OR REPLACE FUNCTION public.set_fichas_sede(p_ficha_numbers TEXT[], p_sede_id INTEGER)
+RETURNS void AS $$
+BEGIN
+  IF public.auth_role_name() NOT IN ('COORDINACION','ADMINISTRADOR','SUPERADMIN') THEN
+    RAISE EXCEPTION 'No autorizado';
+  END IF;
+
+  INSERT INTO public.fichas (ficha_number, sede_id)
+  SELECT unnest(p_ficha_numbers), p_sede_id
+  ON CONFLICT (ficha_number) DO UPDATE SET sede_id = EXCLUDED.sede_id;
+
+  UPDATE public.profiles SET sede_id = p_sede_id WHERE ficha_number = ANY(p_ficha_numbers);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.set_fichas_sede(TEXT[], INTEGER) TO authenticated;
+
+-- Quitar la sede de una ficha + limpiar profiles.sede_id de sus aprendices
+CREATE OR REPLACE FUNCTION public.clear_ficha_sede(p_ficha_number TEXT)
+RETURNS void AS $$
+BEGIN
+  IF public.auth_role_name() NOT IN ('ADMINISTRADOR','SUPERADMIN') THEN
+    RAISE EXCEPTION 'No autorizado';
+  END IF;
+
+  DELETE FROM public.fichas WHERE ficha_number = p_ficha_number;
+  UPDATE public.profiles SET sede_id = NULL WHERE ficha_number = p_ficha_number;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.clear_ficha_sede(TEXT) TO authenticated;
 
 -- Consulta más común: citas de una dependencia en un rango de fechas
 CREATE INDEX IF NOT EXISTS idx_apts_dep_date

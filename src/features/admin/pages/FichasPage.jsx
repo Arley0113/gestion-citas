@@ -178,6 +178,7 @@ export default function FichasPage() {
   const [loadingList, setLoadingList] = useState(true);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState(null); // null = sin búsqueda activa
+  const [searchTotal, setSearchTotal] = useState(0);
   const [searching, setSearching] = useState(false);
 
   const [preview, setPreview]     = useState(null); // { rows, filename }
@@ -187,6 +188,7 @@ export default function FichasPage() {
 
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing]         = useState(false);
+  const [importConflicts, setImportConflicts] = useState(null); // { rows, rawRowsLength, fichaNumbers, conflicts }
 
   const [wlEnabled, setWlEnabled]       = useState(false);
   const [togglingWl, setTogglingWl]     = useState(false);
@@ -228,9 +230,15 @@ export default function FichasPage() {
       setSavingFichaSede(null);
       return;
     }
-    const { error } = await supabase
-      .from("fichas")
-      .upsert({ ficha_number: ficha_number.trim(), sede_id: parseInt(sede_id) }, { onConflict: "ficha_number" });
+    // set_fichas_sede también actualiza profiles.sede_id de aprendices que ya
+    // estén registrados con esa ficha (si solo hiciéramos upsert en `fichas`,
+    // alguien que se registró antes de esta asignación se quedaría sin sede
+    // para siempre, porque el trigger que copia la sede solo corre al crear
+    // o cambiar el ficha_number del perfil, no cuando cambia la ficha en sí).
+    const { error } = await supabase.rpc("set_fichas_sede", {
+      p_ficha_numbers: [ficha_number.trim()],
+      p_sede_id: parseInt(sede_id),
+    });
     if (error) { toast.error("No se pudo asignar la sede"); }
     else { toast.success("Sede asignada"); setNewFicha({ ficha_number: "", sede_id: "" }); await loadFichaSedes(); }
     setSavingFichaSede(null);
@@ -244,7 +252,8 @@ export default function FichasPage() {
       setSavingFichaSede(null);
       return;
     }
-    const { error } = await supabase.from("fichas").delete().eq("ficha_number", ficha_number);
+    // clear_ficha_sede también limpia profiles.sede_id de los aprendices de esa ficha
+    const { error } = await supabase.rpc("clear_ficha_sede", { p_ficha_number: ficha_number });
     if (error) { toast.error("No se pudo eliminar"); }
     else { toast.success("Eliminado"); await loadFichaSedes(); }
     setSavingFichaSede(null);
@@ -326,13 +335,13 @@ export default function FichasPage() {
     setSearching(true);
     const handle = setTimeout(async () => {
       const esc = q.replace(/[%,]/g, "");
-      const { data, error } = await supabase
+      const { data, count, error } = await supabase
         .from("aprendiz_whitelist")
-        .select("*")
+        .select("*", { count: "exact" })
         .or(`document_number.ilike.%${esc}%,ficha_number.ilike.%${esc}%,full_name.ilike.%${esc}%,program.ilike.%${esc}%`)
         .order("uploaded_at", { ascending: false })
         .limit(200);
-      if (!error) setSearchResults(data ?? []);
+      if (!error) { setSearchResults(data ?? []); setSearchTotal(count ?? (data?.length ?? 0)); }
       setSearching(false);
     }, 300);
     return () => clearTimeout(handle);
@@ -404,7 +413,36 @@ export default function FichasPage() {
         seen.set(`${r.document_number}|${r.ficha_number}`, r);
       }
       const rows = Array.from(seen.values());
+      const fichaNumbers = [...new Set(rows.map(r => r.ficha_number))];
 
+      // Si alguna de estas fichas ya tenía asignada una sede DISTINTA a la
+      // elegida, confirmar antes de sobrescribir — un dropdown mal seleccionado
+      // aquí podría desviar en silencio las citas de esos aprendices.
+      const { data: currentFichas, error: checkErr } = await supabase
+        .from("fichas")
+        .select("ficha_number, sede_id, sedes(name)")
+        .in("ficha_number", fichaNumbers);
+      if (checkErr) throw checkErr;
+      const conflicts = (currentFichas || [])
+        .filter(f => f.sede_id && f.sede_id !== parseInt(importSede))
+        .map(f => ({ ficha_number: f.ficha_number, sedeName: f.sedes?.name || "otra sede" }));
+
+      if (conflicts.length > 0) {
+        setImportConflicts({ rows, rawRowsLength: rawRows.length, fichaNumbers, conflicts });
+        setImporting(false);
+        return;
+      }
+
+      await commitImport(rows, rawRows.length, fichaNumbers);
+    } catch (err) {
+      toast.error("Error al importar: " + (err.message || "intenta de nuevo"));
+      setImporting(false);
+    }
+  };
+
+  const commitImport = async (rows, rawRowsLength, fichaNumbers) => {
+    setImporting(true);
+    try {
       // Verificar cuáles document_number+ficha_number ya existían, para poder
       // informar nuevos vs. actualizados (el upsert sobrescribe sin avisar)
       const docNumbers = [...new Set(rows.map(r => r.document_number))];
@@ -430,16 +468,19 @@ export default function FichasPage() {
         if (error) throw error;
       }
 
-      // Asignar la sede elegida a todas las fichas distintas de este archivo
-      const fichaNumbers = [...new Set(rows.map(r => r.ficha_number))];
-      const fichaRows = fichaNumbers.map(ficha_number => ({ ficha_number, sede_id: parseInt(importSede) }));
-      for (let i = 0; i < fichaRows.length; i += 500) {
-        const batch = fichaRows.slice(i, i + 500);
-        const { error: fichaErr } = await supabase.from("fichas").upsert(batch, { onConflict: "ficha_number" });
+      // Asignar la sede elegida a todas las fichas distintas de este archivo.
+      // set_fichas_sede también actualiza profiles.sede_id de aprendices que
+      // ya estén registrados con alguna de estas fichas.
+      for (let i = 0; i < fichaNumbers.length; i += 1000) {
+        const batch = fichaNumbers.slice(i, i + 1000);
+        const { error: fichaErr } = await supabase.rpc("set_fichas_sede", {
+          p_ficha_numbers: batch,
+          p_sede_id: parseInt(importSede),
+        });
         if (fichaErr) throw fichaErr;
       }
 
-      const dupes = rawRows.length - rows.length;
+      const dupes = rawRowsLength - rows.length;
       const parts = [];
       if (newCount > 0)     parts.push(`${newCount} nuevos`);
       if (updatedCount > 0) parts.push(`${updatedCount} actualizados`);
@@ -449,6 +490,7 @@ export default function FichasPage() {
       );
       setPreview(null);
       setImportSede("");
+      setImportConflicts(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       await loadWhitelist();
       await loadFichaSedes();
@@ -782,7 +824,7 @@ export default function FichasPage() {
                   <span className="badge" style={{ background: "#dafbe1", color: "#1a7f37" }}>{preview.rows.length} filas válidas</span>
                 </div>
                 <button
-                  onClick={() => { setPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  onClick={() => { setPreview(null); setImportConflicts(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280", display: "flex" }}
                   aria-label="Cancelar importación"
                 >
@@ -821,17 +863,50 @@ export default function FichasPage() {
                 </table>
               </div>
 
+              {importConflicts && (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 10, padding: "0.875rem 1rem", marginBottom: "1rem" }}>
+                  <AlertCircle size={15} color="#b45309" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: "0.8125rem", color: "#92400e", margin: "0 0 0.5rem", lineHeight: 1.5 }}>
+                      <strong>{importConflicts.conflicts.length} ficha{importConflicts.conflicts.length !== 1 ? "s" : ""}</strong> de este archivo ya tenía{importConflicts.conflicts.length !== 1 ? "n" : ""} otra sede asignada — al continuar se sobrescribe:
+                    </p>
+                    <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.25rem", fontSize: "0.8125rem", color: "#92400e" }}>
+                      {importConflicts.conflicts.slice(0, 8).map(c => (
+                        <li key={c.ficha_number}>Ficha <strong>{c.ficha_number}</strong>: {c.sedeName} → nueva sede elegida</li>
+                      ))}
+                      {importConflicts.conflicts.length > 8 && <li>… y {importConflicts.conflicts.length - 8} más</li>}
+                    </ul>
+                    <div style={{ display: "flex", gap: "0.625rem" }}>
+                      <button
+                        onClick={() => commitImport(importConflicts.rows, importConflicts.rawRowsLength, importConflicts.fichaNumbers)}
+                        disabled={importing}
+                        style={{ padding: "0.5rem 0.875rem", background: "#b45309", color: "white", border: "none", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 700, cursor: importing ? "not-allowed" : "pointer" }}
+                      >
+                        {importing ? "Importando…" : "Sí, sobrescribir y continuar"}
+                      </button>
+                      <button
+                        onClick={() => setImportConflicts(null)}
+                        disabled={importing}
+                        style={{ padding: "0.5rem 0.875rem", background: "white", border: "1.5px solid #d0d7de", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 600, color: "#6e7681", cursor: "pointer" }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: "flex", gap: "0.75rem" }}>
                 <button
                   onClick={handleImport}
-                  disabled={importing}
+                  disabled={importing || !!importConflicts}
                   style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.75rem 1.25rem", background: "#39a900", color: "white", border: "none", borderRadius: 10, fontSize: "0.9rem", fontWeight: 700, cursor: importing ? "not-allowed" : "pointer", opacity: importing ? 0.7 : 1 }}
                 >
                   {importing ? <RefreshCw size={15} style={{ animation: "spin 0.6s linear infinite" }} /> : <Upload size={15} />}
                   {importing ? "Importando…" : `Importar ${preview.rows.length} aprendices`}
                 </button>
                 <button
-                  onClick={() => { setPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  onClick={() => { setPreview(null); setImportConflicts(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                   style={{ padding: "0.75rem 1rem", background: "white", border: "1.5px solid #d0d7de", borderRadius: 10, fontSize: "0.9rem", fontWeight: 600, color: "#6e7681", cursor: "pointer" }}
                 >
                   Cancelar
@@ -949,6 +1024,11 @@ export default function FichasPage() {
               {!search.trim() && totalCount > 200 && (
                 <p style={{ textAlign: "center", padding: "0.75rem", color: "#6b7280", fontSize: "0.8125rem", margin: 0, borderTop: "1px solid #f3f4f6" }}>
                   Mostrando los primeros 200 registros. Usa la búsqueda para encontrar registros específicos.
+                </p>
+              )}
+              {search.trim() && searchTotal > 200 && (
+                <p style={{ textAlign: "center", padding: "0.75rem", color: "#6b7280", fontSize: "0.8125rem", margin: 0, borderTop: "1px solid #f3f4f6" }}>
+                  {searchTotal.toLocaleString("es-CO")} coincidencias — mostrando las primeras 200. Afina la búsqueda para ver el resto.
                 </p>
               )}
             </div>

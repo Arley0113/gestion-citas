@@ -58,12 +58,11 @@ export default function RegisterPage() {
     if (!doc || !ficha) return;
     setWlMatch(null);
     try {
-      const { data } = await supabase
-        .from("aprendiz_whitelist")
-        .select("full_name, program")
-        .eq("document_number", doc)
-        .eq("ficha_number", ficha)
-        .maybeSingle();
+      const { data: rows } = await supabase.rpc("lookup_whitelist", {
+        p_document_number: doc,
+        p_ficha_number: ficha,
+      });
+      const data = rows?.[0] || null;
       if (data) {
         const words = (data.full_name || "").trim().split(/\s+/).filter(Boolean);
         const mid   = Math.ceil(words.length / 2);
@@ -115,12 +114,12 @@ export default function RegisterPage() {
         let wlTimeout = false;
         try {
           const res = await withTimeout(
-            supabase.from("aprendiz_whitelist").select("id, full_name, program")
-              .eq("document_number", normalizeDocNumber(form.document_number))
-              .eq("ficha_number", form.ficha_number.trim())
-              .maybeSingle()
+            supabase.rpc("lookup_whitelist", {
+              p_document_number: normalizeDocNumber(form.document_number),
+              p_ficha_number: form.ficha_number.trim(),
+            })
           );
-          found = res.data; // null = no encontrado, objeto = encontrado
+          found = res.data?.[0] || null; // null = no encontrado, objeto = encontrado
         } catch {
           wlTimeout = true; // timeout → permitir registro (best-effort)
         }

@@ -11,12 +11,17 @@ const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
   : null;
 
 const MOCK_USERS = [
-  { id: "u1", full_name: "Carolina Ruiz",   document_number: "9876543", onboarding_completed: true,  roles: { name: "PSICOLOGIA" },      dependencies: { name: "Psicología" } },
-  { id: "u2", full_name: "Dr. Gómez",       document_number: "1111111", onboarding_completed: true,  roles: { name: "ENFERMERIA" },      dependencies: { name: "Enfermería" } },
-  { id: "u3", full_name: "Coordinadora",    document_number: "2222222", onboarding_completed: true,  roles: { name: "COORDINACION" },    dependencies: null },
-  { id: "u4", full_name: "Admin SENA",      document_number: "3333333", onboarding_completed: true,  roles: { name: "ADMINISTRADOR" },   dependencies: null },
-  { id: "u5", full_name: "Juan Pérez",      document_number: "1234567", onboarding_completed: true,  roles: { name: "APRENDIZ" },        dependencies: null },
-  { id: "u6", full_name: "María Torres",    document_number: "7654321", onboarding_completed: false, roles: { name: "TRABAJO_SOCIAL" },  dependencies: { name: "Trabajo Social" } },
+  { id: "u1", full_name: "Carolina Ruiz",   document_number: "9876543", onboarding_completed: true,  roles: { name: "PSICOLOGIA" },      dependencies: { name: "Psicología" }, sede_id: 1, sedes: { name: "Maicao" } },
+  { id: "u2", full_name: "Dr. Gómez",       document_number: "1111111", onboarding_completed: true,  roles: { name: "ENFERMERIA" },      dependencies: { name: "Enfermería" }, sede_id: null, sedes: null },
+  { id: "u3", full_name: "Coordinadora",    document_number: "2222222", onboarding_completed: true,  roles: { name: "COORDINACION" },    dependencies: null, sede_id: null, sedes: null },
+  { id: "u4", full_name: "Admin SENA",      document_number: "3333333", onboarding_completed: true,  roles: { name: "ADMINISTRADOR" },   dependencies: null, sede_id: null, sedes: null },
+  { id: "u5", full_name: "Juan Pérez",      document_number: "1234567", onboarding_completed: true,  roles: { name: "APRENDIZ" },        dependencies: null, sede_id: 2, sedes: { name: "Comercio y Servicios" } },
+  { id: "u6", full_name: "María Torres",    document_number: "7654321", onboarding_completed: false, roles: { name: "TRABAJO_SOCIAL" },  dependencies: { name: "Trabajo Social" }, sede_id: 3, sedes: { name: "Industrial" } },
+];
+const MOCK_SEDES = [
+  { id: 1, name: "Maicao" },
+  { id: 2, name: "Comercio y Servicios" },
+  { id: 3, name: "Industrial" },
 ];
 
 const ROLE_COLOR = {
@@ -70,27 +75,53 @@ export default function UsuariosPage() {
   const navigate = useNavigate();
   const { user: currentUser, profile: currentProfile } = useAuth();
   const isSuperAdmin = currentProfile?.roles?.name === "SUPERADMIN";
+  const canEditSede   = ["ADMINISTRADOR", "SUPERADMIN"].includes(currentProfile?.roles?.name);
 
   const [users, setUsers]     = useState([]);
+  const [sedes, setSedes]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [confirmUser, setConfirmUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [savingSedeFor, setSavingSedeFor] = useState(null);
 
   const fetchUsers = useCallback(async () => {
-    if (DEV_ROLE) { setUsers(MOCK_USERS); setLoading(false); return; }
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, document_number, onboarding_completed, roles(name), dependencies(name)")
-      .order("full_name")
-      .limit(500);
-    if (error) { toast.error("Error cargando usuarios"); setLoading(false); return; }
-    setUsers(data || []);
+    if (DEV_ROLE) { setUsers(MOCK_USERS); setSedes(MOCK_SEDES); setLoading(false); return; }
+    const [usersRes, sedesRes] = await Promise.all([
+      supabase.from("profiles")
+        .select("id, full_name, document_number, onboarding_completed, roles(name), dependencies(name), sede_id, sedes(name)")
+        .order("full_name")
+        .limit(500),
+      supabase.from("sedes").select("id, name").eq("active", true).order("name"),
+    ]);
+    if (usersRes.error) { toast.error("Error cargando usuarios"); setLoading(false); return; }
+    setUsers(usersRes.data || []);
+    setSedes(sedesRes.data || []);
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  const handleSedeChange = async (userId, sedeValue) => {
+    const sede_id = sedeValue ? parseInt(sedeValue) : null;
+    setSavingSedeFor(userId);
+    if (DEV_ROLE) {
+      setUsers(prev => prev.map(u => u.id === userId
+        ? { ...u, sede_id, sedes: sedes.find(s => s.id === sede_id) || null }
+        : u));
+      toast.success("Sede actualizada (demo)");
+      setSavingSedeFor(null);
+      return;
+    }
+    const { error } = await supabase.from("profiles").update({ sede_id }).eq("id", userId);
+    if (error) { toast.error("No se pudo actualizar la sede"); setSavingSedeFor(null); return; }
+    setUsers(prev => prev.map(u => u.id === userId
+      ? { ...u, sede_id, sedes: sedes.find(s => s.id === sede_id) || null }
+      : u));
+    toast.success("Sede actualizada");
+    setSavingSedeFor(null);
+  };
 
   const filtered = users.filter(u => {
     const matchSearch = !search || (u.full_name || "").toLowerCase().includes(search.toLowerCase()) || (u.document_number || "").includes(search);
@@ -194,6 +225,8 @@ export default function UsuariosPage() {
               const isOtherSuperAdmin = roleName === "SUPERADMIN" && !isSelf;
               const canDelete = isSuperAdmin && !isSelf && !isOtherSuperAdmin;
               const initials = (u.full_name || "?").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+              const isProfessional = ["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL"].includes(roleName);
+              const isAprendiz     = roleName === "APRENDIZ";
 
               return (
                 <div key={u.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1.25rem", borderTop: i === 0 ? "none" : "1px solid #f3f4f6" }}>
@@ -214,6 +247,28 @@ export default function UsuariosPage() {
                       {u.dependencies?.name && <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{u.dependencies.name}</span>}
                       {u.document_number && <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>CC {u.document_number}</span>}
                       {!u.onboarding_completed && <span style={{ fontSize: "0.6875rem", color: "#d97706", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 4, padding: "0.125rem 0.375rem" }}>Sin completar perfil</span>}
+                      {isAprendiz && (
+                        <span style={{ fontSize: "0.75rem", color: u.sedes?.name ? "#0ea5e9" : "#9ca3af" }}>
+                          {u.sedes?.name || "Sin sede"}
+                        </span>
+                      )}
+                      {isProfessional && (
+                        canEditSede ? (
+                          <select
+                            value={u.sede_id ?? ""}
+                            onChange={e => handleSedeChange(u.id, e.target.value)}
+                            disabled={savingSedeFor === u.id}
+                            style={{ fontSize: "0.75rem", padding: "0.15rem 0.4rem", border: "1.5px solid #e5e7eb", borderRadius: 6, color: "#0ea5e9", background: "white", cursor: "pointer", fontFamily: "inherit" }}
+                          >
+                            <option value="">Todas las sedes</option>
+                            {sedes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                          </select>
+                        ) : (
+                          <span style={{ fontSize: "0.75rem", color: "#0ea5e9" }}>
+                            {u.sedes?.name || "Todas las sedes"}
+                          </span>
+                        )
+                      )}
                     </div>
                   </div>
                   {/* Acción */}

@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
       const { data, error } = await Promise.race([
         supabase
           .from("profiles")
-          .select("*, roles(name, label), dependencies(name)")
+          .select("*, roles(name, label), dependencies(name), sedes(name)")
           .eq("id", userId)
           .maybeSingle(),
         new Promise((_, reject) =>

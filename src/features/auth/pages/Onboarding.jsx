@@ -5,6 +5,7 @@ import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { toast } from "sonner";
 import { SenaLogo } from "../../../shared/components/SenaLogo";
+import { normalizeDocNumber } from "../../../lib/normalizeDoc";
 
 const PROGRAMS_FALLBACK = [
   "Tecnología en Análisis y Desarrollo de Software",
@@ -59,8 +60,8 @@ export default function Onboarding() {
       .update({
         full_name: `${form.first_name} ${form.last_name}`.trim(),
         document_type: form.doc_type,
-        document_number: form.doc_number,
-        ficha_number: form.ficha,
+        document_number: normalizeDocNumber(form.doc_number),
+        ficha_number: form.ficha.trim(),
         program: form.program,
         onboarding_completed: true,
       })

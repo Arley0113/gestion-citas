@@ -70,13 +70,13 @@ export default function Login() {
 
           if (wlProfile?.roles?.name === "APRENDIZ") {
             const { data: found } = await withTimeout(
-              supabase.from("aprendiz_whitelist").select("id")
-                .eq("document_number", normalizeDocNumber(wlProfile.document_number))
-                .eq("ficha_number",    wlProfile.ficha_number    || "")
-                .maybeSingle()
+              supabase.rpc("lookup_whitelist", {
+                p_document_number: normalizeDocNumber(wlProfile.document_number),
+                p_ficha_number:    wlProfile.ficha_number || "",
+              })
             );
 
-            if (!found) {
+            if (!found?.length) {
               await Promise.race([supabase.auth.signOut(), new Promise(r => setTimeout(r, 2000))]);
               toast.error(
                 "Tu cédula o número de ficha no aparecen en la base de datos activa del SENA. Contacta al equipo de Bienestar SENA.",

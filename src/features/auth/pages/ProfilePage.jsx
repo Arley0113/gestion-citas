@@ -4,6 +4,7 @@ import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { User, FileText, BookOpen, Hash, Mail, Save, Camera, Shield, CheckCircle2 } from "lucide-react";
 import { ROLE_LABELS } from "../../../shared/rbac/permissions";
+import { normalizeDocNumber } from "../../../lib/normalizeDoc";
 
 const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
 
@@ -17,6 +18,10 @@ const DOC_TYPES = [
 export default function ProfilePage() {
   const { profile, user } = useAuth();
   const isAprendizRole = profile?.roles?.name === "APRENDIZ";
+  const isProfessionalRole = ["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL"].includes(profile?.roles?.name);
+  const sedeLabel = isAprendizRole
+    ? (profile?.sedes?.name || "Sin sede asignada aún")
+    : (profile?.sedes?.name || "Todas las sedes");
 
   const [form, setForm] = useState({
     full_name:       profile?.full_name       || "",
@@ -43,7 +48,7 @@ export default function ProfilePage() {
         .update({
           full_name:       form.full_name.trim(),
           document_type:   form.document_type,
-          document_number: form.document_number.trim() || null,
+          document_number: normalizeDocNumber(form.document_number) || null,
           ficha_number:    form.ficha_number.trim()    || null,
           program:         form.program.trim()          || null,
         })
@@ -280,6 +285,13 @@ export default function ProfilePage() {
             {[
               { label: "Correo electrónico", value: email,    note: "Asociado a tu cuenta Google/Microsoft" },
               { label: "Rol en el sistema",  value: ROLE_LABELS[profile?.roles?.name] || "Aprendiz SENA", note: "Asignado por Bienestar institucional" },
+              ...(isAprendizRole || isProfessionalRole ? [{
+                label: "Sede",
+                value: sedeLabel,
+                note: isAprendizRole
+                  ? "Se asigna automáticamente según tu ficha"
+                  : "Asignada por el administrador al crear tu usuario",
+              }] : []),
             ].map(({ label, value, note }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0", borderBottom: "1px solid #f9fafb" }}>
                 <div>
