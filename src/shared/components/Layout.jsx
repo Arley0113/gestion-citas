@@ -80,6 +80,14 @@ export function Layout({ children }) {
   const { openModal } = useAppointmentModal();
   const { canInstall, install, needsManualInstall } = useInstallPrompt();
   const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("pwa_install_banner_dismissed") === "true"
+  );
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    try { localStorage.setItem("pwa_install_banner_dismissed", "true"); } catch { /* modo privado, etc. */ }
+  };
+  const showInstallBanner = !bannerDismissed && (canInstall || needsManualInstall);
   const [notifCount, setNotifCount] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // No mostrar badge cuando el usuario ya está viendo las notificaciones
@@ -417,6 +425,31 @@ export function Layout({ children }) {
 
       {/* ─── Main ─── */}
       <main className="app-main">
+        {showInstallBanner && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap",
+            background: "linear-gradient(135deg, #39a900, #2d8600)", color: "white",
+            borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1.25rem",
+          }}>
+            <Download size={18} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 200, fontSize: "0.8125rem", fontWeight: 600 }}>
+              Instala Bienestar SENA en tu dispositivo para acceso más rápido
+            </div>
+            <button
+              onClick={() => canInstall ? install() : setShowInstallHelp(true)}
+              style={{ padding: "0.4rem 0.875rem", borderRadius: 8, border: "none", background: "white", color: "#2d8600", fontSize: "0.8125rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", flexShrink: 0 }}
+            >
+              {canInstall ? "Instalar" : "Ver cómo"}
+            </button>
+            <button
+              onClick={dismissBanner}
+              aria-label="Cerrar aviso"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.8)", display: "flex", flexShrink: 0 }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
         {children}
       </main>
 
