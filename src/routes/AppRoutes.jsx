@@ -234,7 +234,7 @@ export function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="/admin/actividad" element={
-          <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
+          <ProtectedRoute requiredRoles={["COORDINACION","ADMINISTRADOR","SUPERADMIN"]}>
             <Layout><ActividadPage /></Layout>
           </ProtectedRoute>
         } />

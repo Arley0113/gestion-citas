@@ -143,6 +143,30 @@ export default function CoordinationDashboard() {
   const today = new Date();
   const [hoveredRow, setHoveredRow] = useState(null);
 
+  const handleExport = () => {
+    if (!data) return;
+    const rows = [
+      ["Reporte de citas — Coordinación", period],
+      [],
+      ["Métrica", "Cantidad"],
+      ["Total citas", data.total],
+      ["Pendientes", data.pending],
+      ["Completadas", data.completed],
+      ["Canceladas/No show", data.cancelled],
+      [],
+      ["Dependencia", "Cantidad", "Porcentaje"],
+      ...depData.map(d => [d.name, d.count, `${d.pct}%`]),
+    ];
+    const csv  = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = `reporte-coordinacion-${format(today, "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const completedPct = data?.total ? Math.round((data.completed / data.total) * 100) : 74;
   const cancelledPct = data?.total ? Math.round((data.cancelled / data.total) * 100) : 11;
   const pendingPct   = data?.total ? Math.round((data.pending / data.total) * 100) : 15;
@@ -184,7 +208,11 @@ export default function CoordinationDashboard() {
                 ))}
               </div>
               {can(P.REPORTS_EXPORT) && (
-                <button style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5625rem 1rem", border: "none", borderRadius: 8, background: "#39a900", fontSize: "0.875rem", fontWeight: 600, color: "white", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                <button
+                  onClick={handleExport}
+                  disabled={loading || !data}
+                  style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5625rem 1rem", border: "none", borderRadius: 8, background: "#39a900", fontSize: "0.875rem", fontWeight: 600, color: "white", cursor: loading ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", opacity: loading || !data ? 0.6 : 1 }}
+                >
                   <Download size={14} /> Exportar
                 </button>
               )}
@@ -438,7 +466,7 @@ export default function CoordinationDashboard() {
               Hay <strong style={{ fontSize: "1rem" }}>{data?.pending ?? "—"} citas pendientes</strong> sin confirmar por profesionales.
             </p>
             <button
-              onClick={() => navigate("/coordination")}
+              onClick={() => navigate("/admin/actividad?status=pending")}
               style={{ width: "100%", padding: "0.5625rem", background: "#f59e0b", color: "white", border: "none", borderRadius: 8, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
               Ver citas pendientes →
             </button>

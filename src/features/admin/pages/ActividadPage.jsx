@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Activity, ArrowLeft, Calendar, CheckCircle2, XCircle, Clock, UserPlus, AlertCircle, PlayCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { DEV_ROLE } from "../../../lib/devMode";
+import { useAuth } from "../../../providers/AuthProvider";
 
 const MOCK_ROWS = [
   { id: "m1", status: "completed", scheduled_date: "2026-08-05", scheduled_time: "09:00:00", created_at: "2026-08-01T10:00:00Z", cancelled_reason: null, dependency_id: 10, profiles: { full_name: "Juan Pérez", document_number: "1001234567" }, dependencies: { name: "Psicología" } },
@@ -25,9 +26,13 @@ const DEP_LABELS = { 10: "Psicología", 11: "Enfermería", 12: "Trabajo Social" 
 
 export default function ActividadPage() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const [searchParams] = useSearchParams();
+  const canToggle = ["ADMINISTRADOR", "SUPERADMIN"].includes(profile?.roles?.name);
+  const backRoute = canToggle ? "/admin" : "/coordination";
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(searchParams.get("status") || "all");
 
   useEffect(() => {
     const load = async () => {
@@ -51,7 +56,7 @@ export default function ActividadPage() {
       <div style={{ background: "linear-gradient(to bottom, #fef3c7, #f5f7fa)", borderBottom: "1px solid #fde68a" }}>
         <div style={{ maxWidth: 960, margin: "0 auto", padding: "2rem 2rem 1.5rem" }}>
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate(backRoute)}
             style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem", color: "#6b7280", background: "none", border: "none", cursor: "pointer", marginBottom: "1rem", padding: 0 }}
           >
             <ArrowLeft size={14} /> Volver
