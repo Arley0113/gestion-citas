@@ -17,24 +17,35 @@ export const isAndroid = () =>
 // de "engagement") canInstall nunca llega a true — Layout.jsx debe mostrar
 // instrucciones manuales (needsManualInstall) en ese caso, no esconder la opción.
 export function useInstallPrompt() {
-  const [deferredEvent, setDeferredEvent] = useState(null);
+  // Puede haber quedado capturado por el script temprano en index.html antes
+  // de que este componente montara — se recoge de una vez como estado inicial.
+  const [deferredEvent, setDeferredEvent] = useState(
+    () => (typeof window !== "undefined" ? window.__bipEvent : null)
+  );
   const [installed, setInstalled] = useState(isStandalone());
 
   useEffect(() => {
     if (isStandalone()) return;
 
+    if (window.__bipEvent) setDeferredEvent(window.__bipEvent);
+
+    const onCaptured = () => setDeferredEvent(window.__bipEvent);
     const onBeforeInstallPrompt = (e) => {
       e.preventDefault();
+      window.__bipEvent = e;
       setDeferredEvent(e);
     };
     const onAppInstalled = () => {
       setInstalled(true);
       setDeferredEvent(null);
+      window.__bipEvent = null;
     };
 
+    window.addEventListener("bip-captured", onCaptured);
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     window.addEventListener("appinstalled", onAppInstalled);
     return () => {
+      window.removeEventListener("bip-captured", onCaptured);
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
       window.removeEventListener("appinstalled", onAppInstalled);
     };
@@ -45,6 +56,7 @@ export function useInstallPrompt() {
     deferredEvent.prompt();
     await deferredEvent.userChoice;
     setDeferredEvent(null);
+    window.__bipEvent = null;
   }, [deferredEvent]);
 
   return {

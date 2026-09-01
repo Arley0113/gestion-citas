@@ -88,6 +88,14 @@ export function Layout({ children }) {
     try { localStorage.setItem("pwa_install_banner_dismissed", "true"); } catch { /* modo privado, etc. */ }
   };
   const showInstallBanner = !bannerDismissed && (canInstall || needsManualInstall);
+  // Se muestra automáticamente una sola vez — a partir de que aparece queda
+  // recordado, aunque el usuario no le haga clic a la X. Volver a verlo
+  // depende del acceso permanente en el menú, no de que este aviso insista.
+  useEffect(() => {
+    if (showInstallBanner) {
+      try { localStorage.setItem("pwa_install_banner_dismissed", "true"); } catch { /* modo privado, etc. */ }
+    }
+  }, [showInstallBanner]);
   const [notifCount, setNotifCount] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // No mostrar badge cuando el usuario ya está viendo las notificaciones
