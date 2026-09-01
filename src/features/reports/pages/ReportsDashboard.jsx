@@ -7,7 +7,7 @@ import { usePermissions } from "../../../shared/rbac/usePermissions";
 import { P } from "../../../shared/rbac/permissions";
 import { format, subMonths, startOfWeek, startOfMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { toast } from "sonner";
+import { generateReportPDF } from "../../../lib/reportPdf";
 
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("preview") : null;
 
@@ -160,7 +160,12 @@ export default function ReportsDashboard() {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportPDF = () => toast.info("Generando PDF...");
+  const handleExportPDF = () => {
+    if (!data) return;
+    const periodLabel = PERIODS.find(p => p.key === period)?.label || period;
+    const doc = generateReportPDF(data, periodLabel, STATUS_CONFIG);
+    doc.save(`reporte-bienestar-sena-${format(now, "yyyy-MM-dd")}.pdf`);
+  };
 
   const completedCount = data?.byStatus?.find(s => s.status === "completed")?.count ?? 0;
   const attendanceRate = data?.total ? Math.round((completedCount / data.total) * 100) : 96;
@@ -187,7 +192,8 @@ export default function ReportsDashboard() {
               <div style={{ display: "flex", gap: "0.625rem" }}>
                 <button
                   onClick={handleExportPDF}
-                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1rem", background: "white", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: "8px", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", transition: "border-color 0.15s" }}
+                  disabled={loading || !data}
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1rem", background: "white", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: "8px", fontSize: "0.875rem", fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading || !data ? 0.6 : 1, transition: "border-color 0.15s" }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = "#d1d5db"}
                   onMouseLeave={e => e.currentTarget.style.borderColor = "#e5e7eb"}
                 >
