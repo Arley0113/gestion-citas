@@ -4,10 +4,18 @@ const isStandalone = () =>
   typeof window !== "undefined" &&
   (window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true);
 
+export const isIOS = () =>
+  typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+export const isAndroid = () =>
+  typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
+
 // Captura el evento beforeinstallprompt (Chrome/Edge) para mostrar un botón propio
 // de "Instalar app" en vez de depender de que el usuario note el ícono del navegador.
-// En navegadores que no disparan este evento (Safari/iOS, Firefox) canInstall
-// simplemente nunca es true — no hay fallback, el usuario instala desde el menú nativo.
+// En navegadores que no disparan este evento (Safari/iOS siempre; Chrome/Android
+// también puede no dispararlo si ya se descartó antes o no se cumplió su heurística
+// de "engagement") canInstall nunca llega a true — Layout.jsx debe mostrar
+// instrucciones manuales (needsManualInstall) en ese caso, no esconder la opción.
 export function useInstallPrompt() {
   const [deferredEvent, setDeferredEvent] = useState(null);
   const [installed, setInstalled] = useState(isStandalone());
@@ -39,5 +47,13 @@ export function useInstallPrompt() {
     setDeferredEvent(null);
   }, [deferredEvent]);
 
-  return { canInstall: !installed && !!deferredEvent, install };
+  return {
+    canInstall: !installed && !!deferredEvent,
+    install,
+    installed,
+    // El navegador nunca ofreció (o nunca ofrecerá) el prompt propio, pero la app
+    // sigue sin estar instalada — hay que mostrar instrucciones manuales en vez
+    // de no mostrar nada.
+    needsManualInstall: !installed && !deferredEvent,
+  };
 }

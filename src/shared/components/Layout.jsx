@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../providers/AuthProvider";
 import { useAppointmentModal } from "../../providers/AppointmentModalContext";
-import { useInstallPrompt } from "../../hooks/useInstallPrompt";
+import { useInstallPrompt, isIOS, isAndroid } from "../../hooks/useInstallPrompt";
 import { SenaLogo } from "./SenaLogo";
 import { AppointmentModal } from "../../features/appointments/components/AppointmentModal";
 import { supabase } from "../../lib/supabase";
@@ -78,7 +78,8 @@ export function Layout({ children }) {
   const location = useLocation();
   const { isProfessional, isCoordination, isAdmin, isAprendiz, profile, user, signOut } = useAuth();
   const { openModal } = useAppointmentModal();
-  const { canInstall, install } = useInstallPrompt();
+  const { canInstall, install, needsManualInstall } = useInstallPrompt();
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // No mostrar badge cuando el usuario ya está viendo las notificaciones
@@ -297,6 +298,27 @@ export function Layout({ children }) {
               <span>Instalar app</span>
             </button>
           )}
+          {needsManualInstall && (
+            <button
+              onClick={() => setShowInstallHelp(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.625rem",
+                padding: "0.5rem 0.625rem",
+                borderRadius: 7, border: "none",
+                background: "rgba(57,169,0,0.12)", color: "#39a900",
+                cursor: "pointer", fontFamily: "var(--font-sans)",
+                fontSize: "0.8125rem", fontWeight: 600,
+                width: "100%", textAlign: "left",
+                marginBottom: "0.25rem",
+                transition: "background 0.12s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(57,169,0,0.2)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(57,169,0,0.12)"}
+            >
+              <Download size={14} />
+              <span>Cómo instalar la app</span>
+            </button>
+          )}
           <button
             onClick={signOut}
             style={{
@@ -456,6 +478,48 @@ export function Layout({ children }) {
 
       {/* ─── Modal global ─── */}
       <AppointmentModal />
+
+      {showInstallHelp && (
+        <div
+          onClick={() => setShowInstallHelp(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: "white", borderRadius: 16, padding: "1.5rem", maxWidth: 380, width: "100%", boxShadow: "0 20px 48px rgba(0,0,0,0.2)" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
+              <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#111827", fontFamily: "var(--font-display)" }}>Instalar la app</h3>
+              <button onClick={() => setShowInstallHelp(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280", display: "flex" }} aria-label="Cerrar">
+                <X size={18} />
+              </button>
+            </div>
+            {isIOS() ? (
+              <ol style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.875rem", color: "#374151", lineHeight: 1.8 }}>
+                <li>Abre esta página en <strong>Safari</strong> (no funciona desde otras apps de navegador en iPhone).</li>
+                <li>Toca el botón <strong>Compartir</strong> (el cuadrado con la flecha hacia arriba) en la barra inferior.</li>
+                <li>Busca y toca <strong>"Agregar a pantalla de inicio"</strong>.</li>
+                <li>Confirma con <strong>"Agregar"</strong> arriba a la derecha.</li>
+              </ol>
+            ) : isAndroid() ? (
+              <ol style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.875rem", color: "#374151", lineHeight: 1.8 }}>
+                <li>Toca el menú <strong>⋮</strong> (tres puntos) arriba a la derecha de Chrome.</li>
+                <li>Busca <strong>"Instalar app"</strong> o <strong>"Agregar a pantalla de inicio"</strong>.</li>
+                <li>Confirma la instalación.</li>
+              </ol>
+            ) : (
+              <ol style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.875rem", color: "#374151", lineHeight: 1.8 }}>
+                <li>Busca el ícono de instalar (⊕) en la barra de direcciones de Chrome/Edge, a la derecha.</li>
+                <li>Si no lo ves, abre el menú <strong>⋮</strong> y busca <strong>"Instalar Bienestar SENA..."</strong>.</li>
+                <li>Confirma la instalación.</li>
+              </ol>
+            )}
+            <p style={{ fontSize: "0.75rem", color: "#9ca3af", margin: "1rem 0 0", lineHeight: 1.5 }}>
+              Si no ves esas opciones, tu navegador puede tardar un poco en ofrecerlas la primera vez, o no soportar instalación — puedes seguir usando la app normalmente desde el navegador.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
