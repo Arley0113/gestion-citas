@@ -52,7 +52,11 @@ export function AuthProvider({ children }) {
       setProfile(data);
       return data;
     } catch (err) {
-      if (import.meta.env.DEV) console.error("Error cargando perfil:", err);
+      // Sin gate de DEV a propósito: si esto sigue pasando en producción,
+      // necesitamos poder abrir la consola del navegador y ver el error real
+      // (antes solo se veía en desarrollo, así que en producción no quedaba
+      // ningún rastro de qué lo estaba causando).
+      console.error("Error cargando perfil:", { message: err.message, code: err.code, isRetry, details: err.details, hint: err.hint });
       const isMissing = err.message?.includes("Perfil no encontrado");
 
       if (!isMissing) {
