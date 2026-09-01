@@ -634,6 +634,61 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.clear_ficha_sede(TEXT) TO authenticated;
 
+-- ────────────────────────────────────────────────────────────
+-- 14. get_dependency_slots — horarios reales al agendar (auditoría/Fase 2,
+--    2026-08-31). AppointmentModal.jsx mostraba un horario fijo (8am-5pm en
+--    bloques de hora) sin relación con `professional_schedules`, que cada
+--    profesional ya configura en "Mis horarios" pero nadie leía. Se calcula
+--    en el servidor (no en el cliente) porque un aprendiz no tiene permiso
+--    de leer los perfiles de otros usuarios (profiles_select) — sin esto la
+--    consulta habría devuelto siempre 0 filas por RLS, silenciosamente.
+--    Devuelve la unión de los bloques activos de ese día de todos los
+--    profesionales de la dependencia que cubran la sede (o sede_id NULL =
+--    "todas las sedes"; p_sede_id NULL = aprendiz sin sede, no filtra).
+--    Si no hay ningún horario configurado, devuelve 0 filas y el cliente
+--    cae de vuelta al horario genérico (HOURS en AppointmentModal.jsx) para
+--    no bloquear el agendamiento mientras el staff completa sus horarios.
+-- ────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.get_dependency_slots(p_dependency_id INTEGER, p_sede_id INTEGER, p_date DATE)
+RETURNS TABLE(slot_time TEXT) AS $$
+DECLARE
+  v_day_key TEXT;
+  rec RECORD;
+  v_start_min INTEGER;
+  v_end_min INTEGER;
+  v_dur INTEGER;
+  v_cur INTEGER;
+  v_out TEXT[] := '{}';
+BEGIN
+  v_day_key := (ARRAY['domingo','lunes','martes','miercoles','jueves','viernes','sabado'])[extract(dow from p_date)::int + 1];
+
+  FOR rec IN
+    SELECT ps.schedule -> v_day_key ->> 'start' AS start_s,
+           ps.schedule -> v_day_key ->> 'end'   AS end_s,
+           COALESCE(ps.duration_minutes, 30)     AS dur
+    FROM public.professional_schedules ps
+    JOIN public.profiles p ON p.id = ps.professional_id
+    WHERE p.dependency_id = p_dependency_id
+      AND (p.sede_id IS NULL OR p_sede_id IS NULL OR p.sede_id = p_sede_id)
+      AND (ps.schedule -> v_day_key ->> 'active')::boolean IS TRUE
+  LOOP
+    CONTINUE WHEN rec.start_s IS NULL OR rec.end_s IS NULL;
+    v_start_min := extract(hour from rec.start_s::time)::int * 60 + extract(minute from rec.start_s::time)::int;
+    v_end_min   := extract(hour from rec.end_s::time)::int   * 60 + extract(minute from rec.end_s::time)::int;
+    v_dur := rec.dur;
+    v_cur := v_start_min;
+    WHILE v_cur + v_dur <= v_end_min LOOP
+      v_out := array_append(v_out, lpad((v_cur/60)::text,2,'0') || ':' || lpad((v_cur%60)::text,2,'0'));
+      v_cur := v_cur + v_dur;
+    END LOOP;
+  END LOOP;
+
+  RETURN QUERY SELECT DISTINCT unnest(v_out) ORDER BY 1;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+GRANT EXECUTE ON FUNCTION public.get_dependency_slots(INTEGER, INTEGER, DATE) TO authenticated;
+
 -- Consulta más común: citas de una dependencia en un rango de fechas
 CREATE INDEX IF NOT EXISTS idx_apts_dep_date
   ON public.appointments(dependency_id, scheduled_date);
@@ -656,10 +711,13 @@ ON CONFLICT (name) DO UPDATE
       description = EXCLUDED.description;
 
 -- 8b. Dependencias de bienestar
+-- `icon` se renderiza directo como texto en DependenciasPage.jsx (sin mapeo
+-- de nombre-de-ícono a componente) -- debe ser un emoji, no un nombre de
+-- ícono de Lucide (bug real corregido 2026-08-31, ver commit correspondiente).
 INSERT INTO public.dependencies (name, color, icon) VALUES
-  ('Psicología',     '#3b82f6', 'brain'),
-  ('Enfermería',     '#39a900', 'stethoscope'),
-  ('Trabajo Social', '#8b5cf6', 'users')
+  ('Psicología',     '#3b82f6', '🧠'),
+  ('Enfermería',     '#39a900', '🩺'),
+  ('Trabajo Social', '#8b5cf6', '🤝')
 ON CONFLICT (name) DO UPDATE
   SET color = EXCLUDED.color,
       icon  = EXCLUDED.icon;

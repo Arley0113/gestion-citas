@@ -52,6 +52,9 @@ const SERVICES = [
   },
 ];
 
+// Horario genérico de respaldo — se usa solo si ningún profesional de la
+// dependencia/sede elegida ha configurado su horario real todavía en "Mis
+// horarios" (para no romper el agendamiento mientras eso se completa).
 const HOURS = [
   { value: "08:00", label: "8:00 a.m."  },
   { value: "09:00", label: "9:00 a.m."  },
@@ -62,6 +65,13 @@ const HOURS = [
   { value: "16:00", label: "4:00 p.m."  },
   { value: "17:00", label: "5:00 p.m."  },
 ];
+
+function slotLabel(value) {
+  const [h, m] = value.split(":").map(Number);
+  const period = h < 12 ? "a.m." : "p.m.";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}
 
 const WEEK_DAYS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 
@@ -171,6 +181,7 @@ export function AppointmentModal() {
   const [form, setForm]       = useState({ serviceKey: null, depId: null, date: null, time: null, reason: "" });
   const [takenSlots, setTakenSlots] = useState([]);
   const [checkingSlots, setCheckingSlots] = useState(false);
+  const [scheduleSlots, setScheduleSlots] = useState(null); // null = usar HOURS de respaldo
   const [aptLocation, setAptLocation] = useState("Bienestar SENA");
   const overlayRef = useRef(null);
   const panelRef = useRef(null);
@@ -232,6 +243,30 @@ export function AppointmentModal() {
     return () => { cancelled = true; };
   }, [form.serviceKey, form.date, services, profile?.sede_id]);
 
+  // Horarios reales: unión de los bloques configurados en "Mis horarios" por
+  // cada profesional de esta dependencia que cubra la sede del aprendiz (o
+  // que atienda "todas las sedes", sede_id NULL). Calculado en el servidor
+  // (get_dependency_slots, SECURITY DEFINER) porque un aprendiz no tiene
+  // permiso de leer los perfiles de otros usuarios (profiles_select). Si
+  // nadie de esa dependencia/sede ha configurado su horario todavía, se usa
+  // el horario genérico HOURS para no bloquear el agendamiento.
+  useEffect(() => {
+    const svc = services.find(s => s.key === form.serviceKey);
+    if (!svc?.id || !form.date || IS_DEV) { setScheduleSlots(null); return; }
+    let cancelled = false;
+    const dateStr = format(form.date, "yyyy-MM-dd");
+    supabase.rpc("get_dependency_slots", {
+      p_dependency_id: svc.id,
+      p_sede_id: profile?.sede_id ?? null,
+      p_date: dateStr,
+    }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error || !data || data.length === 0) { setScheduleSlots(null); return; }
+      setScheduleSlots(data.map(r => ({ value: r.slot_time, label: slotLabel(r.slot_time) })));
+    });
+    return () => { cancelled = true; };
+  }, [form.serviceKey, form.date, services, profile?.sede_id]);
+
   // Cerrar con Escape + atrapar el foco dentro del modal mientras esté abierto
   useEffect(() => {
     if (!isOpen) return;
@@ -271,6 +306,7 @@ export function AppointmentModal() {
   if (!isOpen) return null;
 
   const selSvc = services.find(s => s.key === form.serviceKey);
+  const hoursToShow = scheduleSlots ?? HOURS;
 
   const goNext = () => {
     if (step === 1 && !form.serviceKey) { toast.error("Selecciona un servicio"); return; }
@@ -517,9 +553,13 @@ export function AppointmentModal() {
                     <div style={{ width: 24, height: 24, border: "2.5px solid #e5e7eb", borderTopColor: "#39a900", borderRadius: "50%", animation: "spin 0.6s linear infinite", margin: "0 auto 0.75rem" }} />
                     Verificando disponibilidad...
                   </div>
+                ) : hoursToShow.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "2rem 0", color: "#6b7280", fontSize: "0.875rem" }}>
+                    No hay horarios disponibles para este día. Elige otra fecha.
+                  </div>
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem" }}>
-                    {HOURS.map(h => {
+                    {hoursToShow.map(h => {
                       const taken = takenSlots.includes(h.value);
                       const sel   = form.time === h.value;
                       return (
@@ -581,7 +621,7 @@ export function AppointmentModal() {
                     {
                       icon: Clock,
                       label: "Hora",
-                      value: HOURS.find(h => h.value === form.time)?.label || "—",
+                      value: hoursToShow.find(h => h.value === form.time)?.label || "—",
                     },
                     {
                       icon: MapPin,
