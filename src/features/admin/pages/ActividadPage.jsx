@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { DEV_ROLE } from "../../../lib/devMode";
 import { useAuth } from "../../../providers/AuthProvider";
+import { toast } from "sonner";
 
 const MOCK_ROWS = [
   { id: "m1", status: "completed", scheduled_date: "2026-08-05", scheduled_time: "09:00:00", created_at: "2026-08-01T10:00:00Z", cancelled_reason: null, dependency_id: 10, profiles: { full_name: "Juan Pérez", document_number: "1001234567" }, dependencies: { name: "Psicología" } },
@@ -32,22 +33,37 @@ export default function ActividadPage() {
   const backRoute = canToggle ? "/admin" : "/coordination";
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [filter, setFilter] = useState(searchParams.get("status") || "all");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    if (DEV_ROLE) { setRows(MOCK_ROWS); setLoading(false); return; }
+    let cancelled = false;
     const load = async () => {
       setLoading(true);
-      if (DEV_ROLE) { setRows(MOCK_ROWS); setLoading(false); return; }
-      const { data } = await supabase
-        .from("appointments")
-        .select("id, status, scheduled_date, scheduled_time, created_at, cancelled_reason, dependency_id, profiles!user_id(full_name, document_number), dependencies(name)")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      setRows(data || []);
-      setLoading(false);
+      setLoadError(false);
+      try {
+        const { data, error } = await supabase
+          .from("appointments")
+          .select("id, status, scheduled_date, scheduled_time, created_at, cancelled_reason, dependency_id, profiles!user_id(full_name, document_number), dependencies(name)")
+          .order("created_at", { ascending: false })
+          .limit(100);
+        if (cancelled) return;
+        if (error) throw error;
+        setRows(data || []);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Error cargando actividad:", err);
+        setLoadError(true);
+        toast.error("No se pudo cargar el registro de actividad");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     };
     load();
-  }, []);
+    return () => { cancelled = true; };
+  }, [reloadKey]);
 
   const filtered = filter === "all" ? rows : rows.filter(r => r.status === filter);
 
@@ -96,6 +112,16 @@ export default function ActividadPage() {
 
         {loading ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>Cargando...</div>
+        ) : loadError ? (
+          <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>
+            <p style={{ margin: "0 0 0.875rem", fontSize: "0.875rem" }}>No se pudo cargar el registro de actividad.</p>
+            <button
+              onClick={() => setReloadKey(k => k + 1)}
+              style={{ padding: "0.5rem 1rem", background: "#39a900", color: "white", border: "none", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 700, cursor: "pointer" }}
+            >
+              Reintentar
+            </button>
+          </div>
         ) : (
           <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             {filtered.length === 0 ? (
