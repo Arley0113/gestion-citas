@@ -73,12 +73,16 @@ export default function ProfessionalDashboard() {
     if (!profile?.dependency_id) { setLoading(false); return; }
     const todayStr = format(new Date(), "yyyy-MM-dd");
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("appointments")
       .select("*, profiles!user_id(full_name,document_number)")
       .eq("dependency_id", profile.dependency_id)
       .eq("scheduled_date", todayStr)
       .order("scheduled_time");
+    if (error) {
+      console.error("Error cargando citas del profesional:", error);
+      toast.error("No se pudieron cargar las citas de hoy");
+    }
     setApts(data || []);
     setLoading(false);
   }, [profile]);
