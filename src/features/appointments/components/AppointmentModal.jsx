@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   X, Brain, Heart, Users, Check, ChevronLeft, ChevronRight,
   Lock, Info, Clock, Calendar, MapPin, ArrowRight, Shield,
+  HeartHandshake,
 } from "lucide-react";
 import {
   addDays, format, isWeekend, startOfMonth, endOfMonth,
@@ -48,6 +49,16 @@ const SERVICES = [
     color: "#d97706",
     bg:    "#fef3c7",
     border:"#fde68a",
+    id:    null,
+  },
+  {
+    key:   "APOYO",
+    icon:  HeartHandshake,
+    label: "Apoyos",
+    desc:  "Apoyos de Bienestar: sostenimiento, transporte y convocatorias",
+    color: "#7c3aed",
+    bg:    "#ede9fe",
+    border:"#ddd6fe",
     id:    null,
   },
 ];
@@ -536,7 +547,7 @@ export function AppointmentModal() {
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.875rem", padding: "0.75rem", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
                   <Calendar size={14} color="#16a34a" />
                   <span style={{ fontSize: "0.8125rem", color: "#166534" }}>
-                    Lunes a viernes · Tu cita dura 60 minutos
+                    Lunes a viernes · Tu cita dura 30 minutos
                   </span>
                 </div>
               </div>
@@ -670,7 +681,7 @@ export function AppointmentModal() {
                 <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem", padding: "0.875rem", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10 }}>
                   <Info size={14} color="#d97706" style={{ flexShrink: 0, marginTop: 1 }} />
                   <p style={{ fontSize: "0.8125rem", color: "#92400e", lineHeight: 1.5 }}>
-                    Llega <strong>10 minutos antes</strong> con tu documento de identidad y carné del SENA.
+                    Llega <strong>10 minutos antes</strong> con tu documento de identidad (cédula de ciudadanía, cédula de extranjería o pasaporte) y carnet del SENA.
                   </p>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, ArrowLeft, Trash2, Search, ShieldCheck, User, AlertTriangle, X } from "lucide-react";
+import { Users, ArrowLeft, Trash2, Search, ShieldCheck, User, AlertTriangle, X, Mail } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { ROLE_LABELS } from "../../../shared/rbac/permissions";
@@ -31,6 +31,7 @@ const ROLE_COLOR = {
   PSICOLOGIA:    { bg: "#f0fdf4", text: "#166534", border: "#bbf7d0" },
   ENFERMERIA:    { bg: "#eff6ff", text: "#1e40af", border: "#bfdbfe" },
   TRABAJO_SOCIAL:{ bg: "#fefce8", text: "#92400e", border: "#fde68a" },
+  APOYO:         { bg: "#f5f3ff", text: "#6d28d9", border: "#ddd6fe" },
   APRENDIZ:      { bg: "#f9fafb", text: "#374151", border: "#e5e7eb" },
 };
 
@@ -71,6 +72,51 @@ function ConfirmModal({ user, onConfirm, onCancel, loading }) {
   );
 }
 
+function ChangeEmailModal({ user, value, onChange, onConfirm, onCancel, loading }) {
+  if (!user) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div style={{ background: "white", borderRadius: 16, padding: "1.75rem", maxWidth: 420, width: "100%", boxShadow: "0 20px 48px rgba(0,0,0,0.15)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Mail size={20} color="#2563eb" />
+          </div>
+          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#111827" }}>Cambiar correo</h3>
+        </div>
+        <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.75rem" }}>
+          Vas a actualizar el correo de <strong>{user.full_name || "Sin nombre"}</strong>
+          {user.email ? <> (actual: {user.email})</> : null}.
+        </p>
+        <input
+          type="email"
+          autoFocus
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="nuevo.correo@sena.edu.co"
+          style={{
+            width: "100%", boxSizing: "border-box", padding: "0.625rem 0.875rem",
+            border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.9375rem",
+            color: "#111827", outline: "none", fontFamily: "var(--font-sans)", marginBottom: "0.75rem",
+          }}
+          onFocus={e => e.target.style.borderColor = "#39a900"}
+          onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+        />
+        <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginBottom: "1.25rem", lineHeight: 1.5 }}>
+          El cambio aplica de inmediato: la persona podrá iniciar sesión con el nuevo correo y las notificaciones se enviarán allí.
+        </p>
+        <div style={{ display: "flex", gap: "0.625rem", justifyContent: "flex-end" }}>
+          <button onClick={onCancel} disabled={loading} style={{ padding: "0.625rem 1.125rem", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "white", cursor: "pointer", fontSize: "0.875rem", fontWeight: 600, color: "#374151", fontFamily: "var(--font-sans)" }}>
+            Cancelar
+          </button>
+          <button onClick={onConfirm} disabled={loading} style={{ padding: "0.625rem 1.25rem", border: "none", borderRadius: 9, background: loading ? "#d1d5db" : "#2563eb", cursor: loading ? "not-allowed" : "pointer", fontSize: "0.875rem", fontWeight: 700, color: "white", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            {loading ? "Guardando..." : <><Mail size={14} /> Guardar correo</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function UsuariosPage() {
   const navigate = useNavigate();
   const { user: currentUser, profile: currentProfile } = useAuth();
@@ -85,12 +131,15 @@ export default function UsuariosPage() {
   const [confirmUser, setConfirmUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [savingSedeFor, setSavingSedeFor] = useState(null);
+  const [emailUser, setEmailUser]     = useState(null);
+  const [emailDraft, setEmailDraft]   = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     if (DEV_ROLE) { setUsers(MOCK_USERS); setSedes(MOCK_SEDES); setLoading(false); return; }
     const [usersRes, sedesRes] = await Promise.all([
       supabase.from("profiles")
-        .select("id, full_name, document_number, onboarding_completed, roles(name), dependencies(name), sede_id, sedes(name)")
+        .select("id, full_name, email, document_number, onboarding_completed, roles(name), dependencies(name), sede_id, sedes(name)")
         .order("full_name")
         .limit(500),
       supabase.from("sedes").select("id, name").eq("active", true).order("name"),
@@ -121,6 +170,34 @@ export default function UsuariosPage() {
       : u));
     toast.success("Sede actualizada");
     setSavingSedeFor(null);
+  };
+
+  const handleEmailSave = async () => {
+    if (!emailUser) return;
+    const next = emailDraft.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) { toast.error("Ingresa un correo válido"); return; }
+    if (next === (emailUser.email || "").toLowerCase()) { toast.error("Es el mismo correo actual"); return; }
+    setEmailSaving(true);
+    try {
+      if (DEV_ROLE) {
+        setUsers(prev => prev.map(u => u.id === emailUser.id ? { ...u, email: next } : u));
+        toast.success("Correo actualizado (demo)");
+        setEmailUser(null);
+        setEmailSaving(false);
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("update-user-email", {
+        body: { user_id: emailUser.id, email: next },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Error al actualizar el correo");
+      setUsers(prev => prev.map(u => u.id === emailUser.id ? { ...u, email: next } : u));
+      toast.success("Correo actualizado correctamente");
+      setEmailUser(null);
+    } catch (err) {
+      toast.error(err.message || "No se pudo actualizar el correo");
+    } finally {
+      setEmailSaving(false);
+    }
   };
 
   const filtered = users.filter(u => {
@@ -160,6 +237,7 @@ export default function UsuariosPage() {
   return (
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
       <ConfirmModal user={confirmUser} onConfirm={handleDelete} onCancel={() => setConfirmUser(null)} loading={deleting} />
+      <ChangeEmailModal user={emailUser} value={emailDraft} onChange={setEmailDraft} onConfirm={handleEmailSave} onCancel={() => setEmailUser(null)} loading={emailSaving} />
 
       {/* Header */}
       <div style={{ background: "linear-gradient(to bottom, #f0fce4, #f5f7fa)", borderBottom: "1px solid #d1fae5" }}>
@@ -224,6 +302,7 @@ export default function UsuariosPage() {
               const isSelf = u.id === currentUser?.id;
               const isOtherSuperAdmin = roleName === "SUPERADMIN" && !isSelf;
               const canDelete = isSuperAdmin && !isSelf && !isOtherSuperAdmin;
+              const canChangeEmail = !isOtherSuperAdmin;
               const initials = (u.full_name || "?").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
               const isProfessional = ["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL"].includes(roleName);
               const isAprendiz     = roleName === "APRENDIZ";
@@ -244,6 +323,7 @@ export default function UsuariosPage() {
                       <span style={{ fontSize: "0.75rem", fontWeight: 600, color: rc.text, background: rc.bg, border: `1px solid ${rc.border}`, borderRadius: 5, padding: "0.125rem 0.5rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
                         <ShieldCheck size={11} /> {ROLE_LABELS[roleName] || roleName}
                       </span>
+                      {u.email && <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{u.email}</span>}
                       {u.dependencies?.name && <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{u.dependencies.name}</span>}
                       {u.document_number && <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>CC {u.document_number}</span>}
                       {!u.onboarding_completed && <span style={{ fontSize: "0.6875rem", color: "#d97706", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 4, padding: "0.125rem 0.375rem" }}>Sin completar perfil</span>}
@@ -271,18 +351,31 @@ export default function UsuariosPage() {
                       )}
                     </div>
                   </div>
-                  {/* Acción */}
-                  {canDelete && (
-                    <button
-                      onClick={() => setConfirmUser(u)}
-                      title="Eliminar usuario"
-                      style={{ width: 34, height: 34, borderRadius: 8, border: "1.5px solid #fecaca", background: "#fff5f5", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#dc2626", flexShrink: 0, transition: "all 0.12s" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.borderColor = "#fca5a5"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "#fff5f5"; e.currentTarget.style.borderColor = "#fecaca"; }}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  )}
+                  {/* Acciones */}
+                  <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                    {canChangeEmail && (
+                      <button
+                        onClick={() => { setEmailUser(u); setEmailDraft(u.email || ""); }}
+                        title="Cambiar correo"
+                        style={{ width: 34, height: 34, borderRadius: 8, border: "1.5px solid #bfdbfe", background: "#eff6ff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb", transition: "all 0.12s" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "#dbeafe"; e.currentTarget.style.borderColor = "#93c5fd"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "#eff6ff"; e.currentTarget.style.borderColor = "#bfdbfe"; }}
+                      >
+                        <Mail size={15} />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => setConfirmUser(u)}
+                        title="Eliminar usuario"
+                        style={{ width: 34, height: 34, borderRadius: 8, border: "1.5px solid #fecaca", background: "#fff5f5", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#dc2626", transition: "all 0.12s" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.borderColor = "#fca5a5"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "#fff5f5"; e.currentTarget.style.borderColor = "#fecaca"; }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })

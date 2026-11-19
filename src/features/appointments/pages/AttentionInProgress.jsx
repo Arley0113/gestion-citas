@@ -307,14 +307,14 @@ export default function AttentionInProgress() {
               Tiempo de sesión
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "0.25rem" }}>
-              <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1 }}>60</div>
+              <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1 }}>30</div>
               <div style={{ fontSize: "1rem", fontWeight: 600, color: "#6b7280" }}>min</div>
             </div>
             <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "0.375rem" }}>
               Inicio: {timeLabel(apt.scheduled_time)}
             </div>
             <div style={{ marginTop: "0.875rem", height: 4, background: "#f3f4f6", borderRadius: "99px" }}>
-              <div style={{ height: "100%", width: `${Math.min((elapsed / 60) * 100, 100)}%`, background: elapsed > 50 ? "#f59e0b" : "#39a900", borderRadius: "99px", transition: "width 0.5s" }} />
+              <div style={{ height: "100%", width: `${Math.min((elapsed / 30) * 100, 100)}%`, background: elapsed > 25 ? "#f59e0b" : "#39a900", borderRadius: "99px", transition: "width 0.5s" }} />
             </div>
           </div>
 

@@ -4,6 +4,7 @@ import {
   Plus, ChevronRight, Brain, Heart, Users, Calendar,
   X, Clock, CheckCircle2, AlertCircle, TrendingUp,
   Sparkles, Shield, ChevronDown, Smile, Megaphone, Link as LinkIcon,
+  HeartHandshake,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -30,6 +31,7 @@ const SERVICES = [
   { key: "PSICOLOGIA",    icon: Brain,  label: "Psicología",     desc: "Apoyo emocional y mental",      color: "#16a34a", bg: "#dcfce7", border: "#bbf7d0" },
   { key: "ENFERMERIA",    icon: Heart,  label: "Enfermería",     desc: "Salud y bienestar físico",       color: "#2563eb", bg: "#dbeafe", border: "#bfdbfe" },
   { key: "TRABAJO_SOCIAL",icon: Users,  label: "Trabajo Social", desc: "Acompañamiento y apoyo social",  color: "#d97706", bg: "#fef3c7", border: "#fde68a" },
+  { key: "APOYO",         icon: HeartHandshake, label: "Apoyos", desc: "Sostenimiento, transporte y convocatorias", color: "#7c3aed", bg: "#ede9fe", border: "#ddd6fe" },
 ];
 
 const STATUS = {
@@ -56,6 +58,7 @@ function getDepMeta(name) {
   if (name.toLowerCase().includes("psico"))   return SERVICES[0];
   if (name.toLowerCase().includes("enfer"))   return SERVICES[1];
   if (name.toLowerCase().includes("trabajo")) return SERVICES[2];
+  if (name.toLowerCase().includes("apoyo"))   return SERVICES[3];
   return SERVICES[0];
 }
 

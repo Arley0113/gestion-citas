@@ -27,3 +27,5 @@ TESTING.md
 *.njsproj
 *.sln
 *.sw?
+
+supabase/.temp

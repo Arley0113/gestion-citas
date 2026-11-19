@@ -24,12 +24,12 @@ describe("P — constantes de permisos", () => {
 // SUITE 2 — Roles definidos
 // ─────────────────────────────────────────────────────────────────────────────
 describe("ALL_ROLES — catálogo de roles", () => {
-  it("contiene exactamente 7 roles", () => {
-    expect(ALL_ROLES.length).toBe(7);
+  it("contiene exactamente 8 roles", () => {
+    expect(ALL_ROLES.length).toBe(8);
   });
 
-  it("incluye los 7 roles esperados", () => {
-    const expected = ["APRENDIZ", "PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL", "COORDINACION", "ADMINISTRADOR", "SUPERADMIN"];
+  it("incluye los 8 roles esperados", () => {
+    const expected = ["APRENDIZ", "PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL", "APOYO", "COORDINACION", "ADMINISTRADOR", "SUPERADMIN"];
     expected.forEach(r => expect(ALL_ROLES).toContain(r));
   });
 
@@ -109,7 +109,33 @@ describe("ROLE_PERMISSIONS — Profesionales", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUITE 5 — COORDINACION
+// SUITE 5 — APOYO (gestiona convocatorias/apoyos + atiende citas)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("ROLE_PERMISSIONS — APOYO", () => {
+  const perms = ROLE_PERMISSIONS.APOYO;
+
+  it("puede gestionar convocatorias (apoyos)", () => expect(perms).toContain(P.CONVOCATORIAS_MANAGE));
+  it("tiene los permisos de atención de citas de un profesional", () => {
+    [P.APPOINTMENTS_READ_DEPT, P.APPOINTMENTS_CONFIRM, P.APPOINTMENTS_START,
+      P.APPOINTMENTS_COMPLETE, P.APPOINTMENTS_NO_SHOW].forEach(p =>
+      expect(perms).toContain(p)
+    );
+  });
+
+  it("NO puede ver todas las citas", () => expect(perms).not.toContain(P.APPOINTMENTS_READ_ALL));
+  it("NO puede gestionar usuarios", () => {
+    expect(perms).not.toContain(P.USERS_CREATE);
+    expect(perms).not.toContain(P.USERS_DELETE);
+    expect(perms).not.toContain(P.USERS_MANAGE_ROLES);
+  });
+  it("NO tiene permisos de sistema", () => {
+    expect(perms).not.toContain(P.SYSTEM_CONFIG);
+    expect(perms).not.toContain(P.SYSTEM_DB);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUITE 6 — COORDINACION
 // ─────────────────────────────────────────────────────────────────────────────
 describe("ROLE_PERMISSIONS — COORDINACION", () => {
   const perms = ROLE_PERMISSIONS.COORDINACION;
@@ -129,7 +155,7 @@ describe("ROLE_PERMISSIONS — COORDINACION", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUITE 6 — ADMINISTRADOR
+// SUITE 7 — ADMINISTRADOR
 // ─────────────────────────────────────────────────────────────────────────────
 describe("ROLE_PERMISSIONS — ADMINISTRADOR", () => {
   const perms = ROLE_PERMISSIONS.ADMINISTRADOR;
@@ -148,7 +174,7 @@ describe("ROLE_PERMISSIONS — ADMINISTRADOR", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUITE 7 — SUPERADMIN
+// SUITE 8 — SUPERADMIN
 // ─────────────────────────────────────────────────────────────────────────────
 describe("ROLE_PERMISSIONS — SUPERADMIN", () => {
   const perms = ROLE_PERMISSIONS.SUPERADMIN;
@@ -170,7 +196,7 @@ describe("ROLE_PERMISSIONS — SUPERADMIN", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUITE 8 — Escalación de privilegios (seguridad crítica)
+// SUITE 9 — Escalación de privilegios (seguridad crítica)
 // ─────────────────────────────────────────────────────────────────────────────
 describe("Seguridad — escalación de privilegios", () => {
   it("APRENDIZ no puede acceder a ningún permiso de SUPERADMIN exclusivo", () => {

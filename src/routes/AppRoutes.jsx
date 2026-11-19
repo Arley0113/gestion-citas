@@ -47,7 +47,11 @@ const ProfessionalNotesPage  = lazy(() => import("../features/professional/pages
 const ProfessionalStatsPage  = lazy(() => import("../features/professional/pages/ProfessionalStatsPage"));
 const HorariosPage           = lazy(() => import("../features/professional/pages/HorariosPage"));
 
-const ALL_STAFF = ["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL","COORDINACION","ADMINISTRADOR","SUPERADMIN"];
+// Roles que atienden citas como profesionales de su dependencia (APOYO incluido:
+// gestiona los apoyos y a la vez agenda/atención de citas de esa dependencia)
+const PROF_ROLES = ["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL","APOYO"];
+
+const ALL_STAFF = ["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL","APOYO","COORDINACION","ADMINISTRADOR","SUPERADMIN"];
 
 const Fallback = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "#f5f7fa", fontFamily: "var(--font-sans)" }}>
@@ -60,13 +64,14 @@ const Fallback = () => (
 );
 
 export function AppRoutes() {
-  const { isAdmin, isCoordination, isProfessional, isAprendiz, needsOnboarding, profile } = useAuth();
+  const { isAdmin, isCoordination, isProfessional, isApoyo, isAprendiz, needsOnboarding, profile } = useAuth();
   const location = useLocation();
 
   const getHomeRoute = () => {
     if (isAdmin())        return "/admin";
     if (isCoordination()) return "/coordination";
     if (isProfessional()) return "/professional";
+    if (isApoyo())        return "/admin/convocatorias";
     return "/dashboard";
   };
 
@@ -139,42 +144,42 @@ export function AppRoutes() {
 
         {/* PROFESIONAL */}
         <Route path="/professional" element={
-          <ProtectedRoute requiredRoles={["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL"]}>
+          <ProtectedRoute requiredRoles={PROF_ROLES}>
             <Layout><ProfessionalDashboard /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/aprendices" element={
-          <ProtectedRoute requiredRoles={["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL","COORDINACION","ADMINISTRADOR","SUPERADMIN"]}>
+          <ProtectedRoute requiredRoles={ALL_STAFF}>
             <Layout><AprendicesList /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/professional/agenda" element={
-          <ProtectedRoute requiredRoles={["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL"]}>
+          <ProtectedRoute requiredRoles={PROF_ROLES}>
             <Layout><ProfessionalAgendaPage /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/professional/notas" element={
-          <ProtectedRoute requiredRoles={["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL"]}>
+          <ProtectedRoute requiredRoles={PROF_ROLES}>
             <Layout><ProfessionalNotesPage /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/professional/estadisticas" element={
-          <ProtectedRoute requiredRoles={["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL"]}>
+          <ProtectedRoute requiredRoles={PROF_ROLES}>
             <Layout><ProfessionalStatsPage /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/professional/horarios" element={
-          <ProtectedRoute requiredRoles={["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL"]}>
+          <ProtectedRoute requiredRoles={PROF_ROLES}>
             <Layout><HorariosPage /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/cita/:id/atencion" element={
-          <ProtectedRoute requiredRoles={["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL"]}>
+          <ProtectedRoute requiredRoles={PROF_ROLES}>
             <AttentionInProgress />
           </ProtectedRoute>
         } />
         <Route path="/cita/:id/resultado" element={
-          <ProtectedRoute requiredRoles={["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL"]}>
+          <ProtectedRoute requiredRoles={PROF_ROLES}>
             <AttentionResult />
           </ProtectedRoute>
         } />
@@ -229,7 +234,7 @@ export function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="/admin/convocatorias" element={
-          <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN"]}>
+          <ProtectedRoute requiredRoles={["ADMINISTRADOR","SUPERADMIN","APOYO"]}>
             <Layout><ConvocatoriasPage /></Layout>
           </ProtectedRoute>
         } />

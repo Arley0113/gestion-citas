@@ -86,7 +86,7 @@ const TEMPLATES: Record<string, (apt: Apt, reason?: string) => { subject: string
         { label: "Hora",     value: fmtTime(apt.scheduled_time) },
       ])}
       <div style="font-size:13px;color:#6b7280;line-height:1.6;">
-        Recuerda llegar <strong>10 minutos antes</strong> con tu documento de identidad y carné del SENA.
+        Recuerda llegar <strong>10 minutos antes</strong> con tu documento de identidad (cédula de ciudadanía, cédula de extranjería o pasaporte) y carnet del SENA.
       </div>
     `),
   }),

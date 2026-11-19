@@ -225,7 +225,7 @@ CREATE POLICY "profiles_select"
   USING (
     id = auth.uid()
     OR public.auth_role_name() IN (
-      'PSICOLOGIA','ENFERMERIA','TRABAJO_SOCIAL',
+      'PSICOLOGIA','ENFERMERIA','TRABAJO_SOCIAL','APOYO',
       'COORDINACION','ADMINISTRADOR','SUPERADMIN'
     )
   );
@@ -276,7 +276,7 @@ CREATE POLICY "apts_select"
     public.auth_role_name() IN ('COORDINACION','ADMINISTRADOR','SUPERADMIN')
     -- Profesional: citas de su dependencia y su sede
     OR (
-      public.auth_role_name() IN ('PSICOLOGIA','ENFERMERIA','TRABAJO_SOCIAL')
+      public.auth_role_name() IN ('PSICOLOGIA','ENFERMERIA','TRABAJO_SOCIAL','APOYO')
       AND dependency_id = (
         SELECT dependency_id FROM public.profiles WHERE id = auth.uid()
       )
@@ -315,7 +315,7 @@ CREATE POLICY "apts_update"
     public.auth_role_name() IN ('COORDINACION','ADMINISTRADOR','SUPERADMIN')
     -- Profesional: actualiza citas de su dependencia y su sede
     OR (
-      public.auth_role_name() IN ('PSICOLOGIA','ENFERMERIA','TRABAJO_SOCIAL')
+      public.auth_role_name() IN ('PSICOLOGIA','ENFERMERIA','TRABAJO_SOCIAL','APOYO')
       AND dependency_id = (
         SELECT dependency_id FROM public.profiles WHERE id = auth.uid()
       )
@@ -388,19 +388,19 @@ DROP POLICY IF EXISTS "convocatorias_insert_admin" ON public.convocatorias;
 CREATE POLICY "convocatorias_insert_admin"
   ON public.convocatorias FOR INSERT
   TO authenticated
-  WITH CHECK (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR'));
+  WITH CHECK (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR','APOYO'));
 
 DROP POLICY IF EXISTS "convocatorias_update_admin" ON public.convocatorias;
 CREATE POLICY "convocatorias_update_admin"
   ON public.convocatorias FOR UPDATE
   TO authenticated
-  USING (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR'));
+  USING (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR','APOYO'));
 
 DROP POLICY IF EXISTS "convocatorias_delete_admin" ON public.convocatorias;
 CREATE POLICY "convocatorias_delete_admin"
   ON public.convocatorias FOR DELETE
   TO authenticated
-  USING (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR'));
+  USING (public.auth_role_name() IN ('SUPERADMIN','ADMINISTRADOR','APOYO'));
 
 CREATE INDEX IF NOT EXISTS idx_convocatorias_activa ON public.convocatorias(activa);
 CREATE INDEX IF NOT EXISTS idx_apts_status            ON public.appointments(status);
@@ -703,6 +703,7 @@ INSERT INTO public.roles (name, label, description) VALUES
   ('PSICOLOGIA',     'Psicología',     'Profesional del área de Psicología'),
   ('ENFERMERIA',     'Enfermería',     'Profesional del área de Enfermería'),
   ('TRABAJO_SOCIAL', 'Trabajo Social', 'Profesional del área de Trabajo Social'),
+  ('APOYO',          'Apoyo',          'Gestiona apoyos y convocatorias (sostenimiento, transporte) y atiende citas de la dependencia'),
   ('COORDINACION',   'Coordinación',   'Coordinador de Bienestar con acceso a todos los reportes'),
   ('ADMINISTRADOR',  'Administrador',  'Administrador del sistema — gestiona usuarios y dependencias'),
   ('SUPERADMIN',     'Super Admin',    'Superadministrador con acceso total al sistema')
@@ -717,7 +718,8 @@ ON CONFLICT (name) DO UPDATE
 INSERT INTO public.dependencies (name, color, icon) VALUES
   ('Psicología',     '#3b82f6', '🧠'),
   ('Enfermería',     '#39a900', '🩺'),
-  ('Trabajo Social', '#8b5cf6', '🤝')
+  ('Trabajo Social', '#8b5cf6', '🤝'),
+  ('Apoyos',         '#7c3aed', '🤝')
 ON CONFLICT (name) DO UPDATE
   SET color = EXCLUDED.color,
       icon  = EXCLUDED.icon;

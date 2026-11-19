@@ -19,6 +19,7 @@ const ROLE_LABELS = {
   PSICOLOGIA:     "Psicología",
   ENFERMERIA:     "Enfermería",
   TRABAJO_SOCIAL: "Trabajo Social",
+  APOYO:          "Apoyo",
   COORDINACION:   "Coordinación",
   ADMINISTRADOR:  "Administrador",
   SUPERADMIN:     "Super Admin",
@@ -76,7 +77,7 @@ function NavLink({ to, icon: Icon, label, active, badge }) {
 
 export function Layout({ children }) {
   const location = useLocation();
-  const { isProfessional, isCoordination, isAdmin, isAprendiz, profile, user, signOut } = useAuth();
+  const { isProfessional, isCoordination, isAdmin, isApoyo, isAprendiz, profile, user, signOut } = useAuth();
   const { openModal } = useAppointmentModal();
   const { canInstall, install, needsManualInstall } = useInstallPrompt();
   const [showInstallHelp, setShowInstallHelp] = useState(false);
@@ -181,6 +182,21 @@ export function Layout({ children }) {
         </>
       );
     }
+    if (isApoyo?.()) {
+      return (
+        <>
+          <NavGroup label="Panel" />
+          <NavLink to="/admin/convocatorias"  icon={ClipboardList}   label="Apoyos y convocatorias" active={isActive("/admin/convocatorias")} />
+          <NavLink to="/professional"         icon={LayoutDashboard} label="Citas"       active={isActive("/professional") && !isActive("/professional/agenda") && !isActive("/professional/horarios")} />
+          <NavLink to="/professional/agenda"  icon={CalendarRange}   label="Mi agenda"   active={isActive("/professional/agenda")} />
+          <NavGroup label="Mi cuenta" />
+          <NavLink to="/perfil"               icon={UserCircle}      label="Mi perfil"   active={isActive("/perfil")} />
+          <NavLink to="/professional/horarios" icon={Clock}          label="Horarios"    active={isActive("/professional/horarios")} />
+          <NavGroup label="Soporte" />
+          <NavLink to="/ayuda"                icon={HelpCircle}      label="Ayuda"       active={isActive("/ayuda")} />
+        </>
+      );
+    }
     // APRENDIZ
     return (
       <>
@@ -244,6 +260,14 @@ export function Layout({ children }) {
         { to: "/professional/agenda",       icon: CalendarRange,   label: "Agenda" },
         { to: "/aprendices",                icon: Users,           label: "Aprendices" },
         { to: "/professional/estadisticas", icon: BarChart2,       label: "Stats" },
+      ];
+    }
+    if (isApoyo?.()) {
+      return [
+        { to: "/admin/convocatorias", icon: ClipboardList,   label: "Apoyos" },
+        { to: "/professional",        icon: LayoutDashboard, label: "Citas" },
+        { to: "/professional/agenda", icon: CalendarRange,   label: "Agenda" },
+        { to: "/perfil",              icon: UserCircle,      label: "Perfil" },
       ];
     }
     return [

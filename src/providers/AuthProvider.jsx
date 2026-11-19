@@ -210,6 +210,7 @@ export function AuthProvider({ children }) {
   const isAdmin        = () => hasRole(["SUPERADMIN", "ADMINISTRADOR"]);
   const isCoordination = () => hasRole(["COORDINACION", "SUPERADMIN", "ADMINISTRADOR"]);
   const isProfessional = () => hasRole(["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL"]);
+  const isApoyo        = () => hasRole("APOYO");
   const isAprendiz     = () => hasRole("APRENDIZ");
 
   const needsOnboarding = () =>
@@ -232,7 +233,7 @@ export function AuthProvider({ children }) {
       user, profile, loading, error,
       signIn, signUp, signOut, refreshProfile,
       hasRole, can,
-      isAdmin, isCoordination, isProfessional, isAprendiz,
+      isAdmin, isCoordination, isProfessional, isApoyo, isAprendiz,
       needsOnboarding,
     }}>
       {children}

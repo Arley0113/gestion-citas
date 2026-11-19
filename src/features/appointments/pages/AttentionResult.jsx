@@ -179,7 +179,7 @@ export default function AttentionResult() {
                     <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#374151", textTransform: "capitalize" }}>
                       {format(parseISO(apt.scheduled_date), "d 'de' MMMM, yyyy", { locale: es })}
                     </div>
-                    <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>{durationMin ? `${durationMin} minutos` : "~60 minutos"}</div>
+                    <div style={{ fontSize: "0.8125rem", color: "#6b7280" }}>{durationMin ? `${durationMin} minutos` : "~30 minutos"}</div>
                   </div>
                 )}
               </div>

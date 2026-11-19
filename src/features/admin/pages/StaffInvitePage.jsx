@@ -24,6 +24,7 @@ const STAFF_ROLES = [
   { value: "PSICOLOGIA",     label: "Psicólogo/a",       dep: true  },
   { value: "ENFERMERIA",     label: "Enfermero/a",        dep: true  },
   { value: "TRABAJO_SOCIAL", label: "Trabajador/a Social", dep: true  },
+  { value: "APOYO",          label: "Apoyo (apoyos y citas)", dep: true },
   { value: "COORDINACION",   label: "Coordinación",       dep: false },
   { value: "ADMINISTRADOR",  label: "Administrador/a",    dep: false },
 ];

@@ -14,6 +14,7 @@ const DEP_CONFIG = {
   "Psicología":     { color: "#39a900", bg: "#e6f4ea", abbr: "PSI" },
   "Enfermería":     { color: "#0284c7", bg: "#e0f2fe", abbr: "ENF" },
   "Trabajo Social": { color: "#f59e0b", bg: "#fef3c7", abbr: "TS"  },
+  "Apoyos":         { color: "#7c3aed", bg: "#ede9fe", abbr: "APO" },
 };
 
 function formatTime(scheduled_time) {

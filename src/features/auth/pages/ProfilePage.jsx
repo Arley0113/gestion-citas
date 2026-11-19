@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
-import { User, FileText, BookOpen, Hash, Mail, Save, Camera, Shield, CheckCircle2 } from "lucide-react";
+import { User, FileText, BookOpen, Hash, Mail, Save, Shield, CheckCircle2 } from "lucide-react";
 import { ROLE_LABELS } from "../../../shared/rbac/permissions";
 import { normalizeDocNumber } from "../../../lib/normalizeDoc";
 
@@ -33,6 +33,16 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState(false);
 
+  // Los aprendices inician sesión con Google/Microsoft — su correo lo controla
+  // el proveedor externo, así que el cambio manual aplica solo al staff.
+  const canChangeEmail = !isAprendizRole;
+  const [emailDraft, setEmailDraft] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
+
+  useEffect(() => {
+    setEmailDraft(IS_DEV ? "juan.perez@sena.edu.co" : (user?.email || ""));
+  }, [user?.email]);
+
   const email   = IS_DEV ? "juan.perez@sena.edu.co" : (user?.email || "—");
   const initial = form.full_name?.charAt(0)?.toUpperCase() || "?";
 
@@ -60,6 +70,34 @@ export default function ProfilePage() {
       toast.error("No se pudo actualizar el perfil");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangeEmail = async () => {
+    const next = emailDraft.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) { toast.error("Ingresa un correo válido"); return; }
+    if (next === (user?.email || "").toLowerCase()) { toast.error("Es el mismo correo que ya tienes"); return; }
+    if (IS_DEV) { toast.success("Correo actualizado (demo)"); return; }
+    setEmailSaving(true);
+    try {
+      const { data, error } = await supabase.auth.updateUser({ email: next });
+      if (error) throw error;
+      const applied = data?.user?.email?.toLowerCase() === next;
+      if (applied) {
+        // Sin confirmación de correo: el cambio ya es efectivo — lo reflejamos
+        // también en el perfil para que la lista de usuarios no quede desfasada.
+        await supabase.from("profiles").update({ email: next }).eq("id", user.id);
+        toast.success("Correo actualizado correctamente");
+      } else {
+        toast.success(
+          "Enviamos un enlace de confirmación a tu correo nuevo y al actual. Revisa ambos para completar el cambio.",
+          { duration: 7000 }
+        );
+      }
+    } catch (err) {
+      toast.error(err.message || "No se pudo actualizar el correo");
+    } finally {
+      setEmailSaving(false);
     }
   };
 
@@ -96,15 +134,6 @@ export default function ProfilePage() {
                 boxShadow: "0 4px 16px rgba(57,169,0,0.3)",
               }}>
                 {initial}
-              </div>
-              <div style={{
-                position: "absolute", bottom: 0, right: 0,
-                width: 24, height: 24, borderRadius: "50%",
-                background: "white", border: "2px solid #e5e7eb",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer",
-              }}>
-                <Camera size={11} color="#6b7280" />
               </div>
             </div>
             <div>
@@ -275,6 +304,56 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
+
+        {/* Cambiar correo (solo staff) */}
+        {canChangeEmail && (
+          <div style={{ background: "white", borderRadius: 14, border: "1px solid #e5e7eb", padding: "1.25rem 1.5rem", marginBottom: "1rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
+              Cambiar correo electrónico
+            </div>
+            <div style={{ display: "flex", gap: "0.625rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <input
+                  type="email"
+                  value={emailDraft}
+                  onChange={e => setEmailDraft(e.target.value)}
+                  placeholder="nuevo.correo@sena.edu.co"
+                  style={{
+                    width: "100%", boxSizing: "border-box",
+                    padding: "0.625rem 0.875rem",
+                    border: "1.5px solid #e5e7eb", borderRadius: 9,
+                    fontSize: "0.9375rem", color: "#111827",
+                    outline: "none", fontFamily: "var(--font-sans)",
+                    transition: "border-color 0.15s",
+                  }}
+                  onFocus={e => e.target.style.borderColor = "#39a900"}
+                  onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                />
+              </div>
+              <button
+                onClick={handleChangeEmail}
+                disabled={emailSaving}
+                style={{
+                  display: "flex", alignItems: "center", gap: "0.5rem",
+                  padding: "0.625rem 1.25rem",
+                  background: emailSaving ? "#9ca3af" : "#374151",
+                  color: "white", border: "none", borderRadius: 9,
+                  fontSize: "0.875rem", fontWeight: 700,
+                  cursor: emailSaving ? "not-allowed" : "pointer",
+                  fontFamily: "var(--font-sans)",
+                  transition: "background 0.15s",
+                }}
+              >
+                <Mail size={14} />
+                {emailSaving ? "Enviando..." : "Cambiar correo"}
+              </button>
+            </div>
+            <p style={{ fontSize: "0.75rem", color: "#9ca3af", margin: "0.625rem 0 0", lineHeight: 1.5 }}>
+              Se enviará un enlace de confirmación a tu correo nuevo y al actual; revisa ambos para activar el cambio.
+              Si no tienes acceso a tu correo actual, pídele al administrador que lo actualice desde Gestión de usuarios.
+            </p>
+          </div>
+        )}
 
         {/* Info de cuenta (solo lectura) */}
         <div style={{ background: "white", borderRadius: 14, border: "1px solid #e5e7eb", padding: "1.25rem 1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>

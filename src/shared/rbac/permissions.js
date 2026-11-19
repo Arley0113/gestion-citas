@@ -125,6 +125,13 @@ export const ROLE_PERMISSIONS = {
   ENFERMERIA:     PROFESSIONAL_PERMS,
   TRABAJO_SOCIAL: PROFESSIONAL_PERMS,
 
+  // Gestiona convocatorias/apoyos (sostenimiento, transporte, ...) y a la vez
+  // atiende citas como cualquier profesional de su dependencia ("Apoyos").
+  APOYO: [
+    ...PROFESSIONAL_PERMS,
+    P.CONVOCATORIAS_MANAGE,
+  ],
+
   COORDINACION: [
     P.APPOINTMENTS_READ_ALL,
     P.APPOINTMENTS_CONFIRM,
@@ -167,6 +174,7 @@ export const ROLE_LABELS = {
   PSICOLOGIA:     "Psicología",
   ENFERMERIA:     "Enfermería",
   TRABAJO_SOCIAL: "Trabajo Social",
+  APOYO:          "Apoyo",
   COORDINACION:   "Coordinación",
   ADMINISTRADOR:  "Administrador",
   SUPERADMIN:     "Super Admin",

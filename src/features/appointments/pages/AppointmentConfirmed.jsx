@@ -107,7 +107,7 @@ export default function AppointmentConfirmed() {
                 {[
                   { icon: Calendar, label: "Servicio",  value: depName },
                   { icon: Calendar, label: "Fecha",     value: dateStr, cap: true },
-                  { icon: Clock,    label: "Hora",      value: `${timeStr} — Duración 60 min` },
+                  { icon: Clock,    label: "Hora",      value: `${timeStr} — Duración 30 min` },
                   { icon: MapPin,   label: "Lugar",     value: aptLocation },
                 ].map(({ icon: Icon, label, value, cap }, i, arr) => (
                   <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: "1rem", padding: "0.875rem 0", borderBottom: i < arr.length - 1 ? "1px solid #f7fafc" : "none" }}>
