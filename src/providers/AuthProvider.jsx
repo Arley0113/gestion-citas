@@ -108,7 +108,12 @@ export function AuthProvider({ children }) {
       if (event === "PASSWORD_RECOVERY") {
         clearTimeout(fallbackTimer);
         if (mounted) setLoading(false);
-        window.location.href = "/reset-password" + window.location.hash;
+        // No recargar si ya estamos en /reset-password: auth-js ya limpió el
+        // hash, y un location.href al mismo path provoca un reload que ResetPasswordPage
+        // ve sin hash y muestra "Enlace inválido".
+        if (window.location.pathname !== "/reset-password") {
+          window.location.href = "/reset-password" + window.location.hash;
+        }
         return;
       }
 

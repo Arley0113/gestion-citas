@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, ArrowLeft, Trash2, Search, ShieldCheck, User, AlertTriangle, X, Mail } from "lucide-react";
+import { Users, ArrowLeft, Trash2, Search, ShieldCheck, User, AlertTriangle, X, Mail, UserCog } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { ROLE_LABELS } from "../../../shared/rbac/permissions";
@@ -11,18 +11,28 @@ const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
   : null;
 
 const MOCK_USERS = [
-  { id: "u1", full_name: "Carolina Ruiz",   document_number: "9876543", onboarding_completed: true,  roles: { name: "PSICOLOGIA" },      dependencies: { name: "Psicología" }, sede_id: 1, sedes: { name: "Maicao" } },
-  { id: "u2", full_name: "Dr. Gómez",       document_number: "1111111", onboarding_completed: true,  roles: { name: "ENFERMERIA" },      dependencies: { name: "Enfermería" }, sede_id: null, sedes: null },
-  { id: "u3", full_name: "Coordinadora",    document_number: "2222222", onboarding_completed: true,  roles: { name: "COORDINACION" },    dependencies: null, sede_id: null, sedes: null },
-  { id: "u4", full_name: "Admin SENA",      document_number: "3333333", onboarding_completed: true,  roles: { name: "ADMINISTRADOR" },   dependencies: null, sede_id: null, sedes: null },
-  { id: "u5", full_name: "Juan Pérez",      document_number: "1234567", onboarding_completed: true,  roles: { name: "APRENDIZ" },        dependencies: null, sede_id: 2, sedes: { name: "Comercio y Servicios" } },
-  { id: "u6", full_name: "María Torres",    document_number: "7654321", onboarding_completed: false, roles: { name: "TRABAJO_SOCIAL" },  dependencies: { name: "Trabajo Social" }, sede_id: 3, sedes: { name: "Industrial" } },
+  { id: "u1", full_name: "Carolina Ruiz",   document_number: "9876543", onboarding_completed: true,  roles: { name: "PSICOLOGIA" },      dependency_id: 10, dependencies: { name: "Psicología" }, sede_id: 1, sedes: { name: "Maicao" } },
+  { id: "u2", full_name: "Dr. Gómez",       document_number: "1111111", onboarding_completed: true,  roles: { name: "ENFERMERIA" },      dependency_id: 11, dependencies: { name: "Enfermería" }, sede_id: null, sedes: null },
+  { id: "u3", full_name: "Coordinadora",    document_number: "2222222", onboarding_completed: true,  roles: { name: "COORDINACION" },    dependency_id: null, dependencies: null, sede_id: null, sedes: null },
+  { id: "u4", full_name: "Admin SENA",      document_number: "3333333", onboarding_completed: true,  roles: { name: "ADMINISTRADOR" },   dependency_id: null, dependencies: null, sede_id: null, sedes: null },
+  { id: "u5", full_name: "Juan Pérez",      document_number: "1234567", onboarding_completed: true,  roles: { name: "APRENDIZ" },        dependency_id: null, dependencies: null, sede_id: 2, sedes: { name: "Comercio y Servicios" } },
+  { id: "u6", full_name: "María Torres",    document_number: "7654321", onboarding_completed: false, roles: { name: "TRABAJO_SOCIAL" },  dependency_id: 12, dependencies: { name: "Trabajo Social" }, sede_id: 3, sedes: { name: "Industrial" } },
 ];
 const MOCK_SEDES = [
   { id: 1, name: "Maicao" },
   { id: 2, name: "Comercio y Servicios" },
   { id: 3, name: "Industrial" },
 ];
+const MOCK_ROLES = Object.keys(ROLE_LABELS).map((name, i) => ({ id: i + 1, name, label: ROLE_LABELS[name] }));
+const MOCK_DEPS = [
+  { id: 10, name: "Psicología" },
+  { id: 11, name: "Enfermería" },
+  { id: 12, name: "Trabajo Social" },
+  { id: 13, name: "Apoyos" },
+];
+
+// Roles que necesitan dependencia asignada para ver/atender citas.
+const DEP_REQUIRED_ROLES = ["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL", "APOYO"];
 
 const ROLE_COLOR = {
   SUPERADMIN:    { bg: "#fdf4ff", text: "#7e22ce", border: "#e9d5ff" },
@@ -117,6 +127,64 @@ function ChangeEmailModal({ user, value, onChange, onConfirm, onCancel, loading 
   );
 }
 
+function ChangeRoleModal({ user, roles, deps, roleValue, depValue, onRoleChange, onDepChange, onConfirm, onCancel, loading, allowSuper }) {
+  if (!user) return null;
+  const requiresDep = DEP_REQUIRED_ROLES.includes(roleValue);
+  const roleOptions = allowSuper ? roles : roles.filter(r => r.name !== "SUPERADMIN");
+  const currentRoleLabel = ROLE_LABELS[user.roles?.name] || user.roles?.name;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div style={{ background: "white", borderRadius: 16, padding: "1.75rem", maxWidth: 420, width: "100%", boxShadow: "0 20px 48px rgba(0,0,0,0.15)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <UserCog size={20} color="#7c3aed" />
+          </div>
+          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#111827" }}>Cambiar rol</h3>
+        </div>
+        <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.75rem" }}>
+          Vas a actualizar el rol de <strong>{user.full_name || "Sin nombre"}</strong> (actual: {currentRoleLabel}).
+        </p>
+        <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#374151", marginBottom: "0.3rem" }}>Nuevo rol</label>
+        <select
+          value={roleValue}
+          onChange={e => onRoleChange(e.target.value)}
+          style={{ width: "100%", boxSizing: "border-box", padding: "0.625rem 0.875rem", border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.9375rem", color: "#111827", outline: "none", fontFamily: "var(--font-sans)", background: "white", cursor: "pointer", marginBottom: "0.75rem" }}
+          onFocus={e => e.target.style.borderColor = "#7c3aed"}
+          onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+        >
+          {roleOptions.map(r => <option key={r.id} value={r.name}>{r.label || ROLE_LABELS[r.name] || r.name}</option>)}
+        </select>
+        {requiresDep && (
+          <>
+            <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#374151", marginBottom: "0.3rem" }}>Dependencia</label>
+            <select
+              value={depValue}
+              onChange={e => onDepChange(e.target.value)}
+              style={{ width: "100%", boxSizing: "border-box", padding: "0.625rem 0.875rem", border: "1.5px solid #e5e7eb", borderRadius: 9, fontSize: "0.9375rem", color: depValue ? "#111827" : "#9ca3af", outline: "none", fontFamily: "var(--font-sans)", background: "white", cursor: "pointer", marginBottom: "0.75rem" }}
+              onFocus={e => e.target.style.borderColor = "#7c3aed"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            >
+              <option value="">Selecciona la dependencia</option>
+              {deps.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </>
+        )}
+        <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginBottom: "1.25rem", lineHeight: 1.5 }}>
+          El permiso cambia de inmediato en el servidor; el usuario verá la nueva navegación al recargar la página.
+        </p>
+        <div style={{ display: "flex", gap: "0.625rem", justifyContent: "flex-end" }}>
+          <button onClick={onCancel} disabled={loading} style={{ padding: "0.625rem 1.125rem", border: "1.5px solid #e5e7eb", borderRadius: 9, background: "white", cursor: "pointer", fontSize: "0.875rem", fontWeight: 600, color: "#374151", fontFamily: "var(--font-sans)" }}>
+            Cancelar
+          </button>
+          <button onClick={onConfirm} disabled={loading} style={{ padding: "0.625rem 1.25rem", border: "none", borderRadius: 9, background: loading ? "#d1d5db" : "#7c3aed", cursor: loading ? "not-allowed" : "pointer", fontSize: "0.875rem", fontWeight: 700, color: "white", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            {loading ? "Guardando..." : <><ShieldCheck size={14} /> Guardar rol</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function UsuariosPage() {
   const navigate = useNavigate();
   const { user: currentUser, profile: currentProfile } = useAuth();
@@ -125,6 +193,8 @@ export default function UsuariosPage() {
 
   const [users, setUsers]     = useState([]);
   const [sedes, setSedes]     = useState([]);
+  const [roles, setRoles]     = useState([]);
+  const [deps, setDeps]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -134,19 +204,27 @@ export default function UsuariosPage() {
   const [emailUser, setEmailUser]     = useState(null);
   const [emailDraft, setEmailDraft]   = useState("");
   const [emailSaving, setEmailSaving] = useState(false);
+  const [roleUser, setRoleUser]       = useState(null);
+  const [roleDraft, setRoleDraft]     = useState("");
+  const [roleDepDraft, setRoleDepDraft] = useState("");
+  const [roleSaving, setRoleSaving]   = useState(false);
 
   const fetchUsers = useCallback(async () => {
-    if (DEV_ROLE) { setUsers(MOCK_USERS); setSedes(MOCK_SEDES); setLoading(false); return; }
-    const [usersRes, sedesRes] = await Promise.all([
+    if (DEV_ROLE) { setUsers(MOCK_USERS); setSedes(MOCK_SEDES); setRoles(MOCK_ROLES); setDeps(MOCK_DEPS); setLoading(false); return; }
+    const [usersRes, sedesRes, rolesRes, depsRes] = await Promise.all([
       supabase.from("profiles")
-        .select("id, full_name, email, document_number, onboarding_completed, roles(name), dependencies(name), sede_id, sedes(name)")
+        .select("id, full_name, email, document_number, onboarding_completed, dependency_id, roles(name), dependencies(name), sede_id, sedes(name)")
         .order("full_name")
         .limit(500),
       supabase.from("sedes").select("id, name").eq("active", true).order("name"),
+      supabase.from("roles").select("id, name, label").order("id"),
+      supabase.from("dependencies").select("id, name").order("name"),
     ]);
     if (usersRes.error) { toast.error("Error cargando usuarios"); setLoading(false); return; }
     setUsers(usersRes.data || []);
     setSedes(sedesRes.data || []);
+    setRoles(rolesRes.data || []);
+    setDeps(depsRes.data || []);
     setLoading(false);
   }, []);
 
@@ -200,6 +278,53 @@ export default function UsuariosPage() {
     }
   };
 
+  const handleRoleSave = async () => {
+    if (!roleUser) return;
+    const target = users.find(u => u.id === roleUser.id) || roleUser;
+    const currentRoleName = target.roles?.name;
+
+    // Guardas: no cambiar tu propio rol, no tocar a otro SUPERADMIN salvo que
+    // seas SUPERADMIN, y solo SUPERADMIN puede asignar SUPERADMIN.
+    if (target.id === currentUser?.id) { toast.error("No puedes cambiar tu propio rol"); return; }
+    if (currentRoleName === "SUPERADMIN" && !isSuperAdmin) { toast.error("No puedes cambiar el rol de otro Super Admin"); return; }
+    if (roleDraft === "SUPERADMIN" && !isSuperAdmin) { toast.error("Solo Super Admin puede asignar el rol Super Admin"); return; }
+    if (roleDraft === currentRoleName && String(target.dependency_id ?? "") === roleDepDraft) {
+      toast.error("No hay cambios que guardar");
+      return;
+    }
+
+    const roleRow = roles.find(r => r.name === roleDraft);
+    if (!roleRow) { toast.error("Rol no encontrado"); return; }
+    const requiresDep = DEP_REQUIRED_ROLES.includes(roleDraft);
+    if (requiresDep && !roleDepDraft) { toast.error("Selecciona la dependencia"); return; }
+
+    setRoleSaving(true);
+    try {
+      const patch = { role_id: roleRow.id };
+      if (requiresDep) patch.dependency_id = parseInt(roleDepDraft, 10);
+      if (DEV_ROLE) {
+        setUsers(prev => prev.map(u => u.id === target.id
+          ? { ...u, roles: { name: roleDraft }, dependency_id: patch.dependency_id ?? u.dependency_id, dependencies: requiresDep ? (deps.find(d => d.id === patch.dependency_id) || null) : u.dependencies }
+          : u));
+        toast.success(`Rol actualizado a ${ROLE_LABELS[roleDraft] || roleDraft} (demo)`);
+        setRoleUser(null);
+        setRoleSaving(false);
+        return;
+      }
+      const { error } = await supabase.from("profiles").update(patch).eq("id", target.id);
+      if (error) throw error;
+      setUsers(prev => prev.map(u => u.id === target.id
+        ? { ...u, roles: { name: roleDraft }, dependency_id: patch.dependency_id ?? u.dependency_id, dependencies: requiresDep ? (deps.find(d => d.id === patch.dependency_id) || null) : u.dependencies }
+        : u));
+      toast.success(`Rol actualizado a ${ROLE_LABELS[roleDraft] || roleDraft}`);
+      setRoleUser(null);
+    } catch (err) {
+      toast.error(err.message || "No se pudo actualizar el rol");
+    } finally {
+      setRoleSaving(false);
+    }
+  };
+
   const filtered = users.filter(u => {
     const matchSearch = !search || (u.full_name || "").toLowerCase().includes(search.toLowerCase()) || (u.document_number || "").includes(search);
     const matchRole = roleFilter === "all" || u.roles?.name === roleFilter;
@@ -238,6 +363,19 @@ export default function UsuariosPage() {
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
       <ConfirmModal user={confirmUser} onConfirm={handleDelete} onCancel={() => setConfirmUser(null)} loading={deleting} />
       <ChangeEmailModal user={emailUser} value={emailDraft} onChange={setEmailDraft} onConfirm={handleEmailSave} onCancel={() => setEmailUser(null)} loading={emailSaving} />
+      <ChangeRoleModal
+        user={roleUser}
+        roles={roles}
+        deps={deps}
+        roleValue={roleDraft}
+        depValue={roleDepDraft}
+        onRoleChange={v => { setRoleDraft(v); if (!DEP_REQUIRED_ROLES.includes(v)) setRoleDepDraft(""); }}
+        onDepChange={setRoleDepDraft}
+        onConfirm={handleRoleSave}
+        onCancel={() => setRoleUser(null)}
+        loading={roleSaving}
+        allowSuper={isSuperAdmin}
+      />
 
       {/* Header */}
       <div style={{ background: "linear-gradient(to bottom, #f0fce4, #f5f7fa)", borderBottom: "1px solid #d1fae5" }}>
@@ -303,8 +441,9 @@ export default function UsuariosPage() {
               const isOtherSuperAdmin = roleName === "SUPERADMIN" && !isSelf;
               const canDelete = isSuperAdmin && !isSelf && !isOtherSuperAdmin;
               const canChangeEmail = !isOtherSuperAdmin;
+              const canChangeRole = !isSelf && !(isOtherSuperAdmin && !isSuperAdmin);
               const initials = (u.full_name || "?").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
-              const isProfessional = ["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL"].includes(roleName);
+              const isProfessional = ["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL", "APOYO"].includes(roleName);
               const isAprendiz     = roleName === "APRENDIZ";
 
               return (
@@ -353,6 +492,17 @@ export default function UsuariosPage() {
                   </div>
                   {/* Acciones */}
                   <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                    {canChangeRole && (
+                      <button
+                        onClick={() => { setRoleUser(u); setRoleDraft(roleName); setRoleDepDraft(u.dependency_id != null ? String(u.dependency_id) : ""); }}
+                        title="Cambiar rol"
+                        style={{ width: 34, height: 34, borderRadius: 8, border: "1.5px solid #ddd6fe", background: "#f5f3ff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#7c3aed", transition: "all 0.12s" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "#ede9fe"; e.currentTarget.style.borderColor = "#c4b5fd"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "#f5f3ff"; e.currentTarget.style.borderColor = "#ddd6fe"; }}
+                      >
+                        <UserCog size={15} />
+                      </button>
+                    )}
                     {canChangeEmail && (
                       <button
                         onClick={() => { setEmailUser(u); setEmailDraft(u.email || ""); }}
@@ -387,6 +537,9 @@ export default function UsuariosPage() {
             Solo SUPERADMIN puede eliminar usuarios.
           </p>
         )}
+        <p style={{ fontSize: "0.8125rem", color: "#6b7280", textAlign: "center", marginTop: "0.5rem" }}>
+          Con el botón de rol (ícono de usuario con engranaje) puedes cambiar el rol y la dependencia de un usuario.
+        </p>
       </div>
     </div>
   );

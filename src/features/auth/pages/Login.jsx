@@ -26,7 +26,15 @@ export default function Login() {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     setForgotLoading(false);
-    if (error) { toast.error("No se pudo enviar el correo"); return; }
+    if (error) {
+      const msg = String(error.message || "");
+      if (error.status === 429 || /rate limit|over_email_send_rate_limit|after \d+ seconds?/i.test(msg)) {
+        toast.error("Ya solicitaste un correo hace poco. Espera 1 minuto y vuelve a intentarlo.", { duration: 5000 });
+      } else {
+        toast.error("No se pudo enviar el correo. Intenta de nuevo.");
+      }
+      return;
+    }
     toast.success("Revisa tu correo para restablecer tu contraseña");
     setForgotOpen(false);
     setForgotEmail("");

@@ -15,14 +15,40 @@ export default function ResetPasswordPage() {
   const [validToken, setValidToken] = useState(null); // null=checking, true=ok, false=invalid
 
   useEffect(() => {
-    // Supabase redirige con hash: #access_token=...&type=recovery
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#", "?"));
-    const type = params.get("type");
-    const accessToken = params.get("access_token");
-    setValidToken(type === "recovery" && !!accessToken);
-    // Limpiar el token del historial del navegador para evitar exposición
-    if (accessToken) window.history.replaceState(null, "", window.location.pathname);
+    let mounted = true;
+
+    const resolve = async () => {
+      // auth-js limpia el hash (#access_token=...&type=recovery) al guardar la
+      // sesión y AuthProvider puede navegar de nuevo a /reset-password sin hash.
+      // Esperamos a que termine de procesar la URL antes de decidir.
+      await supabase.auth.initialize().catch(() => {});
+      if (!mounted) return;
+
+      const params = new URLSearchParams(window.location.hash.replace("#", "?"));
+      const type = params.get("type");
+      const accessToken = params.get("access_token");
+      const urlError = params.get("error") || params.get("error_code");
+
+      // Token envejecido: verify redirige con #error=access_denied&error_code=otp_expired
+      if (urlError) {
+        window.history.replaceState(null, "", window.location.pathname);
+        setValidToken(false);
+        return;
+      }
+
+      if (type === "recovery" && accessToken) {
+        window.history.replaceState(null, "", window.location.pathname);
+        setValidToken(true);
+        return;
+      }
+
+      // Hash ya consumido por auth-js: la sesión de recuperación quedó establecida
+      const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+      if (mounted) setValidToken(!!data.session);
+    };
+
+    resolve();
+    return () => { mounted = false; };
   }, []);
 
   const handleReset = async (e) => {
