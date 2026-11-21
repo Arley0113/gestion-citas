@@ -2,7 +2,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../providers/AuthProvider";
 
-const VALID_PREVIEWS = ["aprendiz","professional","coordination","admin","superadmin"];
+const VALID_PREVIEWS = ["aprendiz","professional","apoyo","coordination","admin","superadmin"];
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
   ? new URLSearchParams(window.location.search).get("preview")
   : null;

@@ -18,7 +18,7 @@ const DOC_TYPES = [
 export default function ProfilePage() {
   const { profile, user } = useAuth();
   const isAprendizRole = profile?.roles?.name === "APRENDIZ";
-  const isProfessionalRole = ["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL"].includes(profile?.roles?.name);
+  const isProfessionalRole = ["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL", "APOYO"].includes(profile?.roles?.name);
   const sedeLabel = isAprendizRole
     ? (profile?.sedes?.name || "Sin sede asignada aún")
     : (profile?.sedes?.name || "Todas las sedes");

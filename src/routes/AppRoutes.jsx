@@ -64,14 +64,13 @@ const Fallback = () => (
 );
 
 export function AppRoutes() {
-  const { isAdmin, isCoordination, isProfessional, isApoyo, isAprendiz, needsOnboarding, profile } = useAuth();
+  const { isAdmin, isCoordination, isProfessional, isAprendiz, needsOnboarding, profile } = useAuth();
   const location = useLocation();
 
   const getHomeRoute = () => {
     if (isAdmin())        return "/admin";
     if (isCoordination()) return "/coordination";
     if (isProfessional()) return "/professional";
-    if (isApoyo())        return "/admin/convocatorias";
     return "/dashboard";
   };
 

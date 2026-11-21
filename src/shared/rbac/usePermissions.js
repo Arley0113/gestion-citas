@@ -21,7 +21,7 @@ export function usePermissions() {
 
   // Helpers semánticos
   const isAprendiz     = () => roleName === "APRENDIZ";
-  const isProfessional = () => ["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL"].includes(roleName);
+  const isProfessional = () => ["PSICOLOGIA","ENFERMERIA","TRABAJO_SOCIAL","APOYO"].includes(roleName);
   const isCoordination = () => roleName === "COORDINACION";
   const isAdmin        = () => ["ADMINISTRADOR","SUPERADMIN"].includes(roleName);
   const isSuperAdmin   = () => roleName === "SUPERADMIN";

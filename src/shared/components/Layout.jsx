@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Calendar, Users, BarChart2,
   LogOut, Plus, Heart, UserCircle, Bell,
   CalendarDays, ClipboardList, FileText, Settings, HelpCircle,
-  CalendarRange, Clock, ShieldCheck, Menu, X, Download,
+  CalendarRange, Clock, ShieldCheck, Menu, X, Download, Megaphone,
 } from "lucide-react";
 import { useAuth } from "../../providers/AuthProvider";
 import { useAppointmentModal } from "../../providers/AppointmentModalContext";
@@ -170,6 +170,9 @@ export function Layout({ children }) {
           <NavLink to="/professional"              icon={LayoutDashboard} label="Inicio"           active={isActive("/professional") && !isActive("/professional/agenda") && !isActive("/professional/notas") && !isActive("/professional/estadisticas") && !isActive("/professional/horarios")} />
           <NavLink to="/professional/agenda"       icon={CalendarRange}   label="Mi agenda"        active={isActive("/professional/agenda")} />
           <NavGroup label="Gestión" />
+          {isApoyo?.() && (
+            <NavLink to="/admin/convocatorias"     icon={Megaphone}       label="Convocatorias"    active={isActive("/admin/convocatorias")} />
+          )}
           <NavLink to="/aprendices"                icon={Users}           label="Aprendices"       active={isActive("/aprendices")} />
           <NavLink to="/professional/notas"        icon={ClipboardList}   label="Mis notas"        active={isActive("/professional/notas")} />
           <NavGroup label="Análisis" />
@@ -179,21 +182,6 @@ export function Layout({ children }) {
           <NavLink to="/professional/horarios"     icon={Clock}           label="Horarios"         active={isActive("/professional/horarios")} />
           <NavGroup label="Soporte" />
           <NavLink to="/ayuda"                     icon={HelpCircle}      label="Ayuda"            active={isActive("/ayuda")} />
-        </>
-      );
-    }
-    if (isApoyo?.()) {
-      return (
-        <>
-          <NavGroup label="Panel" />
-          <NavLink to="/admin/convocatorias"  icon={ClipboardList}   label="Apoyos y convocatorias" active={isActive("/admin/convocatorias")} />
-          <NavLink to="/professional"         icon={LayoutDashboard} label="Citas"       active={isActive("/professional") && !isActive("/professional/agenda") && !isActive("/professional/horarios")} />
-          <NavLink to="/professional/agenda"  icon={CalendarRange}   label="Mi agenda"   active={isActive("/professional/agenda")} />
-          <NavGroup label="Mi cuenta" />
-          <NavLink to="/perfil"               icon={UserCircle}      label="Mi perfil"   active={isActive("/perfil")} />
-          <NavLink to="/professional/horarios" icon={Clock}          label="Horarios"    active={isActive("/professional/horarios")} />
-          <NavGroup label="Soporte" />
-          <NavLink to="/ayuda"                icon={HelpCircle}      label="Ayuda"       active={isActive("/ayuda")} />
         </>
       );
     }
@@ -255,20 +243,16 @@ export function Layout({ children }) {
       ];
     }
     if (isProfessional?.()) {
-      return [
+      const items = [
         { to: "/professional",              icon: LayoutDashboard, label: "Inicio" },
         { to: "/professional/agenda",       icon: CalendarRange,   label: "Agenda" },
         { to: "/aprendices",                icon: Users,           label: "Aprendices" },
         { to: "/professional/estadisticas", icon: BarChart2,       label: "Stats" },
       ];
-    }
-    if (isApoyo?.()) {
-      return [
-        { to: "/admin/convocatorias", icon: ClipboardList,   label: "Apoyos" },
-        { to: "/professional",        icon: LayoutDashboard, label: "Citas" },
-        { to: "/professional/agenda", icon: CalendarRange,   label: "Agenda" },
-        { to: "/perfil",              icon: UserCircle,      label: "Perfil" },
-      ];
+      if (isApoyo?.()) {
+        items.splice(2, 0, { to: "/admin/convocatorias", icon: Megaphone, label: "Apoyos" });
+      }
+      return items;
     }
     return [
       { to: "/dashboard",      icon: LayoutDashboard, label: "Inicio" },

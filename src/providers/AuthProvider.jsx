@@ -13,6 +13,7 @@ const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
 const DEV_PROFILES = {
   aprendiz:     { full_name: "Juan Pérez",     document_number: "1234567", dependency_id: 1,    onboarding_completed: true, roles: { name: "APRENDIZ" },       dependencies: { name: "Psicología" } },
   professional: { full_name: "Carolina R.",    document_number: "9876543", dependency_id: 1,    onboarding_completed: true, roles: { name: "PSICOLOGIA" },      dependencies: { name: "Psicología" } },
+  apoyo:        { full_name: "Apoyo Bienestar", document_number: "4444444", dependency_id: 1,    onboarding_completed: true, roles: { name: "APOYO" },          dependencies: { name: "Psicología" } },
   coordination: { full_name: "Coordinadora",   document_number: "1111111", dependency_id: null, onboarding_completed: true, roles: { name: "COORDINACION" },    dependencies: null },
   admin:        { full_name: "Admin SENA",     document_number: "2222222", dependency_id: null, onboarding_completed: true, roles: { name: "ADMINISTRADOR" },   dependencies: null },
   superadmin:   { full_name: "Super Admin",    document_number: "3333333", dependency_id: null, onboarding_completed: true, roles: { name: "SUPERADMIN" },      dependencies: null },
@@ -214,7 +215,7 @@ export function AuthProvider({ children }) {
 
   const isAdmin        = () => hasRole(["SUPERADMIN", "ADMINISTRADOR"]);
   const isCoordination = () => hasRole(["COORDINACION", "SUPERADMIN", "ADMINISTRADOR"]);
-  const isProfessional = () => hasRole(["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL"]);
+  const isProfessional = () => hasRole(["PSICOLOGIA", "ENFERMERIA", "TRABAJO_SOCIAL", "APOYO"]);
   const isApoyo        = () => hasRole("APOYO");
   const isAprendiz     = () => hasRole("APRENDIZ");
 

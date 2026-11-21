@@ -4,6 +4,7 @@ import { Megaphone, ArrowLeft, ToggleLeft, ToggleRight, Edit2, Trash2, Check, X,
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { DEV_ROLE } from "../../../lib/devMode";
+import { useAuth } from "../../../providers/AuthProvider";
 
 const MOCK_CONVOCATORIAS = [
   { id: "1", titulo: "Convocatoria de apoyo de sostenimiento", descripcion: "Abierta la convocatoria trimestral de apoyo de sostenimiento para aprendices en formación titulada.", link_externo: "https://www.sena.edu.co", activa: true, created_at: "2026-08-01T00:00:00Z" },
@@ -14,6 +15,7 @@ const EMPTY_FORM = { titulo: "", descripcion: "", link_externo: "" };
 
 export default function ConvocatoriasPage() {
   const navigate = useNavigate();
+  const { isApoyo } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
@@ -127,7 +129,7 @@ export default function ConvocatoriasPage() {
       <div style={{ background: "linear-gradient(to bottom, #f0fce4, #f5f7fa)", borderBottom: "1px solid #d1fae5" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem 2rem 1.5rem" }}>
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate(isApoyo?.() ? "/professional" : "/admin")}
             style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem", color: "#6b7280", background: "none", border: "none", cursor: "pointer", marginBottom: "1rem", padding: 0 }}
           >
             <ArrowLeft size={14} /> Volver
