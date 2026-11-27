@@ -162,13 +162,22 @@ export default function ProfessionalDashboard() {
     completed: apts.filter(a => a.status === "completed").length,
   };
 
+  // KPIs: Pendientes/Confirmadas incluyen además las citas FUTURAS (lo que
+  // acaba de agendar un aprendiz), no solo las de hoy — si no, los
+  // indicadores se quedaban en 0 aunque hubiera trabajo pendiente.
+  // Las atrasadas (antes de hoy, aún pendientes) van aparte en "Sin atender".
+  const backlog = {
+    pending:   counts.pending   + upcoming.filter(a => a.status === "pending").length,
+    confirmed: counts.confirmed + upcoming.filter(a => a.status === "confirmed").length,
+  };
+
   const filtered = apts.filter(a => a.status === tab);
 
   const statsCards = [
-    { label: "Total hoy",   value: counts.total,     icon: CalendarDays,  color: "#6366f1", bg: "#eef2ff" },
-    { label: "Pendientes",  value: counts.pending,   icon: AlertCircle,   color: "#d97706", bg: "#fffbeb" },
-    { label: "Confirmadas", value: counts.confirmed, icon: TrendingUp,    color: "#2563eb", bg: "#eff6ff" },
-    { label: "Completadas", value: counts.completed, icon: CheckCircle2,  color: "#16a34a", bg: "#f0fce4" },
+    { label: "Sin atender",  value: overdue.length,    icon: AlertCircle,   color: "#d97706", bg: "#fffbeb" },
+    { label: "Pendientes",   value: backlog.pending,   icon: CalendarDays,  color: "#6366f1", bg: "#eef2ff" },
+    { label: "Confirmadas",  value: backlog.confirmed, icon: TrendingUp,    color: "#2563eb", bg: "#eff6ff" },
+    { label: "Completadas",  value: counts.completed,  icon: CheckCircle2,  color: "#16a34a", bg: "#f0fce4" },
   ];
 
   const progressPct = counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0;
