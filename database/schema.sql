@@ -645,6 +645,10 @@ GRANT EXECUTE ON FUNCTION public.clear_ficha_sede(TEXT) TO authenticated;
 --    Devuelve la unión de los bloques activos de ese día de todos los
 --    profesionales de la dependencia que cubran la sede (o sede_id NULL =
 --    "todas las sedes"; p_sede_id NULL = aprendiz sin sede, no filtra).
+--    Cada día puede tener hasta DOS bloques ({active,start,end} de la mañana
+--    y {active2,start2,end2} de la tarde); los horarios guardados antes de la
+--    migración a dos bloques no traen el segundo bloque y se leen como
+--    inactivo (retrocompatible).
 --    Si no hay ningún horario configurado, devuelve 0 filas y el cliente
 --    cae de vuelta al horario genérico (HOURS en AppointmentModal.jsx) para
 --    no bloquear el agendamiento mientras el staff completa sus horarios.
@@ -654,6 +658,8 @@ RETURNS TABLE(slot_time TEXT) AS $$
 DECLARE
   v_day_key TEXT;
   rec RECORD;
+  v_blocks TEXT[][];
+  v_block TEXT[];
   v_start_min INTEGER;
   v_end_min INTEGER;
   v_dur INTEGER;
@@ -663,23 +669,33 @@ BEGIN
   v_day_key := (ARRAY['domingo','lunes','martes','miercoles','jueves','viernes','sabado'])[extract(dow from p_date)::int + 1];
 
   FOR rec IN
-    SELECT ps.schedule -> v_day_key ->> 'start' AS start_s,
-           ps.schedule -> v_day_key ->> 'end'   AS end_s,
+    SELECT ps.schedule -> v_day_key AS day,
            COALESCE(ps.duration_minutes, 30)     AS dur
     FROM public.professional_schedules ps
     JOIN public.profiles p ON p.id = ps.professional_id
     WHERE p.dependency_id = p_dependency_id
       AND (p.sede_id IS NULL OR p_sede_id IS NULL OR p.sede_id = p_sede_id)
-      AND (ps.schedule -> v_day_key ->> 'active')::boolean IS TRUE
   LOOP
-    CONTINUE WHEN rec.start_s IS NULL OR rec.end_s IS NULL;
-    v_start_min := extract(hour from rec.start_s::time)::int * 60 + extract(minute from rec.start_s::time)::int;
-    v_end_min   := extract(hour from rec.end_s::time)::int   * 60 + extract(minute from rec.end_s::time)::int;
-    v_dur := rec.dur;
-    v_cur := v_start_min;
-    WHILE v_cur + v_dur <= v_end_min LOOP
-      v_out := array_append(v_out, lpad((v_cur/60)::text,2,'0') || ':' || lpad((v_cur%60)::text,2,'0'));
-      v_cur := v_cur + v_dur;
+    CONTINUE WHEN rec.day IS NULL OR (rec.day ->> 'active')::boolean IS NOT TRUE;
+
+    v_blocks := ARRAY[]::TEXT[][];
+    IF rec.day ->> 'start' IS NOT NULL AND rec.day ->> 'end' IS NOT NULL THEN
+      v_blocks := array_append(v_blocks, ARRAY[rec.day ->> 'start', rec.day ->> 'end']);
+    END IF;
+    IF COALESCE((rec.day ->> 'active2')::boolean, false)
+       AND rec.day ->> 'start2' IS NOT NULL AND rec.day ->> 'end2' IS NOT NULL THEN
+      v_blocks := array_append(v_blocks, ARRAY[rec.day ->> 'start2', rec.day ->> 'end2']);
+    END IF;
+
+    FOREACH v_block IN ARRAY v_blocks LOOP
+      v_start_min := extract(hour from v_block[1]::time)::int * 60 + extract(minute from v_block[1]::time)::int;
+      v_end_min   := extract(hour from v_block[2]::time)::int   * 60 + extract(minute from v_block[2]::time)::int;
+      v_dur := rec.dur;
+      v_cur := v_start_min;
+      WHILE v_cur + v_dur <= v_end_min LOOP
+        v_out := array_append(v_out, lpad((v_cur/60)::text,2,'0') || ':' || lpad((v_cur%60)::text,2,'0'));
+        v_cur := v_cur + v_dur;
+      END LOOP;
     END LOOP;
   END LOOP;
 

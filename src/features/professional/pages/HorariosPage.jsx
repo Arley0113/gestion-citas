@@ -4,15 +4,15 @@ import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { DEV_ROLE } from "../../../lib/devMode";
-
-const DAYS = [
-  { key: "lunes",     label: "Lunes" },
-  { key: "martes",    label: "Martes" },
-  { key: "miercoles", label: "Miércoles" },
-  { key: "jueves",    label: "Jueves" },
-  { key: "viernes",   label: "Viernes" },
-  { key: "sabado",    label: "Sábado" },
-];
+import {
+  SCHEDULE_DAYS as DAYS,
+  DEFAULT_SCHEDULE,
+  countSlots,
+  countDaySlots,
+  dayBlocks,
+  toMinutes,
+  normalizeSchedule,
+} from "../../../lib/schedule";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => {
   const h = String(i).padStart(2, "0");
@@ -25,23 +25,6 @@ const DURATIONS = [
   { value: 45, label: "45 min" },
   { value: 60, label: "1 hora" },
 ];
-
-const DEFAULT_SCHEDULE = {
-  lunes:     { active: true,  start: "08:00", end: "17:00" },
-  martes:    { active: true,  start: "08:00", end: "17:00" },
-  miercoles: { active: true,  start: "08:00", end: "17:00" },
-  jueves:    { active: true,  start: "08:00", end: "17:00" },
-  viernes:   { active: true,  start: "08:00", end: "15:00" },
-  sabado:    { active: false, start: "08:00", end: "12:00" },
-};
-
-function countSlots(start, end, duration) {
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  const totalMin = (eh * 60 + em) - (sh * 60 + sm);
-  if (totalMin <= 0) return 0;
-  return Math.floor(totalMin / duration);
-}
 
 export default function HorariosPage() {
   const { user } = useAuth();
@@ -67,7 +50,7 @@ export default function HorariosPage() {
           return;
         }
         if (data) {
-          setSchedule(data.schedule ?? DEFAULT_SCHEDULE);
+          setSchedule(normalizeSchedule(data.schedule ?? DEFAULT_SCHEDULE));
           setDuration(data.duration_minutes ?? 30);
         }
       });
@@ -77,6 +60,13 @@ export default function HorariosPage() {
     setSchedule(prev => ({
       ...prev,
       [key]: { ...prev[key], active: !prev[key].active },
+    }));
+  };
+
+  const toggleBlock2 = (key) => {
+    setSchedule(prev => ({
+      ...prev,
+      [key]: { ...prev[key], active2: !prev[key].active2 },
     }));
   };
 
@@ -96,12 +86,21 @@ export default function HorariosPage() {
     for (const { key } of DAYS) {
       const d = schedule[key];
       if (!d.active) continue;
-      const [sh, sm] = d.start.split(":").map(Number);
-      const [eh, em] = d.end.split(":").map(Number);
-      if (eh * 60 + em <= sh * 60 + sm) {
-        const dayLabel = DAYS.find(d => d.key === key)?.label ?? key;
-        toast.error(`${dayLabel}: la hora de fin debe ser mayor a la de inicio`);
-        return;
+      const dayLabel = DAYS.find(x => x.key === key)?.label ?? key;
+      const blocks = dayBlocks(d);
+      for (const b of blocks) {
+        if (toMinutes(b.end) <= toMinutes(b.start)) {
+          toast.error(`${dayLabel}: la hora de fin debe ser mayor a la de inicio`);
+          return;
+        }
+      }
+      if (blocks.length === 2) {
+        const [b1, b2] = blocks;
+        const solapan = toMinutes(b1.end) > toMinutes(b2.start) && toMinutes(b2.end) > toMinutes(b1.start);
+        if (solapan) {
+          toast.error(`${dayLabel}: los bloques de la mañana y la tarde no pueden solaparse`);
+          return;
+        }
       }
     }
     if (DEV_ROLE) { toast.success("Horarios guardados correctamente"); return; }
@@ -117,11 +116,7 @@ export default function HorariosPage() {
     toast.success("Horarios guardados correctamente");
   };
 
-  const totalSlots = DAYS.reduce((acc, { key }) => {
-    const d = schedule[key];
-    if (!d.active) return acc;
-    return acc + countSlots(d.start, d.end, duration);
-  }, 0);
+  const totalSlots = DAYS.reduce((acc, { key }) => acc + countDaySlots(schedule[key], duration), 0);
 
   const activeDays = DAYS.filter(({ key }) => schedule[key].active).length;
 
@@ -138,7 +133,7 @@ export default function HorariosPage() {
             Gestión de horarios
           </h1>
           <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: "0.25rem 0 0" }}>
-            Configura tu disponibilidad semanal y la duración de cada cita.
+            Configura tus bloques de atención (mañana y tarde) y la duración de cada cita.
           </p>
         </div>
       </div>
@@ -201,7 +196,8 @@ export default function HorariosPage() {
 
           {DAYS.map(({ key, label }, i) => {
             const d = schedule[key];
-            const slots = d.active ? countSlots(d.start, d.end, duration) : 0;
+            const slots = countDaySlots(d, duration);
+            const selectStyle = { padding: "0.4rem 0.625rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", color: "#111827", background: "white", cursor: "pointer", fontFamily: "var(--font-sans)", outline: "none" };
             return (
               <div
                 key={key}
@@ -240,24 +236,67 @@ export default function HorariosPage() {
                   {label}
                 </div>
 
-                {/* Horas */}
+                {/* Bloques */}
                 {d.active ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flex: "1 1 220px", minWidth: 0, flexWrap: "wrap" }}>
-                    <select
-                      value={d.start}
-                      onChange={e => setField(key, "start", e.target.value)}
-                      style={{ padding: "0.4rem 0.625rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", color: "#111827", background: "white", cursor: "pointer", fontFamily: "var(--font-sans)", outline: "none" }}
-                    >
-                      {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
-                    </select>
-                    <span style={{ color: "#6b7280", fontSize: "0.875rem" }}>hasta</span>
-                    <select
-                      value={d.end}
-                      onChange={e => setField(key, "end", e.target.value)}
-                      style={{ padding: "0.4rem 0.625rem", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.875rem", color: "#111827", background: "white", cursor: "pointer", fontFamily: "var(--font-sans)", outline: "none" }}
-                    >
-                      {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
-                    </select>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: "1 1 320px", minWidth: 0 }}>
+                    {/* Bloque 1 — mañana */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", width: 58, flexShrink: 0 }}>
+                        Mañana
+                      </span>
+                      <select value={d.start} onChange={e => setField(key, "start", e.target.value)} style={selectStyle}>
+                        {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                      </select>
+                      <span style={{ color: "#6b7280", fontSize: "0.875rem" }}>hasta</span>
+                      <select value={d.end} onChange={e => setField(key, "end", e.target.value)} style={selectStyle}>
+                        {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                      </select>
+                      <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                        <strong style={{ color: "#39a900" }}>{countSlots(d.start, d.end, duration)}</strong> slots
+                      </span>
+                    </div>
+                    {/* Bloque 2 — tarde */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => toggleBlock2(key)}
+                        aria-label={`Activar/desactivar bloque de la tarde de ${label}`}
+                        style={{
+                          width: 44, height: 24, borderRadius: 12,
+                          background: d.active2 ? "#39a900" : "#d1d5db",
+                          border: "none", cursor: "pointer",
+                          position: "relative", transition: "background 0.2s",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span style={{
+                          position: "absolute",
+                          top: 2, left: d.active2 ? 22 : 2,
+                          width: 20, height: 20,
+                          borderRadius: "50%", background: "white",
+                          boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+                          transition: "left 0.2s",
+                        }} />
+                      </button>
+                      <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", width: 58, flexShrink: 0 }}>
+                        Tarde
+                      </span>
+                      {d.active2 ? (
+                        <>
+                          <select value={d.start2} onChange={e => setField(key, "start2", e.target.value)} style={selectStyle}>
+                            {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                          </select>
+                          <span style={{ color: "#6b7280", fontSize: "0.875rem" }}>hasta</span>
+                          <select value={d.end2} onChange={e => setField(key, "end2", e.target.value)} style={selectStyle}>
+                            {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                          </select>
+                          <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                            <strong style={{ color: "#39a900" }}>{countSlots(d.start2, d.end2, duration)}</strong> slots
+                          </span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: "0.8125rem", color: "#9ca3af", fontStyle: "italic" }}>Sin bloque de la tarde</span>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div style={{ flex: 1, fontSize: "0.875rem", color: "#6b7280", fontStyle: "italic" }}>No disponible</div>

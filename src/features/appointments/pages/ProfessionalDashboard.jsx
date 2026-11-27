@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, ChevronRight, Check, X, Play, Users, BarChart2, FolderOpen, AlertCircle, TrendingUp, CheckCircle2, CalendarDays } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { usePermissions } from "../../../shared/rbac/usePermissions";
 import { P } from "../../../shared/rbac/permissions";
 import { notifyAppointmentConfirmed, notifyAppointmentCancelled } from "../../../lib/notifications";
+import { normalizeSchedule, dayBlocks, toMinutes, DEFAULT_SCHEDULE, DAY_KEYS } from "../../../lib/schedule";
 import { toast } from "sonner";
 
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("preview") : null;
@@ -53,15 +54,24 @@ const TABS = [
 ];
 
 export default function ProfessionalDashboard() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { can }    = usePermissions();
   const navigate = useNavigate();
   const [tab, setTab] = useState("pending");
   const [apts, setApts] = useState([]);
+  const [upcoming, setUpcoming] = useState([]);
+  const [ownSchedule, setOwnSchedule] = useState(null);
   const [loading, setLoading] = useState(true);
   const today = new Date();
   const currentHour = today.getHours();
-  const enJornada = currentHour >= 7 && currentHour < 17;
+
+  // "En jornada" según los bloques configurados en "Mis horarios"
+  // (por defecto 08:00-11:00 y 14:00-16:00), no un rango fijo 7-17.
+  const todayBlocks = ownSchedule
+    ? dayBlocks(ownSchedule[DAY_KEYS[today.getDay()]])
+    : dayBlocks(DEFAULT_SCHEDULE[DAY_KEYS[today.getDay()]]);
+  const nowMinutes = currentHour * 60 + today.getMinutes();
+  const enJornada = todayBlocks.some(b => nowMinutes >= toMinutes(b.start) && nowMinutes < toMinutes(b.end));
 
   const depName   = profile?.dependencies?.name || "Psicología";
   const fullName  = DEV_ROLE ? "Carolina Ruiz" : (profile?.full_name || "Profesional");
@@ -69,7 +79,7 @@ export default function ProfessionalDashboard() {
   const nameInitial = fullName.charAt(0).toUpperCase();
 
   const fetch = useCallback(async () => {
-    if (DEV_ROLE) { setApts(MOCK); setLoading(false); return; }
+    if (DEV_ROLE) { setApts(MOCK); setUpcoming([]); setLoading(false); return; }
     if (!profile?.dependency_id) { setLoading(false); return; }
     const todayStr = format(new Date(), "yyyy-MM-dd");
     setLoading(true);
@@ -77,15 +87,33 @@ export default function ProfessionalDashboard() {
       .from("appointments")
       .select("*, profiles!user_id(full_name,document_number)")
       .eq("dependency_id", profile.dependency_id)
-      .eq("scheduled_date", todayStr)
+      .gte("scheduled_date", todayStr)
+      .order("scheduled_date")
       .order("scheduled_time");
     if (error) {
       console.error("Error cargando citas del profesional:", error);
       toast.error("No se pudieron cargar las citas de hoy");
     }
-    setApts(data || []);
+    const rows = data || [];
+    // Hoy alimenta las stats y las pestañas; las citas futuras (que es lo que
+    // se acaba de agendar: el modal solo permite fechas desde mañana) se
+    // listan aparte en "Próximas citas" para que no parezca que no salió.
+    setApts(rows.filter(r => r.scheduled_date === todayStr));
+    setUpcoming(rows.filter(r => r.scheduled_date > todayStr && ["pending", "confirmed"].includes(r.status)));
     setLoading(false);
   }, [profile]);
+
+  // Horario propio para el indicador de jornada (si falla la lectura se
+  // mantiene el horario por defecto, sin romper el dashboard).
+  useEffect(() => {
+    if (DEV_ROLE || !user?.id) return;
+    supabase
+      .from("professional_schedules")
+      .select("schedule")
+      .eq("professional_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => { if (data?.schedule) setOwnSchedule(normalizeSchedule(data.schedule)); });
+  }, [user]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
@@ -329,6 +357,82 @@ export default function ProfessionalDashboard() {
                 </div>
               )}
             </div>
+
+            {/* ─── Próximas citas (fuera de hoy) ─── */}
+            {upcoming.length > 0 && (
+              <div style={{ background: "white", borderRadius: 14, border: "1px solid #e5e7eb", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", marginTop: "1.25rem" }}>
+                <div style={{ padding: "1rem 1.5rem", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <CalendarDays size={15} color="#3b82f6" />
+                    <span style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>Próximas citas</span>
+                  </div>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1d4ed8", background: "#eff6ff", border: "1px solid #bfdbfe", padding: "0.2rem 0.6rem", borderRadius: 99 }}>
+                    {upcoming.length} {upcoming.length === 1 ? "agendada" : "agendadas"}
+                  </span>
+                </div>
+                {upcoming.slice(0, 10).map((apt, i, arr) => {
+                  const sc = STATUS_COLOR[apt.status] || STATUS_COLOR.pending;
+                  const { time, ampm } = fmtTimeShort(apt.scheduled_time);
+                  const aptName = apt.profiles?.full_name || "Aprendiz";
+                  const ac = avatarColor(aptName);
+                  const dateLabel = format(parseISO(apt.scheduled_date), "d 'de' MMM", { locale: es });
+                  return (
+                    <div key={apt.id}
+                      onClick={() => navigate(`/cita/${apt.id}${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
+                      style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1.5rem", borderBottom: i < arr.length - 1 ? "1px solid #f3f4f6" : "none", borderLeft: `4px solid ${sc.left}`, cursor: "pointer", transition: "box-shadow 0.15s" }}
+                      onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.06)"}
+                      onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
+                    >
+                      {/* Fecha + hora */}
+                      <div style={{ minWidth: 76, flexShrink: 0 }}>
+                        <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#111827", textTransform: "capitalize" }}>{dateLabel}</div>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: 2 }}>
+                          {time} {ampm}
+                        </div>
+                      </div>
+
+                      <div style={{ width: 1, height: 36, background: "#f3f4f6", flexShrink: 0 }} />
+
+                      {/* Avatar */}
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: ac + "22", border: `2px solid ${ac}44`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.75rem", color: ac, flexShrink: 0 }}>
+                        {initials(aptName)}
+                      </div>
+
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "#111827", marginBottom: "0.125rem" }}>
+                          {aptName}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>CC: {apt.profiles?.document_number}</span>
+                          {apt.reason && (
+                            <span style={{ fontSize: "0.75rem", color: "#6b7280", background: "#f3f4f6", padding: "0.125rem 0.5rem", borderRadius: 20, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", display: "inline-block" }}>
+                              {apt.reason}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Badge */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.3rem 0.75rem", background: sc.bg, border: `1.5px solid ${sc.border}`, borderRadius: 99, flexShrink: 0 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: sc.dot }} />
+                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: sc.text }}>{sc.label}</span>
+                      </div>
+
+                      <ChevronRight size={15} color="#d1d5db" />
+                    </div>
+                  );
+                })}
+                {upcoming.length > 10 && (
+                  <div style={{ padding: "0.75rem 1.5rem", borderTop: "1px solid #f3f4f6", background: "#fafafa" }}>
+                    <button onClick={() => navigate(`/professional/agenda${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
+                      style={{ display: "flex", alignItems: "center", gap: "0.375rem", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: "0.8125rem", fontWeight: 700, color: "#39a900" }}>
+                      Ver todas en mi agenda <ChevronRight size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ─── Sidebar derecho ─── */}

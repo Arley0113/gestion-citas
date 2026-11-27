@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Users, ChevronRight, ChevronLeft, Calendar, Clock, AlertCircle, Trash2, Check, X } from "lucide-react";
+import { Search, Users, ChevronRight, ChevronLeft, Calendar, Clock, AlertCircle, Trash2, Check, X, MapPin } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
 import { usePermissions } from "../../../shared/rbac/usePermissions";
@@ -12,12 +12,12 @@ import { es } from "date-fns/locale";
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("preview") : null;
 
 const DEV_DATA = [
-  { id: "a1", full_name: "Ana García",       document_number: "1001234", program: "Desarrollo de Software",   last_date: "2026-06-20", total: 3 },
-  { id: "a2", full_name: "Carlos López",     document_number: "1005678", program: "Diseño Gráfico",           last_date: "2026-06-15", total: 1 },
-  { id: "a3", full_name: "María Rodríguez",  document_number: "1009012", program: "Contabilidad",             last_date: "2026-06-18", total: 2 },
-  { id: "a4", full_name: "Pedro Martínez",   document_number: "1003456", program: "Desarrollo de Software",   last_date: null,         total: 0 },
-  { id: "a5", full_name: "Laura Sánchez",    document_number: "1007890", program: "Administración Empresas",  last_date: "2026-06-22", total: 4 },
-  { id: "a6", full_name: "Diego Torres",     document_number: "1002345", program: "Mantenimiento Industrial", last_date: "2026-06-10", total: 1 },
+  { id: "a1", full_name: "Ana García",       document_number: "1001234", program: "Desarrollo de Software",   sede: "Maicao",             last_date: "2026-06-20", total: 3 },
+  { id: "a2", full_name: "Carlos López",     document_number: "1005678", program: "Diseño Gráfico",           sede: "Comercio y Servicios", last_date: "2026-06-15", total: 1 },
+  { id: "a3", full_name: "María Rodríguez",  document_number: "1009012", program: "Contabilidad",             sede: "Comercio y Servicios", last_date: "2026-06-18", total: 2 },
+  { id: "a4", full_name: "Pedro Martínez",   document_number: "1003456", program: "Desarrollo de Software",   sede: null,                  last_date: null,         total: 0 },
+  { id: "a5", full_name: "Laura Sánchez",    document_number: "1007890", program: "Administración Empresas",  sede: "Maicao",             last_date: "2026-06-22", total: 4 },
+  { id: "a6", full_name: "Diego Torres",     document_number: "1002345", program: "Mantenimiento Industrial", sede: "Industrial",         last_date: "2026-06-10", total: 1 },
 ];
 
 const AVATAR_COLORS = ["#39a900","#3b82f6","#8b5cf6","#f59e0b","#ef4444","#06b6d4","#ec4899","#14b8a6"];
@@ -101,7 +101,7 @@ export default function AprendicesList() {
       // buscador filtraba sobre el array ya capado y "perdía" resultados reales.
       let profileQuery = supabase
         .from("profiles")
-        .select("id, full_name, document_number, program")
+        .select("id, full_name, document_number, program, sedes(name)")
         .eq("role_id", roleRow.id)
         .order("full_name");
 
@@ -144,6 +144,7 @@ export default function AprendicesList() {
           full_name:       p.full_name,
           document_number: p.document_number,
           program:         p.program,
+          sede:            p.sedes?.name ?? null,
           last_date:       dates[0] || null,
           total:           dates.length,
         };
@@ -372,6 +373,14 @@ function AprendizCard({ aprendiz, onClick, canDelete, onDelete }) {
           }}>
             {aprendiz.program}
           </span>
+        </div>
+      )}
+
+      {/* Centro / sede */}
+      {aprendiz.sede && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", color: "#6b7280", marginTop: "-0.375rem" }}>
+          <MapPin size={12} color="#9ca3af" style={{ flexShrink: 0 }} />
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Centro · {aprendiz.sede}</span>
         </div>
       )}
 

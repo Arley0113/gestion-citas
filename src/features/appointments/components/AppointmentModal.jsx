@@ -16,6 +16,7 @@ import { useAppointmentModal } from "../../../providers/AppointmentModalContext"
 import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 import { notifyNewAppointment } from "../../../lib/notifications";
+import { FALLBACK_HOUR_VALUES } from "../../../lib/schedule";
 import { toast } from "sonner";
 
 const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
@@ -66,16 +67,9 @@ const SERVICES = [
 // Horario genérico de respaldo — se usa solo si ningún profesional de la
 // dependencia/sede elegida ha configurado su horario real todavía en "Mis
 // horarios" (para no romper el agendamiento mientras eso se completa).
-const HOURS = [
-  { value: "08:00", label: "8:00 a.m."  },
-  { value: "09:00", label: "9:00 a.m."  },
-  { value: "10:00", label: "10:00 a.m." },
-  { value: "11:00", label: "11:00 a.m." },
-  { value: "14:00", label: "2:00 p.m."  },
-  { value: "15:00", label: "3:00 p.m."  },
-  { value: "16:00", label: "4:00 p.m."  },
-  { value: "17:00", label: "5:00 p.m."  },
-];
+// Dos bloques: mañana 08:00-11:00 y tarde 14:00-16:00 (mismo criterio que
+// DEFAULT_SCHEDULE en src/lib/schedule.js).
+const HOURS = FALLBACK_HOUR_VALUES.map(value => ({ value, label: slotLabel(value) }));
 
 function slotLabel(value) {
   const [h, m] = value.split(":").map(Number);

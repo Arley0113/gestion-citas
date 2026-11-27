@@ -5,6 +5,7 @@ import { format, addWeeks, subWeeks, startOfWeek, addDays, isToday } from "date-
 import { es } from "date-fns/locale";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../providers/AuthProvider";
+import { normalizeSchedule, blockHours, DEFAULT_SCHEDULE, DAY_KEYS } from "../../../lib/schedule";
 import { toast } from "sonner";
 
 const DEV_ROLE = import.meta.env.DEV && typeof window !== "undefined"
@@ -19,7 +20,10 @@ const STATUS_CFG = {
   cancelled: { bg: "#f3f4f6", border: "#9ca3af", label: "Cancelada" },
 };
 
-const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+// Grid dinámico (ver buildGridHours abajo): arranca con el horario por
+// defecto y se amplía con las horas reales de las citas y del horario del
+// profesional, para nunca ocultar una cita fuera de los bloques.
+const DEFAULT_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
 const DAY_NAMES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 const MOCK_WEEK_CITAS = [
@@ -43,10 +47,11 @@ function apptName(apt) {
 
 export default function ProfessionalAgendaPage() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [weekBase, setWeekBase] = useState(new Date());
   const [viewMode, setViewMode] = useState("week");
   const [apts, setApts] = useState([]);
+  const [ownSchedule, setOwnSchedule] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const monday = startOfWeek(weekBase, { weekStartsOn: 1 });
@@ -54,23 +59,31 @@ export default function ProfessionalAgendaPage() {
   const weekLabel = `${format(days[0], "d MMM", { locale: es })} – ${format(days[6], "d MMM yyyy", { locale: es })}`;
 
   const fetchWeek = useCallback(async () => {
-    if (DEV_ROLE) { setApts(MOCK_WEEK_CITAS); setLoading(false); return; }
+    if (DEV_ROLE) { setApts(MOCK_WEEK_CITAS); setOwnSchedule(null); setLoading(false); return; }
     if (!profile?.dependency_id) { setLoading(false); return; }
     setLoading(true);
     const from = format(days[0], "yyyy-MM-dd");
     const to   = format(days[6], "yyyy-MM-dd");
-    const { data, error } = await supabase
-      .from("appointments")
-      .select("id, scheduled_date, scheduled_time, status, profiles!user_id(full_name)")
-      .eq("dependency_id", profile.dependency_id)
-      .gte("scheduled_date", from)
-      .lte("scheduled_date", to)
-      .order("scheduled_date")
-      .order("scheduled_time");
-    if (error) toast.error("No se pudo cargar la agenda de esta semana");
-    setApts(data || []);
+    const [aptsRes, schedRes] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select("id, scheduled_date, scheduled_time, status, profiles!user_id(full_name)")
+        .eq("dependency_id", profile.dependency_id)
+        .gte("scheduled_date", from)
+        .lte("scheduled_date", to)
+        .order("scheduled_date")
+        .order("scheduled_time"),
+      user
+        ? supabase.from("professional_schedules").select("schedule").eq("professional_id", user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+    if (aptsRes.error) toast.error("No se pudo cargar la agenda de esta semana");
+    setApts(aptsRes.data || []);
+    // El horario propio puede fallar por RLS sin romper la agenda: se ignora
+    // y el grid usa el horario por defecto.
+    setOwnSchedule(schedRes?.data?.schedule ? normalizeSchedule(schedRes.data.schedule) : null);
     setLoading(false);
-  }, [profile, monday.toISOString()]);
+  }, [profile, user, monday.toISOString()]);
 
   useEffect(() => { fetchWeek(); }, [fetchWeek]);
 
@@ -101,6 +114,24 @@ export default function ProfessionalAgendaPage() {
   };
 
   const totalCitas = apts.filter(a => !["cancelled"].includes(a.status)).length;
+
+  // Horas del grid: unión de los bloques del horario configurado (o el
+  // por defecto) con las horas de las citas de la semana, para que nunca
+  // se oculte una cita registrada fuera de los bloques (p. ej. 12:30).
+  const gridHours = (() => {
+    if (DEV_ROLE) return DEFAULT_HOURS;
+    const set = new Set();
+    for (const a of apts) {
+      const h = parseInt(String(a.scheduled_time ?? "").split(":")[0], 10);
+      if (!Number.isNaN(h)) set.add(h);
+    }
+    const sched = ownSchedule ?? DEFAULT_SCHEDULE;
+    for (const day of days) {
+      for (const h of blockHours(sched[DAY_KEYS[day.getDay()]])) set.add(h);
+    }
+    const out = [...set].sort((a, b) => a - b);
+    return out.length ? out : DEFAULT_HOURS;
+  })();
 
   return (
     <div style={{ background: "#f5f7fa", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
@@ -204,8 +235,8 @@ export default function ProfessionalAgendaPage() {
             </div>
 
             {/* Hour rows */}
-            {HOURS.map((hour, hi) => (
-              <div key={hour} style={{ display: "grid", gridTemplateColumns: "60px repeat(7, 1fr)", borderBottom: hi < HOURS.length - 1 ? "1px solid #f9fafb" : "none", minHeight: 52 }}>
+            {gridHours.map((hour, hi) => (
+              <div key={hour} style={{ display: "grid", gridTemplateColumns: "60px repeat(7, 1fr)", borderBottom: hi < gridHours.length - 1 ? "1px solid #f9fafb" : "none", minHeight: 52 }}>
                 <div style={{ padding: "0.375rem 0.5rem", borderRight: "1px solid #f3f4f6", display: "flex", alignItems: "flex-start" }}>
                   <span style={{ fontSize: "0.6875rem", color: "#6b7280", fontWeight: 500 }}>{fmtHour(hour)}</span>
                 </div>
