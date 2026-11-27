@@ -652,14 +652,20 @@ GRANT EXECUTE ON FUNCTION public.clear_ficha_sede(TEXT) TO authenticated;
 --    Si no hay ningún horario configurado, devuelve 0 filas y el cliente
 --    cae de vuelta al horario genérico (HOURS en AppointmentModal.jsx) para
 --    no bloquear el agendamiento mientras el staff completa sus horarios.
+--    Solo devuelve horas dentro de las ventanas de agendamiento del aprendiz
+--    (08:00-11:00 y 14:00-17:00), aunque el horario guardado cubra más
+--    (p. ej. el antiguo 08:00-17:00 con mediodía incluido).
 -- ────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.get_dependency_slots(p_dependency_id INTEGER, p_sede_id INTEGER, p_date DATE)
 RETURNS TABLE(slot_time TEXT) AS $$
 DECLARE
   v_day_key TEXT;
   rec RECORD;
-  v_blocks TEXT[][];
-  v_block TEXT[];
+  -- PG no anida arrays (text[][] = text[]): por eso los bloques se guardan en
+  -- dos arrays paralelos de inicio/fin y se recorren por índice.
+  v_starts TEXT[];
+  v_ends   TEXT[];
+  v_i      INTEGER;
   v_start_min INTEGER;
   v_end_min INTEGER;
   v_dur INTEGER;
@@ -678,18 +684,21 @@ BEGIN
   LOOP
     CONTINUE WHEN rec.day IS NULL OR (rec.day ->> 'active')::boolean IS NOT TRUE;
 
-    v_blocks := ARRAY[]::TEXT[][];
+    v_starts := '{}';
+    v_ends   := '{}';
     IF rec.day ->> 'start' IS NOT NULL AND rec.day ->> 'end' IS NOT NULL THEN
-      v_blocks := array_append(v_blocks, ARRAY[rec.day ->> 'start', rec.day ->> 'end']);
+      v_starts := v_starts || (rec.day ->> 'start');
+      v_ends   := v_ends   || (rec.day ->> 'end');
     END IF;
     IF COALESCE((rec.day ->> 'active2')::boolean, false)
        AND rec.day ->> 'start2' IS NOT NULL AND rec.day ->> 'end2' IS NOT NULL THEN
-      v_blocks := array_append(v_blocks, ARRAY[rec.day ->> 'start2', rec.day ->> 'end2']);
+      v_starts := v_starts || (rec.day ->> 'start2');
+      v_ends   := v_ends   || (rec.day ->> 'end2');
     END IF;
 
-    FOREACH v_block IN ARRAY v_blocks LOOP
-      v_start_min := extract(hour from v_block[1]::time)::int * 60 + extract(minute from v_block[1]::time)::int;
-      v_end_min   := extract(hour from v_block[2]::time)::int   * 60 + extract(minute from v_block[2]::time)::int;
+    FOR v_i IN 1 .. COALESCE(array_length(v_starts, 1), 0) LOOP
+      v_start_min := extract(hour from v_starts[v_i]::time)::int * 60 + extract(minute from v_starts[v_i]::time)::int;
+      v_end_min   := extract(hour from v_ends[v_i]::time)::int   * 60 + extract(minute from v_ends[v_i]::time)::int;
       v_dur := rec.dur;
       v_cur := v_start_min;
       WHILE v_cur + v_dur <= v_end_min LOOP
@@ -699,7 +708,12 @@ BEGIN
     END LOOP;
   END LOOP;
 
-  RETURN QUERY SELECT DISTINCT unnest(v_out) ORDER BY 1;
+  RETURN QUERY
+    SELECT DISTINCT t.slot
+    FROM unnest(v_out) AS t(slot)
+    WHERE (t.slot::time >= '08:00' AND t.slot::time < '11:00')
+       OR (t.slot::time >= '14:00' AND t.slot::time < '17:00')
+    ORDER BY 1;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 

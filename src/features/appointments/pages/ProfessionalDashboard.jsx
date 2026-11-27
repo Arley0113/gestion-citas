@@ -60,13 +60,14 @@ export default function ProfessionalDashboard() {
   const [tab, setTab] = useState("pending");
   const [apts, setApts] = useState([]);
   const [upcoming, setUpcoming] = useState([]);
+  const [overdue, setOverdue] = useState([]);
   const [ownSchedule, setOwnSchedule] = useState(null);
   const [loading, setLoading] = useState(true);
   const today = new Date();
   const currentHour = today.getHours();
 
   // "En jornada" según los bloques configurados en "Mis horarios"
-  // (por defecto 08:00-11:00 y 14:00-16:00), no un rango fijo 7-17.
+  // (por defecto 08:00-11:00 y 14:00-17:00), no un rango fijo 7-17.
   const todayBlocks = ownSchedule
     ? dayBlocks(ownSchedule[DAY_KEYS[today.getDay()]])
     : dayBlocks(DEFAULT_SCHEDULE[DAY_KEYS[today.getDay()]]);
@@ -79,15 +80,17 @@ export default function ProfessionalDashboard() {
   const nameInitial = fullName.charAt(0).toUpperCase();
 
   const fetch = useCallback(async () => {
-    if (DEV_ROLE) { setApts(MOCK); setUpcoming([]); setLoading(false); return; }
+    if (DEV_ROLE) { setApts(MOCK); setUpcoming([]); setOverdue([]); setLoading(false); return; }
     if (!profile?.dependency_id) { setLoading(false); return; }
     const todayStr = format(new Date(), "yyyy-MM-dd");
     setLoading(true);
+    // Sin filtro de fecha: además de hoy y de las próximas, se necesitan las
+    // citas anteriores a hoy que siguen pendientes, o de lo contrario el
+    // profesional nunca las veía y quedaban pendientes para siempre.
     const { data, error } = await supabase
       .from("appointments")
       .select("*, profiles!user_id(full_name,document_number)")
       .eq("dependency_id", profile.dependency_id)
-      .gte("scheduled_date", todayStr)
       .order("scheduled_date")
       .order("scheduled_time");
     if (error) {
@@ -100,6 +103,7 @@ export default function ProfessionalDashboard() {
     // listan aparte en "Próximas citas" para que no parezca que no salió.
     setApts(rows.filter(r => r.scheduled_date === todayStr));
     setUpcoming(rows.filter(r => r.scheduled_date > todayStr && ["pending", "confirmed"].includes(r.status)));
+    setOverdue(rows.filter(r => r.scheduled_date < todayStr && ["pending", "confirmed"].includes(r.status)));
     setLoading(false);
   }, [profile]);
 
@@ -200,11 +204,20 @@ export default function ProfessionalDashboard() {
                 </div>
               </div>
             </div>
-            {/* Derecha: chip citas hoy */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.125rem", background: "white", border: "1.5px solid #bbf7d0", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-              <CalendarDays size={16} color="#39a900" />
-              <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#111827", fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}>{counts.total}</span>
-              <span style={{ fontSize: "0.8125rem", color: "#6b7280" }}>citas hoy</span>
+            {/* Derecha: chips citas hoy + sin atender */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.125rem", background: "white", border: "1.5px solid #bbf7d0", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                <CalendarDays size={16} color="#39a900" />
+                <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#111827", fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}>{counts.total}</span>
+                <span style={{ fontSize: "0.8125rem", color: "#6b7280" }}>citas hoy</span>
+              </div>
+              {overdue.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.125rem", background: "white", border: "1.5px solid #fde68a", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                  <AlertCircle size={16} color="#d97706" />
+                  <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#111827", fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}>{overdue.length}</span>
+                  <span style={{ fontSize: "0.8125rem", color: "#92400e" }}>sin atender</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -357,6 +370,83 @@ export default function ProfessionalDashboard() {
                 </div>
               )}
             </div>
+
+            {/* ─── Citas sin atender (anteriores a hoy, aún pendientes) ─── */}
+            {overdue.length > 0 && (
+              <div style={{ background: "white", borderRadius: 14, border: "1px solid #fde68a", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", marginTop: "1.25rem", borderLeft: "4px solid #f59e0b" }}>
+                <div style={{ padding: "1rem 1.5rem", borderBottom: "1px solid #fef3c7", background: "#fffbeb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <AlertCircle size={15} color="#d97706" />
+                    <span style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#111827" }}>Citas sin atender</span>
+                    <span style={{ fontSize: "0.75rem", color: "#92400e" }}>anteriores a hoy</span>
+                  </div>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#92400e", background: "#fef3c7", border: "1px solid #fde68a", padding: "0.2rem 0.6rem", borderRadius: 99 }}>
+                    {overdue.length} {overdue.length === 1 ? "atrasada" : "atrasadas"}
+                  </span>
+                </div>
+                {overdue.slice(0, 10).map((apt, i, arr) => {
+                  const sc = STATUS_COLOR[apt.status] || STATUS_COLOR.pending;
+                  const { time, ampm } = fmtTimeShort(apt.scheduled_time);
+                  const aptName = apt.profiles?.full_name || "Aprendiz";
+                  const ac = avatarColor(aptName);
+                  const dateLabel = format(parseISO(apt.scheduled_date), "d 'de' MMM", { locale: es });
+                  return (
+                    <div key={apt.id}
+                      onClick={() => navigate(`/cita/${apt.id}${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
+                      style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1.5rem", borderBottom: i < arr.length - 1 ? "1px solid #f3f4f6" : "none", borderLeft: `4px solid ${sc.left}`, cursor: "pointer", transition: "box-shadow 0.15s" }}
+                      onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.06)"}
+                      onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
+                    >
+                      {/* Fecha + hora */}
+                      <div style={{ minWidth: 76, flexShrink: 0 }}>
+                        <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#92400e", textTransform: "capitalize" }}>{dateLabel}</div>
+                        <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: 2 }}>
+                          {time} {ampm}
+                        </div>
+                      </div>
+
+                      <div style={{ width: 1, height: 36, background: "#f3f4f6", flexShrink: 0 }} />
+
+                      {/* Avatar */}
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: ac + "22", border: `2px solid ${ac}44`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.75rem", color: ac, flexShrink: 0 }}>
+                        {initials(aptName)}
+                      </div>
+
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "#111827", marginBottom: "0.125rem" }}>
+                          {aptName}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>CC: {apt.profiles?.document_number}</span>
+                          {apt.reason && (
+                            <span style={{ fontSize: "0.75rem", color: "#6b7280", background: "#f3f4f6", padding: "0.125rem 0.5rem", borderRadius: 20, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", display: "inline-block" }}>
+                              {apt.reason}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Badge */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.3rem 0.75rem", background: sc.bg, border: `1.5px solid ${sc.border}`, borderRadius: 99, flexShrink: 0 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: sc.dot }} />
+                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: sc.text }}>{sc.label}</span>
+                      </div>
+
+                      <ChevronRight size={15} color="#d1d5db" />
+                    </div>
+                  );
+                })}
+                {overdue.length > 10 && (
+                  <div style={{ padding: "0.75rem 1.5rem", borderTop: "1px solid #f3f4f6", background: "#fafafa" }}>
+                    <button onClick={() => navigate(`/professional/agenda${DEV_ROLE ? `?preview=${DEV_ROLE}` : ""}`)}
+                      style={{ display: "flex", alignItems: "center", gap: "0.375rem", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: "0.8125rem", fontWeight: 700, color: "#39a900" }}>
+                      Ver todas en mi agenda <ChevronRight size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ─── Próximas citas (fuera de hoy) ─── */}
             {upcoming.length > 0 && (

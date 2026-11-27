@@ -1,5 +1,5 @@
 // Horario de atención de los profesionales: dos bloques por día
-// (mañana 08:00-11:00 y tarde 14:00-16:00 por defecto).
+// (mañana 08:00-11:00 y tarde 14:00-17:00 por defecto).
 //
 // Cada día guarda { active, start, end, active2, start2, end2 }. Los horarios
 // guardados antes de esta migración no traen el segundo bloque: normalizeSchedule
@@ -18,17 +18,26 @@ export const SCHEDULE_DAYS = [
 export const DAY_KEYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
 
 export const DEFAULT_SCHEDULE = {
-  lunes:     { active: true,  start: "08:00", end: "11:00", active2: true,  start2: "14:00", end2: "16:00" },
-  martes:    { active: true,  start: "08:00", end: "11:00", active2: true,  start2: "14:00", end2: "16:00" },
-  miercoles: { active: true,  start: "08:00", end: "11:00", active2: true,  start2: "14:00", end2: "16:00" },
-  jueves:    { active: true,  start: "08:00", end: "11:00", active2: true,  start2: "14:00", end2: "16:00" },
-  viernes:   { active: true,  start: "08:00", end: "11:00", active2: true,  start2: "14:00", end2: "16:00" },
-  sabado:    { active: false, start: "08:00", end: "12:00", active2: false, start2: "14:00", end2: "16:00" },
+  lunes:     { active: true,  start: "08:00", end: "11:00", active2: true,  start2: "14:00", end2: "17:00" },
+  martes:    { active: true,  start: "08:00", end: "11:00", active2: true,  start2: "14:00", end2: "17:00" },
+  miercoles: { active: true,  start: "08:00", end: "11:00", active2: true,  start2: "14:00", end2: "17:00" },
+  jueves:    { active: true,  start: "08:00", end: "11:00", active2: true,  start2: "14:00", end2: "17:00" },
+  viernes:   { active: true,  start: "08:00", end: "11:00", active2: true,  start2: "14:00", end2: "17:00" },
+  sabado:    { active: false, start: "08:00", end: "12:00", active2: false, start2: "14:00", end2: "17:00" },
 };
+
+// Ventanas en las que un aprendiz PUEDE agendar: 8:00-11:00 y 14:00-17:00.
+// Se aplican en AppointmentModal y en la RPC get_dependency_slots para que,
+// aunque un horario guardado cubra más (p. ej. el antiguo 08:00-17:00),
+// nunca se ofrezcan horas fuera de estas ventanas.
+export const BOOKING_WINDOWS = [
+  { start: "08:00", end: "11:00" },
+  { start: "14:00", end: "17:00" },
+];
 
 // Horario genérico de respaldo cuando nadie en la dependencia/sede ha
 // configurado "Mis horarios" todavía (AppointmentModal.jsx).
-export const FALLBACK_HOUR_VALUES = ["08:00", "09:00", "10:00", "14:00", "15:00"];
+export const FALLBACK_HOUR_VALUES = ["08:00", "09:00", "10:00", "14:00", "15:00", "16:00"];
 
 export function countSlots(start, end, duration) {
   const [sh, sm] = start.split(":").map(Number);
@@ -41,6 +50,14 @@ export function countSlots(start, end, duration) {
 export function toMinutes(hhmm) {
   const [h, m] = (hhmm || "0:0").split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
+}
+
+// ¿Esta hora de inicio está dentro de una ventana de agendamiento?
+// (inicio incluido, fin excluido: un slot de 10:30 dura hasta 11:00 y sí
+// cabe; un slot a las 11:00 exactas no se ofrece).
+export function isBookableTime(hhmm) {
+  const t = toMinutes(hhmm);
+  return BOOKING_WINDOWS.some(w => t >= toMinutes(w.start) && t < toMinutes(w.end));
 }
 
 export function normalizeSchedule(raw) {

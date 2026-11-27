@@ -16,7 +16,7 @@ import { useAppointmentModal } from "../../../providers/AppointmentModalContext"
 import { useAuth } from "../../../providers/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 import { notifyNewAppointment } from "../../../lib/notifications";
-import { FALLBACK_HOUR_VALUES } from "../../../lib/schedule";
+import { FALLBACK_HOUR_VALUES, isBookableTime } from "../../../lib/schedule";
 import { toast } from "sonner";
 
 const IS_DEV = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview");
@@ -67,8 +67,9 @@ const SERVICES = [
 // Horario genérico de respaldo — se usa solo si ningún profesional de la
 // dependencia/sede elegida ha configurado su horario real todavía en "Mis
 // horarios" (para no romper el agendamiento mientras eso se completa).
-// Dos bloques: mañana 08:00-11:00 y tarde 14:00-16:00 (mismo criterio que
-// DEFAULT_SCHEDULE en src/lib/schedule.js).
+// Dos bloques: mañana 08:00-11:00 y tarde 14:00-17:00 (mismo criterio que
+// DEFAULT_SCHEDULE en src/lib/schedule.js); solo horas dentro de las
+// ventanas de agendamiento del aprendiz.
 const HOURS = FALLBACK_HOUR_VALUES.map(value => ({ value, label: slotLabel(value) }));
 
 function slotLabel(value) {
@@ -311,7 +312,10 @@ export function AppointmentModal() {
   if (!isOpen) return null;
 
   const selSvc = services.find(s => s.key === form.serviceKey);
-  const hoursToShow = scheduleSlots ?? HOURS;
+  // Solo se ofrecen horas dentro de las ventanas de agendamiento del aprendiz
+  // (08:00-11:00 y 14:00-17:00), aunque el horario guardado del profesional
+  // cubra más (p. ej. el antiguo 08:00-17:00 con mediodía incluido).
+  const hoursToShow = (scheduleSlots ?? HOURS).filter(h => isBookableTime(h.value));
 
   const goNext = () => {
     if (step === 1 && !form.serviceKey) { toast.error("Selecciona un servicio"); return; }
@@ -541,7 +545,7 @@ export function AppointmentModal() {
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.875rem", padding: "0.75rem", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
                   <Calendar size={14} color="#16a34a" />
                   <span style={{ fontSize: "0.8125rem", color: "#166534" }}>
-                    Lunes a viernes · Tu cita dura 30 minutos
+                    Lunes a viernes · Disponible de 8:00 a.m. a 11:00 a.m. y de 2:00 p.m. a 5:00 p.m.
                   </span>
                 </div>
               </div>

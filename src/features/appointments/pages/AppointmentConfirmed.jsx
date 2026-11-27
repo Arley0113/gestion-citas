@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Check, Calendar, Clock, MapPin, Bell, Shield, Printer, Home, ChevronRight, ArrowLeft } from "lucide-react";
+import { Check, Calendar, Clock, MapPin, Bell, Shield, Printer, Home, ChevronRight, ArrowLeft, Building2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { SenaLogo } from "../../../shared/components/SenaLogo";
@@ -19,12 +19,22 @@ export default function AppointmentConfirmed() {
   const navigate  = useNavigate();
   const apt       = state?.appointment;
   const [aptLocation, setAptLocation] = useState("Bienestar SENA");
+  const [sedeName, setSedeName] = useState(null);
 
   // Misma fuente de verdad configurable que AppointmentDetail/AppointmentModal (system_settings)
   useEffect(() => {
     supabase.from("system_settings").select("value").eq("key", "appointment_location").maybeSingle()
       .then(({ data }) => { if (data?.value) setAptLocation(data.value); });
   }, []);
+
+  // La sede la puebla el trigger trg_appointments_set_sede desde el perfil del
+  // aprendiz; este componente recibe la cita creada sin el embed `sedes`, así
+  // que se busca el nombre aparte.
+  useEffect(() => {
+    if (!apt?.sede_id) return;
+    supabase.from("sedes").select("name").eq("id", apt.sede_id).maybeSingle()
+      .then(({ data }) => { if (data?.name) setSedeName(data.name); });
+  }, [apt?.sede_id]);
 
   const depName  = apt?.dependencies?.name || "Psicología";
   const dateStr  = apt?.scheduled_date
@@ -108,6 +118,7 @@ export default function AppointmentConfirmed() {
                   { icon: Calendar, label: "Servicio",  value: depName },
                   { icon: Calendar, label: "Fecha",     value: dateStr, cap: true },
                   { icon: Clock,    label: "Hora",      value: `${timeStr} — Duración 30 min` },
+                  { icon: Building2, label: "Sede",     value: sedeName || "Sin sede asignada" },
                   { icon: MapPin,   label: "Lugar",     value: aptLocation },
                 ].map(({ icon: Icon, label, value, cap }, i, arr) => (
                   <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: "1rem", padding: "0.875rem 0", borderBottom: i < arr.length - 1 ? "1px solid #f7fafc" : "none" }}>

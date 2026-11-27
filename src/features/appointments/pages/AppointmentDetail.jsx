@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   ChevronLeft, Check, Clock, Calendar, MapPin, FileText,
   Paperclip, Play, UserX, User, X, Star, Hash, BookOpen,
-  AlertCircle, Brain, Heart, Users, Shield, Eye,
+  AlertCircle, Brain, Heart, Users, Shield, Eye, Building2,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -29,6 +29,7 @@ const MOCK_APT = {
   dependencies: { name: "Psicología", color: "var(--psi-color)" },
   profiles: { full_name: "Juan Pérez", document_number: "1034567890" },
   professional: { full_name: "Dra. Ana García" },
+  sedes: { name: "Comercio y Servicios" },
 };
 
 const DEP_ICON = {
@@ -78,7 +79,7 @@ export default function AppointmentDetail() {
     if (DEV_ROLE) return;
     supabase
       .from("appointments")
-      .select("*, dependencies(name,color), profiles!user_id(full_name,document_number,ficha_number,program), professional:profiles!professional_id(full_name)")
+      .select("*, dependencies(name,color), profiles!user_id(full_name,document_number,ficha_number,program), professional:profiles!professional_id(full_name), sedes(name)")
       .eq("id", id)
       .single()
       .then(({ data, error }) => {
@@ -319,11 +320,12 @@ export default function AppointmentDetail() {
               </div>
             </div>
 
-            <div style={{ marginTop: "1.25rem", paddingTop: "1.25rem", borderTop: "1px solid var(--gray-100)", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+            <div style={{ marginTop: "1.25rem", paddingTop: "1.25rem", borderTop: "1px solid var(--gray-100)", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
               {[
                 { icon: Calendar, label: "Fecha",     val: dateShort,          cap: true },
                 { icon: Clock,    label: "Hora",      val: timeStr              },
                 { icon: MapPin,   label: "Lugar",     val: aptLocation         },
+                { icon: Building2, label: "Sede",      val: apt?.sedes?.name || "Sin sede asignada" },
               ].map(({ icon: Ic, label, val, cap }) => (
                 <div key={label}>
                   <div style={{ fontSize: "var(--text-xs)", color: "var(--gray-500)", display: "flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.25rem" }}>
